@@ -1,0 +1,25 @@
+{
+  "name": "averias-backend",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "migrate": "node migrations/run.js",
+    "migrate:test": "NODE_ENV=test node migrations/run.js",
+    "test": "jest --runInBand"
+  },
+  "dependencies": {
+    "@fastify/jwt": "^8.0.0",
+    "@fastify/rate-limit": "^9.0.0",
+    "bcrypt": "^5.1.1",
+    "dotenv": "^16.4.5",
+    "fastify": "^4.28.0",
+    "fastify-plugin": "^4.5.1",
+    "pg": "^8.11.5"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.4"
+  }
+}
