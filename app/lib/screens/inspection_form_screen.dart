@@ -48,6 +48,12 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   bool _saving = false;
   String? _error;
 
+  @override
+  void dispose() {
+    _commentCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _save() async {
     setState(() { _saving = true; _error = null; });
     try {
