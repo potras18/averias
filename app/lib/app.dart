@@ -35,6 +35,7 @@ final _router = GoRouter(
       builder: (_, state) => InspectionFormScreen(
         api: _api,
         machineId: state.pathParameters['id']!,
+        hasRedemptionTickets: state.extra as bool? ?? false,
       ),
     ),
     GoRoute(
