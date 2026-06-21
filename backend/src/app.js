@@ -1,6 +1,7 @@
 // averias/backend/src/app.js
 'use strict'
 const Fastify = require('fastify')
+const rateLimit = require('@fastify/rate-limit')
 const dbPlugin = require('./plugins/db')
 const authPlugin = require('./plugins/auth')
 const authRoutes = require('./routes/auth')
@@ -10,6 +11,7 @@ const inspectionsRoutes = require('./routes/inspections')
 
 function buildApp(opts = {}) {
   const app = Fastify({ logger: opts.logger ?? false })
+  app.register(rateLimit, { global: false })
   app.register(dbPlugin)
   app.register(authPlugin)
   app.register(authRoutes, { prefix: '/auth' })
