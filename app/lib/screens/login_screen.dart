@@ -29,6 +29,13 @@ class _LoginScreenState extends State<LoginScreen> {
     _auth = AuthService(api: widget.api, storage: widget.storage);
   }
 
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _passCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _loading = true; _error = null; });

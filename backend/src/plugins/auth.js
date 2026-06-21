@@ -4,7 +4,11 @@ const fp = require('fastify-plugin')
 const fastifyJwt = require('@fastify/jwt')
 
 module.exports = fp(async function authPlugin(app) {
-  app.register(fastifyJwt, { secret: process.env.JWT_SECRET || 'test-secret' })
+  const secret = process.env.JWT_SECRET
+  if (!secret || secret.length < 32) {
+    throw new Error('JWT_SECRET must be set and at least 32 characters long')
+  }
+  app.register(fastifyJwt, { secret })
   app.decorate('authenticate', async function (request, reply) {
     try {
       await request.jwtVerify()

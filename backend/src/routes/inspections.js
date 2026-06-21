@@ -31,24 +31,32 @@ module.exports = async function inspectionsRoutes(app) {
     const { machine_id, status, card_reader_ok, card_reader_failure_type, comment, ticket_check } = req.body
     const technician_id = req.user.sub
 
-    const { rows } = await app.db.query(
-      `INSERT INTO inspections (machine_id, technician_id, status, card_reader_ok, card_reader_failure_type, comment)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, machine_id, technician_id, status, card_reader_ok, card_reader_failure_type, comment, inspected_at`,
-      [machine_id, technician_id, status, card_reader_ok, card_reader_failure_type ?? null, comment ?? null]
-    )
-    const inspection = rows[0]
-
-    let tc = null
-    if (ticket_check) {
-      const { rows: tcRows } = await app.db.query(
-        'INSERT INTO ticket_checks (inspection_id, dispenser_ok, ticket_level) VALUES ($1, $2, $3) RETURNING dispenser_ok, ticket_level',
-        [inspection.id, ticket_check.dispenser_ok, ticket_check.ticket_level]
+    const client = await app.db.connect()
+    try {
+      await client.query('BEGIN')
+      const { rows } = await client.query(
+        `INSERT INTO inspections (machine_id, technician_id, status, card_reader_ok, card_reader_failure_type, comment)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id, machine_id, technician_id, status, card_reader_ok, card_reader_failure_type, comment, inspected_at`,
+        [machine_id, technician_id, status, card_reader_ok, card_reader_failure_type ?? null, comment ?? null]
       )
-      tc = tcRows[0]
+      const inspection = rows[0]
+      let tc = null
+      if (ticket_check) {
+        const { rows: tcRows } = await client.query(
+          'INSERT INTO ticket_checks (inspection_id, dispenser_ok, ticket_level) VALUES ($1, $2, $3) RETURNING dispenser_ok, ticket_level',
+          [inspection.id, ticket_check.dispenser_ok, ticket_check.ticket_level]
+        )
+        tc = tcRows[0]
+      }
+      await client.query('COMMIT')
+      return reply.code(201).send({ ...inspection, ticket_check: tc })
+    } catch (err) {
+      await client.query('ROLLBACK')
+      throw err
+    } finally {
+      client.release()
     }
-
-    return reply.code(201).send({ ...inspection, ticket_check: tc })
   })
 
   app.get('/', { preHandler: [app.authenticate] }, async (req) => {

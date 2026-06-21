@@ -97,10 +97,12 @@ module.exports = async function machinesRoutes(app) {
       },
     },
   }, async (req, reply) => {
+    const ALLOWED_UPDATE_FIELDS = new Set(['name', 'location_id', 'has_redemption_tickets'])
     const fields = []
     const vals = []
     let i = 1
     for (const [k, v] of Object.entries(req.body)) {
+      if (!ALLOWED_UPDATE_FIELDS.has(k)) continue
       fields.push(`${k} = $${i++}`)
       vals.push(v)
     }
