@@ -1,6 +1,7 @@
 // averias/app/lib/screens/machine_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../models/machine.dart';
 import '../models/inspection.dart';
 import '../services/api_client.dart';
@@ -47,6 +48,16 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
               _InfoRow('Local', machine.locationName ?? '-'),
               _InfoRow('Código QR', machine.qrCode),
               _InfoRow('Tickets redemption', machine.hasRedemptionTickets ? 'Sí' : 'No'),
+              const SizedBox(height: 16),
+              Center(
+                child: QrImageView(
+                  data: machine.qrCode,
+                  version: QrVersions.auto,
+                  size: 160,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Center(child: Text(machine.qrCode, style: Theme.of(context).textTheme.bodySmall)),
               const SizedBox(height: 8),
               Row(children: [
                 const Text('Estado actual: '),
