@@ -49,7 +49,7 @@ class _StatsScreenState extends State<StatsScreen> {
       initialDateRange: _dateRange,
       locale: const Locale('es', 'ES'),
     );
-    if (range != null) setState(() => _dateRange = range);
+    if (range != null && mounted) setState(() => _dateRange = range);
   }
 
   Future<void> _loadStats() async {
@@ -174,32 +174,9 @@ class _StatsScreenState extends State<StatsScreen> {
               onChanged: (v) => setState(() => _selectedLocationId = v),
             ),
             const SizedBox(height: 20),
-            Row(
-              children: [
-                FilledButton(
-                  onPressed: _loading ? null : _loadStats,
-                  child: const Text('Consultar'),
-                ),
-                if (_stats != null && !_loading) ...[
-                  const SizedBox(width: 12),
-                  FilledButton.icon(
-                    icon: const Icon(Icons.picture_as_pdf),
-                    label: const Text('Generar PDF'),
-                    onPressed: _generatePdf,
-                  ),
-                  const SizedBox(width: 12),
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.email),
-                    label: const Text('Enviar por email'),
-                    onPressed: _sendByEmail,
-                  ),
-                ],
-                if (_loading)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 16),
-                    child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-                  ),
-              ],
+            FilledButton(
+              onPressed: _loading ? null : _loadStats,
+              child: const Text('Consultar'),
             ),
             if (_error != null) ...[
               const SizedBox(height: 12),
@@ -258,6 +235,25 @@ class _StatsScreenState extends State<StatsScreen> {
                             .toList(),
                       ),
               ),
+              const SizedBox(height: 20),
+              if (_loading)
+                const Center(child: CircularProgressIndicator())
+              else
+                Wrap(
+                  spacing: 12,
+                  children: [
+                    FilledButton.icon(
+                      icon: const Icon(Icons.picture_as_pdf),
+                      label: const Text('Generar PDF'),
+                      onPressed: _generatePdf,
+                    ),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.email),
+                      label: const Text('Enviar por email'),
+                      onPressed: _sendByEmail,
+                    ),
+                  ],
+                ),
             ],
           ],
         ),

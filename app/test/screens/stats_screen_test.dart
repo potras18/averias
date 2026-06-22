@@ -103,6 +103,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Consultar'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Generar PDF'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Generar PDF'));
     await tester.pumpAndSettle();
 
