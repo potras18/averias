@@ -13,12 +13,12 @@ module.exports = fp(async function authPlugin(app) {
     try {
       await request.jwtVerify()
     } catch (err) {
-      reply.code(401).send({ error: 'Unauthorized' })
+      return reply.code(401).send({ error: 'Unauthorized' })
     }
   })
   app.decorate('requireAdmin', async function (request, reply) {
     if (request.user.role !== 'admin') {
-      reply.code(403).send({ error: 'Forbidden' })
+      return reply.code(403).send({ error: 'Forbidden' })
     }
   })
 })
