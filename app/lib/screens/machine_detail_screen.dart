@@ -2,10 +2,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'dart:ui' as ui;
+import 'dart:typed_data';
 import '../models/machine.dart';
 import '../models/inspection.dart';
 import '../services/api_client.dart';
 import '../widgets/status_badge.dart';
+import '../utils/download_file.dart';
 
 class MachineDetailScreen extends StatefulWidget {
   final ApiClient api;
@@ -23,6 +26,30 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
   void initState() {
     super.initState();
     _future = widget.api.getMachineById(widget.machineId);
+  }
+
+  Future<void> _downloadQrPng(String qrCode) async {
+    final painter = QrPainter(
+      data: qrCode,
+      version: QrVersions.auto,
+      eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.black),
+      dataModuleStyle: const QrDataModuleStyle(
+        dataModuleShape: QrDataModuleShape.square,
+        color: Colors.black,
+      ),
+    );
+    final img = await painter.toImage(512);
+    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+    await downloadFile(byteData!.buffer.asUint8List(), 'qr-$qrCode.png', 'image/png');
+  }
+
+  Future<void> _downloadQrPdf(Machine machine) async {
+    final bytes = await widget.api.getMachineQrPdf(machine.id);
+    await downloadFile(
+      bytes,
+      'qr-${machine.name.replaceAll(' ', '-')}.pdf',
+      'application/pdf',
+    );
   }
 
   @override
@@ -58,6 +85,25 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
               ),
               const SizedBox(height: 8),
               Center(child: Text(machine.qrCode, style: Theme.of(context).textTheme.bodySmall)),
+              const SizedBox(height: 8),
+              Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.image),
+                      label: const Text('PNG'),
+                      onPressed: () => _downloadQrPng(machine.qrCode),
+                    ),
+                    const SizedBox(width: 12),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.picture_as_pdf),
+                      label: const Text('PDF'),
+                      onPressed: () => _downloadQrPdf(machine),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 8),
               Row(children: [
                 const Text('Estado actual: '),
