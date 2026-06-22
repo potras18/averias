@@ -60,11 +60,11 @@ class _ReportScreenState extends State<ReportScreen> {
       );
       await downloadFile(bytes, 'informe_averias.pdf');
     } on UnsupportedError {
-      setState(() => _error = 'Descarga no disponible en esta plataforma');
+      if (mounted) setState(() => _error = 'Descarga no disponible en esta plataforma');
     } catch (e) {
-      setState(() => _error = 'Error al generar PDF');
+      if (mounted) setState(() => _error = 'Error al generar PDF');
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -119,9 +119,9 @@ class _ReportScreenState extends State<ReportScreen> {
         );
       }
     } catch (e) {
-      setState(() => _error = 'Error al enviar el informe');
+      if (mounted) setState(() => _error = 'Error al enviar el informe');
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 

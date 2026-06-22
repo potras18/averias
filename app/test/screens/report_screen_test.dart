@@ -5,10 +5,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:averias_app/screens/report_screen.dart';
 import 'package:averias_app/services/api_client.dart';
 import 'package:averias_app/models/location.dart';
-import 'package:averias_app/services/storage_service.dart';
-
 class MockApiClient extends Mock implements ApiClient {}
-class MockStorageService extends Mock implements StorageService {}
 
 void main() {
   late MockApiClient api;
