@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../models/machine.dart';
 import '../services/api_client.dart';
+import '../services/storage_service.dart';
 import '../widgets/machine_card.dart';
 
 class MachineListScreen extends StatefulWidget {
   final ApiClient api;
-  const MachineListScreen({super.key, required this.api});
+  final StorageService storage;
+  const MachineListScreen({super.key, required this.api, required this.storage});
 
   @override
   State<MachineListScreen> createState() => _MachineListScreenState();
@@ -14,14 +16,21 @@ class MachineListScreen extends StatefulWidget {
 
 class _MachineListScreenState extends State<MachineListScreen> {
   late Future<List<Machine>> _machinesFuture;
+  String? _role;
 
   @override
   void initState() {
     super.initState();
     _reload();
+    _loadRole();
   }
 
   void _reload() => setState(() { _machinesFuture = widget.api.getMachines(); });
+
+  Future<void> _loadRole() async {
+    final role = await widget.storage.getRole();
+    if (mounted) setState(() => _role = role);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +38,12 @@ class _MachineListScreenState extends State<MachineListScreen> {
       appBar: AppBar(
         title: const Text('Máquinas'),
         actions: [
+          if (_role == 'admin')
+            IconButton(
+              icon: const Icon(Icons.settings),
+              tooltip: 'Administración',
+              onPressed: () => context.push('/admin'),
+            ),
           IconButton(
             icon: const Icon(Icons.bar_chart),
             tooltip: 'Estadísticas',

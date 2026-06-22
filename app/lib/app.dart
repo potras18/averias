@@ -7,6 +7,7 @@ import 'screens/inspection_form_screen.dart';
 import 'screens/qr_scanner_screen.dart';
 import 'screens/report_screen.dart';
 import 'screens/stats_screen.dart';
+import 'screens/admin_screen.dart';
 import 'services/storage_service.dart';
 import 'services/api_client.dart';
 
@@ -23,8 +24,8 @@ final _router = GoRouter(
     return null;
   },
   routes: [
-    GoRoute(path: '/login', builder: (_, __) => LoginScreen(api: _api, storage: _storage)),
-    GoRoute(path: '/machines', builder: (_, __) => MachineListScreen(api: _api)),
+    GoRoute(path: '/login',   builder: (_, __) => LoginScreen(api: _api, storage: _storage)),
+    GoRoute(path: '/machines', builder: (_, __) => MachineListScreen(api: _api, storage: _storage)),
     GoRoute(
       path: '/machines/:id',
       builder: (_, state) => MachineDetailScreen(
@@ -40,18 +41,10 @@ final _router = GoRouter(
         hasRedemptionTickets: state.extra as bool? ?? false,
       ),
     ),
-    GoRoute(
-      path: '/scan',
-      builder: (_, __) => QrScannerScreen(api: _api),
-    ),
-    GoRoute(
-      path: '/reports',
-      builder: (_, __) => ReportScreen(api: _api),
-    ),
-    GoRoute(
-      path: '/stats',
-      builder: (_, __) => StatsScreen(api: _api),
-    ),
+    GoRoute(path: '/scan',    builder: (_, __) => QrScannerScreen(api: _api)),
+    GoRoute(path: '/reports', builder: (_, __) => ReportScreen(api: _api)),
+    GoRoute(path: '/stats',   builder: (_, __) => StatsScreen(api: _api)),
+    GoRoute(path: '/admin',   builder: (_, __) => AdminScreen(api: _api, storage: _storage)),
   ],
 );
 
