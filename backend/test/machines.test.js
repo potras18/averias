@@ -4,7 +4,7 @@ const supertest = require('supertest')
 const { resetDb, seedUser, seedLocation, seedMachine } = require('./helpers/db')
 const { buildApp } = require('../src/app')
 
-let app, st, token, location
+let app, st, token, adminToken, location
 
 beforeAll(async () => {
   app = buildApp()
@@ -14,25 +14,29 @@ beforeAll(async () => {
   const user = await seedUser()
   const res = await st.post('/auth/login').send({ email: user.email, password: user.password })
   token = res.body.accessToken
+  const admin = await seedUser({ name: 'Admin User', email: 'admin@example.com', role: 'admin' })
+  const adminRes = await st.post('/auth/login').send({ email: admin.email, password: admin.password })
+  adminToken = adminRes.body.accessToken
   location = await seedLocation()
 })
 
 afterAll(() => app.close())
 
 const auth = () => ({ Authorization: `Bearer ${token}` })
+const authAdmin = () => ({ Authorization: `Bearer ${adminToken}` })
 
 beforeEach(async () => {
   const { pool } = require('./helpers/db')
   await pool.query('TRUNCATE ticket_checks, inspections, machines RESTART IDENTITY CASCADE')
 })
 
-test('POST /machines creates a machine', async () => {
-  const res = await st.post('/machines').set(auth()).send({
-    name: 'Pinball X', qr_code: 'QR-100', location_id: location.id, has_redemption_tickets: false,
+test('POST /machines creates a machine (admin)', async () => {
+  const res = await st.post('/machines').set(authAdmin()).send({
+    name: 'Pinball X', location_id: location.id, has_redemption_tickets: false,
   })
   expect(res.status).toBe(201)
   expect(res.body.name).toBe('Pinball X')
-  expect(res.body.qr_code).toBe('QR-100')
+  expect(res.body.qr_code).toMatch(/^[0-9a-f-]{36}$/)
 })
 
 test('GET /machines returns list', async () => {
@@ -72,11 +76,42 @@ test('GET /machines/qr/:code returns 404 for unknown code', async () => {
   expect(res.status).toBe(404)
 })
 
-test('PUT /machines/:id updates machine name', async () => {
+test('PUT /machines/:id updates machine name (admin)', async () => {
   const m = await seedMachine({ locationId: location.id, name: 'Old Name', qrCode: 'QR-5' })
-  const res = await st.put(`/machines/${m.id}`).set(auth()).send({ name: 'New Name' })
+  const res = await st.put(`/machines/${m.id}`).set(authAdmin()).send({ name: 'New Name' })
   expect(res.status).toBe(200)
   expect(res.body.name).toBe('New Name')
+})
+
+test('POST /machines returns 403 for technician', async () => {
+  const res = await st.post('/machines').set(auth()).send({ name: 'X' })
+  expect(res.status).toBe(403)
+})
+
+test('PUT /machines/:id returns 403 for technician', async () => {
+  const m = await seedMachine({ locationId: location.id, name: 'M', qrCode: 'QR-PUT-TEC' })
+  const res = await st.put(`/machines/${m.id}`).set(auth()).send({ name: 'Y' })
+  expect(res.status).toBe(403)
+})
+
+test('PATCH /machines/:id/decommission sets active to false', async () => {
+  const m = await seedMachine({ locationId: location.id, name: 'To Decommission', qrCode: 'QR-DEC' })
+  const res = await st.patch(`/machines/${m.id}/decommission`).set(authAdmin())
+  expect(res.status).toBe(200)
+  expect(res.body.ok).toBe(true)
+  const check = await st.get(`/machines/${m.id}`).set(auth())
+  expect(check.body.active).toBe(false)
+})
+
+test('PATCH /machines/:id/decommission returns 403 for technician', async () => {
+  const m = await seedMachine({ locationId: location.id, name: 'M2', qrCode: 'QR-DEC2' })
+  const res = await st.patch(`/machines/${m.id}/decommission`).set(auth())
+  expect(res.status).toBe(403)
+})
+
+test('PATCH /machines/:id/decommission returns 404 for unknown id', async () => {
+  const res = await st.patch('/machines/00000000-0000-0000-0000-000000000000/decommission').set(authAdmin())
+  expect(res.status).toBe(404)
 })
 
 test('GET /machines returns only active machines by default', async () => {

@@ -64,14 +64,13 @@ module.exports = async function machinesRoutes(app) {
   })
 
   app.post('/', {
-    preHandler: [app.authenticate],
+    preHandler: [app.authenticate, app.requireAdmin],
     schema: {
       body: {
         type: 'object',
-        required: ['name', 'qr_code'],
+        required: ['name'],
         properties: {
           name: { type: 'string', minLength: 1 },
-          qr_code: { type: 'string', minLength: 1 },
           location_id: { type: 'string' },
           has_redemption_tickets: { type: 'boolean' },
         },
@@ -79,7 +78,8 @@ module.exports = async function machinesRoutes(app) {
       },
     },
   }, async (req, reply) => {
-    const { name, qr_code, location_id, has_redemption_tickets = false } = req.body
+    const { name, location_id, has_redemption_tickets = false } = req.body
+    const qr_code = randomUUID()
     const { rows } = await app.db.query(
       'INSERT INTO machines (name, qr_code, location_id, has_redemption_tickets) VALUES ($1,$2,$3,$4) RETURNING id',
       [name, qr_code, location_id ?? null, has_redemption_tickets]
@@ -89,7 +89,7 @@ module.exports = async function machinesRoutes(app) {
   })
 
   app.put('/:id', {
-    preHandler: [app.authenticate],
+    preHandler: [app.authenticate, app.requireAdmin],
     schema: {
       body: {
         type: 'object',
@@ -117,5 +117,14 @@ module.exports = async function machinesRoutes(app) {
     const machine = await getMachineWithInspections(app.db, req.params.id)
     if (!machine) return reply.code(404).send({ error: 'Machine not found' })
     return machine
+  })
+
+  app.patch('/:id/decommission', { preHandler: [app.authenticate, app.requireAdmin] }, async (req, reply) => {
+    const { rowCount } = await app.db.query(
+      'UPDATE machines SET active = false WHERE id = $1',
+      [req.params.id]
+    )
+    if (rowCount === 0) return reply.code(404).send({ error: 'Machine not found' })
+    return { ok: true }
   })
 }
