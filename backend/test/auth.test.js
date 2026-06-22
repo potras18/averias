@@ -20,6 +20,30 @@ describe('POST /auth/login', () => {
     await app.close()
   })
 
+  test('login response includes role for technician', async () => {
+    await seedUser({ email: 'tech@x.com', password: 'pass123' })
+    const { app } = buildTestApp()
+    await app.ready()
+    const res = await require('supertest')(app.server)
+      .post('/auth/login')
+      .send({ email: 'tech@x.com', password: 'pass123' })
+    expect(res.status).toBe(200)
+    expect(res.body.user.role).toBe('technician')
+    await app.close()
+  })
+
+  test('login response includes role for admin', async () => {
+    await seedUser({ email: 'admin@x.com', password: 'pass123', role: 'admin' })
+    const { app } = buildTestApp()
+    await app.ready()
+    const res = await require('supertest')(app.server)
+      .post('/auth/login')
+      .send({ email: 'admin@x.com', password: 'pass123' })
+    expect(res.status).toBe(200)
+    expect(res.body.user.role).toBe('admin')
+    await app.close()
+  })
+
   test('returns 401 on wrong password', async () => {
     await seedUser({ email: 'a@a.com', password: 'pass123' })
     const { app } = buildTestApp()

@@ -20,14 +20,17 @@ module.exports = async function authRoutes(app) {
   }, async (req, reply) => {
     const { email, password } = req.body
     const { rows } = await app.db.query(
-      'SELECT id, name, email, password_hash FROM users WHERE email = $1',
+      'SELECT id, name, email, password_hash, role FROM users WHERE email = $1',
       [email]
     )
     if (!rows.length || !(await bcrypt.compare(password, rows[0].password_hash))) {
       return reply.code(401).send({ error: 'Invalid credentials' })
     }
     const user = rows[0]
-    const accessToken = app.jwt.sign({ sub: user.id, name: user.name }, { expiresIn: '8h' })
+    const accessToken = app.jwt.sign(
+      { sub: user.id, name: user.name, role: user.role },
+      { expiresIn: '8h' }
+    )
     const refreshToken = randomUUID()
     const tokenHash = createHash('sha256').update(refreshToken).digest('hex')
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
@@ -35,7 +38,11 @@ module.exports = async function authRoutes(app) {
       'INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)',
       [user.id, tokenHash, expiresAt]
     )
-    return { accessToken, refreshToken, user: { id: user.id, name: user.name, email: user.email } }
+    return {
+      accessToken,
+      refreshToken,
+      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+    }
   })
 
   app.post('/refresh', {
@@ -50,15 +57,15 @@ module.exports = async function authRoutes(app) {
   }, async (req, reply) => {
     const hash = createHash('sha256').update(req.body.refreshToken).digest('hex')
     const { rows } = await app.db.query(
-      `SELECT rt.user_id, u.name
+      `SELECT rt.user_id, u.name, u.role
        FROM refresh_tokens rt
        JOIN users u ON u.id = rt.user_id
        WHERE rt.token_hash = $1 AND rt.expires_at > now()`,
       [hash]
     )
     if (!rows.length) return reply.code(401).send({ error: 'Invalid or expired refresh token' })
-    const { user_id, name } = rows[0]
-    const accessToken = app.jwt.sign({ sub: user_id, name }, { expiresIn: '8h' })
+    const { user_id, name, role } = rows[0]
+    const accessToken = app.jwt.sign({ sub: user_id, name, role }, { expiresIn: '8h' })
     return { accessToken }
   })
 

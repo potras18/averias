@@ -16,4 +16,9 @@ module.exports = fp(async function authPlugin(app) {
       reply.code(401).send({ error: 'Unauthorized' })
     }
   })
+  app.decorate('requireAdmin', async function (request, reply) {
+    if (request.user.role !== 'admin') {
+      reply.code(403).send({ error: 'Forbidden' })
+    }
+  })
 })
