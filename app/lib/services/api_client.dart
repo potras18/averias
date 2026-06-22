@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../models/machine.dart';
 import '../models/inspection.dart';
 import '../models/location.dart';
+import '../models/stats.dart';
 import '../models/user.dart';
 import 'storage_service.dart';
 
@@ -96,6 +97,48 @@ class ApiClient {
     String? locationId,
   }) async {
     await _dio.post('/reports/email', data: {
+      'emails': emails,
+      if (from != null) 'from': from,
+      if (to != null) 'to': to,
+      if (locationId != null) 'location_id': locationId,
+    });
+  }
+
+  // Stats
+  Future<StatsResult> getStats({String? from, String? to, String? locationId}) async {
+    final params = <String, String>{
+      if (from != null) 'from': from,
+      if (to != null) 'to': to,
+      if (locationId != null) 'location_id': locationId,
+    };
+    final res = await _dio.get(
+      '/stats',
+      queryParameters: params.isNotEmpty ? params : null,
+    );
+    return StatsResult.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<Uint8List> getStatsPdf({String? from, String? to, String? locationId}) async {
+    final params = <String, String>{
+      if (from != null) 'from': from,
+      if (to != null) 'to': to,
+      if (locationId != null) 'location_id': locationId,
+    };
+    final res = await _dio.get(
+      '/stats/pdf',
+      queryParameters: params.isNotEmpty ? params : null,
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return Uint8List.fromList(res.data as List<int>);
+  }
+
+  Future<void> sendStatsByEmail({
+    required List<String> emails,
+    String? from,
+    String? to,
+    String? locationId,
+  }) async {
+    await _dio.post('/stats/email', data: {
       'emails': emails,
       if (from != null) 'from': from,
       if (to != null) 'to': to,
