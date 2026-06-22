@@ -30,6 +30,11 @@ class _MachineListScreenState extends State<MachineListScreen> {
         title: const Text('Máquinas'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.assessment),
+            tooltip: 'Informes',
+            onPressed: () => context.push('/reports'),
+          ),
+          IconButton(
             icon: const Icon(Icons.qr_code_scanner),
             tooltip: 'Escanear QR',
             onPressed: () => context.push('/scan'),

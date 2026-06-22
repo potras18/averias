@@ -5,6 +5,7 @@ import 'screens/machine_list_screen.dart';
 import 'screens/machine_detail_screen.dart';
 import 'screens/inspection_form_screen.dart';
 import 'screens/qr_scanner_screen.dart';
+import 'screens/report_screen.dart';
 import 'services/storage_service.dart';
 import 'services/api_client.dart';
 
@@ -41,6 +42,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/scan',
       builder: (_, __) => QrScannerScreen(api: _api),
+    ),
+    GoRoute(
+      path: '/reports',
+      builder: (_, __) => ReportScreen(api: _api),
     ),
   ],
 );
