@@ -145,4 +145,38 @@ class ApiClient {
       if (locationId != null) 'location_id': locationId,
     });
   }
+
+  // Admin — Locations
+  Future<Location> createLocation({required String name, String? address}) async {
+    final res = await _dio.post('/locations', data: {
+      'name': name,
+      if (address != null && address.isNotEmpty) 'address': address,
+    });
+    return Location.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<Location> updateLocation(String id, {required String name, String? address}) async {
+    final res = await _dio.put('/locations/$id', data: {
+      'name': name,
+      if (address != null && address.isNotEmpty) 'address': address,
+    });
+    return Location.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<void> deleteLocation(String id) async {
+    await _dio.delete('/locations/$id');
+  }
+
+  // Admin — Users
+  Future<List<User>> getUsers() async {
+    final res = await _dio.get('/users');
+    return (res.data as List)
+        .map((j) => User.fromJson(j as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<User> updateUserRole(String id, String role) async {
+    final res = await _dio.patch('/users/$id/role', data: {'role': role});
+    return User.fromJson(res.data as Map<String, dynamic>);
+  }
 }

@@ -13,10 +13,11 @@ class AuthService {
   Future<void> login(String email, String password) async {
     final data = await api.login(email, password);
     await storage.setTokens(
-      accessToken: data['accessToken'] as String,
+      accessToken:  data['accessToken']  as String,
       refreshToken: data['refreshToken'] as String,
     );
     currentUser = User.fromJson(data['user'] as Map<String, dynamic>);
+    await storage.setUserMeta(role: currentUser!.role, userId: currentUser!.id);
   }
 
   Future<void> logout() async {

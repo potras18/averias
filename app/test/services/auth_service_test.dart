@@ -19,19 +19,23 @@ void main() {
     authService = AuthService(api: mockApi, storage: mockStorage);
   });
 
-  test('login stores tokens and sets currentUser', () async {
+  test('login stores tokens, saves user meta, and sets currentUser', () async {
     when(() => mockApi.login('a@a.com', 'pass')).thenAnswer((_) async => {
-          'accessToken': 'tok123',
-          'refreshToken': 'ref456',
-          'user': {'id': 'uid1', 'name': 'Tech', 'email': 'a@a.com'},
-        });
+      'accessToken': 'tok123',
+      'refreshToken': 'ref456',
+      'user': {'id': 'uid1', 'name': 'Tech', 'email': 'a@a.com', 'role': 'technician'},
+    });
     when(() => mockStorage.setTokens(accessToken: 'tok123', refreshToken: 'ref456'))
+        .thenAnswer((_) async {});
+    when(() => mockStorage.setUserMeta(role: 'technician', userId: 'uid1'))
         .thenAnswer((_) async {});
 
     await authService.login('a@a.com', 'pass');
 
     verify(() => mockStorage.setTokens(accessToken: 'tok123', refreshToken: 'ref456')).called(1);
+    verify(() => mockStorage.setUserMeta(role: 'technician', userId: 'uid1')).called(1);
     expect(authService.currentUser?.name, 'Tech');
+    expect(authService.currentUser?.role, 'technician');
   });
 
   test('logout clears storage and currentUser', () async {
