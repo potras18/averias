@@ -9,5 +9,8 @@ node_modules/
 # Superpowers (planning artifacts, not source)
 .superpowers/
 
+# Puppeteer downloaded browser
+backend/chrome/
+
 # OS
 .DS_Store
