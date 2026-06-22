@@ -78,3 +78,23 @@ test('PUT /machines/:id updates machine name', async () => {
   expect(res.status).toBe(200)
   expect(res.body.name).toBe('New Name')
 })
+
+test('GET /machines returns only active machines by default', async () => {
+  const m1 = await seedMachine({ locationId: location.id, name: 'Active M', qrCode: 'QR-ACT' })
+  const m2 = await seedMachine({ locationId: location.id, name: 'Inactive M', qrCode: 'QR-INA', active: false })
+  const res = await st.get('/machines').set(auth())
+  expect(res.status).toBe(200)
+  const names = res.body.map(m => m.name)
+  expect(names).toContain('Active M')
+  expect(names).not.toContain('Inactive M')
+})
+
+test('GET /machines?include_inactive=true returns all machines', async () => {
+  await seedMachine({ locationId: location.id, name: 'Active M2', qrCode: 'QR-ACT2' })
+  await seedMachine({ locationId: location.id, name: 'Inactive M2', qrCode: 'QR-INA2', active: false })
+  const res = await st.get('/machines?include_inactive=true').set(auth())
+  expect(res.status).toBe(200)
+  const names = res.body.map(m => m.name)
+  expect(names).toContain('Active M2')
+  expect(names).toContain('Inactive M2')
+})

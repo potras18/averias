@@ -32,10 +32,10 @@ async function seedLocation({ name = 'Local Test', address = 'Calle Test 1' } = 
   return rows[0]
 }
 
-async function seedMachine({ locationId, name = 'Machine Test', qrCode = 'QR-001', hasRedemptionTickets = false } = {}) {
+async function seedMachine({ locationId, name = 'Machine Test', qrCode = 'QR-001', hasRedemptionTickets = false, active = true } = {}) {
   const { rows } = await pool.query(
-    'INSERT INTO machines (location_id, name, qr_code, has_redemption_tickets) VALUES ($1, $2, $3, $4) RETURNING *',
-    [locationId, name, qrCode, hasRedemptionTickets]
+    'INSERT INTO machines (location_id, name, qr_code, has_redemption_tickets, active) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+    [locationId, name, qrCode, hasRedemptionTickets, active]
   )
   return rows[0]
 }

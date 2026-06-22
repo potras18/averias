@@ -1,8 +1,9 @@
 // averias/backend/src/routes/machines.js
 'use strict'
+const { randomUUID } = require('node:crypto')
 
 const MACHINE_FIELDS = `
-  m.id, m.name, m.qr_code, m.has_redemption_tickets, m.created_at,
+  m.id, m.name, m.qr_code, m.has_redemption_tickets, m.created_at, m.active,
   m.location_id, l.name AS location_name,
   (SELECT status FROM inspections WHERE machine_id = m.id ORDER BY inspected_at DESC LIMIT 1) AS last_status,
   (SELECT inspected_at FROM inspections WHERE machine_id = m.id ORDER BY inspected_at DESC LIMIT 1) AS last_inspected_at
@@ -48,11 +49,15 @@ module.exports = async function machinesRoutes(app) {
   })
 
   app.get('/', { preHandler: [app.authenticate] }, async (req) => {
-    const { location_id } = req.query
-    const where = location_id ? 'WHERE m.location_id = $1' : ''
-    const params = location_id ? [location_id] : []
+    const { location_id, include_inactive } = req.query
+    const where = []
+    const params = []
+    let i = 1
+    if (include_inactive !== 'true') { where.push('m.active = true') }
+    if (location_id) { where.push(`m.location_id = $${i++}`); params.push(location_id) }
+    const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : ''
     const { rows } = await app.db.query(
-      `SELECT ${MACHINE_FIELDS} FROM machines m LEFT JOIN locations l ON l.id = m.location_id ${where} ORDER BY m.name`,
+      `SELECT ${MACHINE_FIELDS} FROM machines m LEFT JOIN locations l ON l.id = m.location_id ${whereClause} ORDER BY m.name`,
       params
     )
     return rows
