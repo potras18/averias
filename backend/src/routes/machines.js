@@ -42,6 +42,32 @@ module.exports = async function machinesRoutes(app) {
     return machine
   })
 
+  app.get('/:id/qr/pdf', { preHandler: [app.authenticate] }, async (req, reply) => {
+    const { rows } = await app.db.query(
+      `SELECT m.id, m.name, m.qr_code, l.name AS location_name
+       FROM machines m
+       LEFT JOIN locations l ON l.id = m.location_id
+       WHERE m.id = $1`,
+      [req.params.id]
+    )
+    if (!rows.length) return reply.code(404).send({ error: 'Machine not found' })
+    const machine = rows[0]
+    const QRCode = require('qrcode')
+    const { generatePdf } = require('../pdf/generator')
+    const { buildQrHtml } = require('../pdf/qr-template')
+    const qrDataUri = await QRCode.toDataURL(machine.qr_code, { width: 300, margin: 2 })
+    const html = buildQrHtml({
+      machineName: machine.name,
+      locationName: machine.location_name,
+      qrDataUri,
+    })
+    const pdfBuffer = await generatePdf(html)
+    const filename = `qr-${machine.name.replace(/\s+/g, '-')}.pdf`
+    reply.header('Content-Type', 'application/pdf')
+    reply.header('Content-Disposition', `attachment; filename="${filename}"`)
+    return reply.send(pdfBuffer)
+  })
+
   app.get('/:id', { preHandler: [app.authenticate] }, async (req, reply) => {
     const machine = await getMachineWithInspections(app.db, req.params.id)
     if (!machine) return reply.code(404).send({ error: 'Machine not found' })

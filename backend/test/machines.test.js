@@ -1,5 +1,11 @@
 // averias/backend/test/machines.test.js
 'use strict'
+jest.mock('../src/pdf/generator', () => ({
+  generatePdf: jest.fn().mockResolvedValue(Buffer.from('%PDF-fake')),
+}))
+jest.mock('qrcode', () => ({
+  toDataURL: jest.fn().mockResolvedValue('data:image/png;base64,FAKE'),
+}))
 const supertest = require('supertest')
 const { resetDb, seedUser, seedLocation, seedMachine } = require('./helpers/db')
 const { buildApp } = require('../src/app')
@@ -132,4 +138,22 @@ test('GET /machines?include_inactive=true returns all machines', async () => {
   const names = res.body.map(m => m.name)
   expect(names).toContain('Active M2')
   expect(names).toContain('Inactive M2')
+})
+
+test('GET /machines/:id/qr/pdf returns 200 with application/pdf', async () => {
+  const m = await seedMachine({ locationId: location.id, name: 'QR Machine', qrCode: 'QR-PDF' })
+  const res = await st.get(`/machines/${m.id}/qr/pdf`).set(auth())
+  expect(res.status).toBe(200)
+  expect(res.headers['content-type']).toContain('application/pdf')
+})
+
+test('GET /machines/:id/qr/pdf returns 401 without token', async () => {
+  const m = await seedMachine({ locationId: location.id, name: 'QR M2', qrCode: 'QR-PDF2' })
+  const res = await st.get(`/machines/${m.id}/qr/pdf`)
+  expect(res.status).toBe(401)
+})
+
+test('GET /machines/:id/qr/pdf returns 404 for unknown id', async () => {
+  const res = await st.get('/machines/00000000-0000-0000-0000-000000000000/qr/pdf').set(auth())
+  expect(res.status).toBe(404)
 })
