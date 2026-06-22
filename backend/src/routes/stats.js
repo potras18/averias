@@ -1,0 +1,121 @@
+// backend/src/routes/stats.js
+'use strict'
+const { generatePdf }    = require('../pdf/generator')
+const { buildStatsHtml } = require('../pdf/stats-template')
+const { sendReport }     = require('../email/mailer')
+const {
+  getInspectionRows, getMttrHours, getTopProblematic, buildSummary,
+} = require('../reports/queries')
+
+module.exports = async function statsRoutes(app) {
+  const QUERY_SCHEMA = {
+    type: 'object',
+    properties: {
+      from:        { type: 'string' },
+      to:          { type: 'string' },
+      location_id: { type: 'string' },
+    },
+    additionalProperties: false,
+  }
+
+  async function buildStatsData(db, filters) {
+    const [rows, mttrHours, topProblematic] = await Promise.all([
+      getInspectionRows(db, filters),
+      getMttrHours(db, filters),
+      getTopProblematic(db, filters),
+    ])
+    const summary = buildSummary(rows)
+    return {
+      mttrHours,
+      pctOperative:    summary.pctOperative,
+      pctOutOfService: summary.pctOutOfService,
+      pctInRepair:     summary.pctInRepair,
+      totalMachines:   summary.total,
+      topProblematic,
+    }
+  }
+
+  app.get('/', {
+    preHandler: [app.authenticate],
+    schema: { querystring: QUERY_SCHEMA },
+  }, async (req, reply) => {
+    const { from, to, location_id } = req.query
+    const data = await buildStatsData(app.db, { from, to, locationId: location_id })
+    return reply.send({
+      mttr_hours:         data.mttrHours,
+      pct_operative:      data.pctOperative,
+      pct_out_of_service: data.pctOutOfService,
+      pct_in_repair:      data.pctInRepair,
+      total_machines:     data.totalMachines,
+      top_problematic:    data.topProblematic,
+    })
+  })
+
+  app.get('/pdf', {
+    preHandler: [app.authenticate],
+    schema: { querystring: QUERY_SCHEMA },
+  }, async (req, reply) => {
+    const { from, to, location_id } = req.query
+    const filters = { from, to, locationId: location_id }
+    const data = await buildStatsData(app.db, filters)
+    const html = buildStatsHtml({
+      from,
+      to,
+      generatedAt:     new Date().toISOString(),
+      technicianName:  req.user.name,
+      locationName:    null,
+      mttrHours:       data.mttrHours,
+      pctOperative:    data.pctOperative,
+      pctOutOfService: data.pctOutOfService,
+      pctInRepair:     data.pctInRepair,
+      totalMachines:   data.totalMachines,
+      topProblematic:  data.topProblematic,
+    })
+    const pdfBuffer = await generatePdf(html)
+    const fromLabel = from ?? 'todo'
+    const toLabel   = to ?? ''
+    reply.header('Content-Type', 'application/pdf')
+    reply.header('Content-Disposition', `attachment; filename="estadisticas_${fromLabel}_${toLabel}.pdf"`)
+    return reply.send(pdfBuffer)
+  })
+
+  app.post('/email', {
+    preHandler: [app.authenticate],
+    schema: {
+      body: {
+        type: 'object',
+        required: ['emails'],
+        properties: {
+          emails:      { type: 'array', items: { type: 'string' }, minItems: 1 },
+          from:        { type: 'string' },
+          to:          { type: 'string' },
+          location_id: { type: 'string' },
+        },
+        additionalProperties: false,
+      },
+    },
+  }, async (req, reply) => {
+    const { emails, from, to, location_id } = req.body
+    const filters = { from, to, locationId: location_id }
+    const data = await buildStatsData(app.db, filters)
+    const html = buildStatsHtml({
+      from,
+      to,
+      generatedAt:     new Date().toISOString(),
+      technicianName:  req.user.name,
+      locationName:    null,
+      mttrHours:       data.mttrHours,
+      pctOperative:    data.pctOperative,
+      pctOutOfService: data.pctOutOfService,
+      pctInRepair:     data.pctInRepair,
+      totalMachines:   data.totalMachines,
+      topProblematic:  data.topProblematic,
+    })
+    const fromLabel = from ?? 'todo'
+    const toLabel   = to ?? ''
+    const filename  = `estadisticas_${fromLabel}_${toLabel}.pdf`
+    const pdfBuffer = await generatePdf(html)
+    await sendReport({ to: emails, pdfBuffer, filename })
+    return reply.send({ ok: true })
+  })
+}

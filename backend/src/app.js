@@ -10,6 +10,7 @@ const locationsRoutes = require('./routes/locations')
 const machinesRoutes = require('./routes/machines')
 const inspectionsRoutes = require('./routes/inspections')
 const reportsRoutes = require('./routes/reports')
+const statsRoutes = require('./routes/stats')
 
 function buildApp(opts = {}) {
   const app = Fastify({ logger: opts.logger ?? false })
@@ -22,6 +23,7 @@ function buildApp(opts = {}) {
   app.register(machinesRoutes, { prefix: '/machines' })
   app.register(inspectionsRoutes, { prefix: '/inspections' })
   app.register(reportsRoutes, { prefix: '/reports' })
+  app.register(statsRoutes, { prefix: '/stats' })
   return app
 }
 
