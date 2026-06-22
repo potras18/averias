@@ -171,7 +171,7 @@ class _StatsScreenState extends State<StatsScreen> {
                   (l) => DropdownMenuItem(value: l.id, child: Text(l.name)),
                 ),
               ],
-              onChanged: (v) => setState(() => _selectedLocationId = v),
+              onChanged: (v) { if (mounted) setState(() => _selectedLocationId = v); },
             ),
             const SizedBox(height: 20),
             FilledButton(
