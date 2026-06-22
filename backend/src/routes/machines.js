@@ -1,6 +1,9 @@
 // averias/backend/src/routes/machines.js
 'use strict'
 const { randomUUID } = require('node:crypto')
+const QRCode = require('qrcode')
+const { generatePdf } = require('../pdf/generator')
+const { buildQrHtml } = require('../pdf/qr-template')
 
 const MACHINE_FIELDS = `
   m.id, m.name, m.qr_code, m.has_redemption_tickets, m.created_at, m.active,
@@ -52,9 +55,6 @@ module.exports = async function machinesRoutes(app) {
     )
     if (!rows.length) return reply.code(404).send({ error: 'Machine not found' })
     const machine = rows[0]
-    const QRCode = require('qrcode')
-    const { generatePdf } = require('../pdf/generator')
-    const { buildQrHtml } = require('../pdf/qr-template')
     const qrDataUri = await QRCode.toDataURL(machine.qr_code, { width: 300, margin: 2 })
     const html = buildQrHtml({
       machineName: machine.name,

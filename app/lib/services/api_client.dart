@@ -66,11 +66,6 @@ class ApiClient {
     return Machine.fromJson(res.data as Map<String, dynamic>);
   }
 
-  Future<Machine> createMachine(Map<String, dynamic> data) async {
-    final res = await _dio.post('/machines', data: data);
-    return Machine.fromJson(res.data as Map<String, dynamic>);
-  }
-
   Future<Machine> createMachineAdmin({
     required String name,
     String? locationId,
