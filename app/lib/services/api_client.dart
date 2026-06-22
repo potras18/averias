@@ -48,9 +48,11 @@ class ApiClient {
   }
 
   // Machines
-  Future<List<Machine>> getMachines({String? locationId}) async {
-    final res = await _dio.get('/machines',
-        queryParameters: locationId != null ? {'location_id': locationId} : null);
+  Future<List<Machine>> getMachines({String? locationId, bool includeInactive = false}) async {
+    final res = await _dio.get('/machines', queryParameters: {
+      if (locationId != null) 'location_id': locationId,
+      if (includeInactive) 'include_inactive': 'true',
+    });
     return (res.data as List).map((j) => Machine.fromJson(j as Map<String, dynamic>)).toList();
   }
 
@@ -67,6 +69,45 @@ class ApiClient {
   Future<Machine> createMachine(Map<String, dynamic> data) async {
     final res = await _dio.post('/machines', data: data);
     return Machine.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<Machine> createMachineAdmin({
+    required String name,
+    String? locationId,
+    bool hasRedemptionTickets = false,
+  }) async {
+    final res = await _dio.post('/machines', data: {
+      'name': name,
+      if (locationId != null) 'location_id': locationId,
+      'has_redemption_tickets': hasRedemptionTickets,
+    });
+    return Machine.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<Machine> updateMachine(
+    String id, {
+    required String name,
+    String? locationId,
+    required bool hasRedemptionTickets,
+  }) async {
+    final res = await _dio.put('/machines/$id', data: {
+      'name': name,
+      'location_id': locationId,
+      'has_redemption_tickets': hasRedemptionTickets,
+    });
+    return Machine.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<void> decommissionMachine(String id) async {
+    await _dio.patch('/machines/$id/decommission');
+  }
+
+  Future<Uint8List> getMachineQrPdf(String id) async {
+    final res = await _dio.get(
+      '/machines/$id/qr/pdf',
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return Uint8List.fromList(res.data as List<int>);
   }
 
   // Inspections

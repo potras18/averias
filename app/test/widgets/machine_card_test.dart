@@ -9,6 +9,7 @@ Machine _machine({String status = 'operative'}) => Machine(
       name: 'Pinball X',
       qrCode: 'QR-1',
       hasRedemptionTickets: false,
+      active: true,
       lastStatus: status,
     );
 

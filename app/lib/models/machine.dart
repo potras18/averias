@@ -7,6 +7,7 @@ class Machine {
   final String? locationId;
   final String? locationName;
   final bool hasRedemptionTickets;
+  final bool active;
   final String? lastStatus;
   final DateTime? lastInspectedAt;
   final List<Inspection> inspections;
@@ -18,6 +19,7 @@ class Machine {
     this.locationId,
     this.locationName,
     required this.hasRedemptionTickets,
+    required this.active,
     this.lastStatus,
     this.lastInspectedAt,
     this.inspections = const [],
@@ -30,6 +32,7 @@ class Machine {
         locationId: json['location_id'] as String?,
         locationName: json['location_name'] as String?,
         hasRedemptionTickets: json['has_redemption_tickets'] as bool? ?? false,
+        active: json['active'] as bool? ?? true,
         lastStatus: json['last_status'] as String?,
         lastInspectedAt: json['last_inspected_at'] != null
             ? DateTime.parse(json['last_inspected_at'] as String)
