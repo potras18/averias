@@ -1,7 +1,8 @@
-// app/lib/services/api_client.dart
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import '../models/machine.dart';
 import '../models/inspection.dart';
+import '../models/location.dart';
 import '../models/user.dart';
 import 'storage_service.dart';
 
@@ -16,7 +17,7 @@ class ApiClient {
     _dio = Dio(BaseOptions(
       baseUrl: _baseUrl,
       connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 30),
     ));
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
@@ -37,6 +38,12 @@ class ApiClient {
 
   Future<void> logout() async {
     await _dio.post('/auth/logout');
+  }
+
+  // Locations
+  Future<List<Location>> getLocations() async {
+    final res = await _dio.get('/locations');
+    return (res.data as List).map((j) => Location.fromJson(j as Map<String, dynamic>)).toList();
   }
 
   // Machines
@@ -65,5 +72,34 @@ class ApiClient {
   Future<Inspection> createInspection(Map<String, dynamic> data) async {
     final res = await _dio.post('/inspections', data: data);
     return Inspection.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  // Reports
+  Future<Uint8List> getReportPdf({String? from, String? to, String? locationId}) async {
+    final params = <String, String>{
+      if (from != null) 'from': from,
+      if (to != null) 'to': to,
+      if (locationId != null) 'location_id': locationId,
+    };
+    final res = await _dio.get(
+      '/reports/pdf',
+      queryParameters: params.isNotEmpty ? params : null,
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return Uint8List.fromList(res.data as List<int>);
+  }
+
+  Future<void> sendReportByEmail({
+    required List<String> emails,
+    String? from,
+    String? to,
+    String? locationId,
+  }) async {
+    await _dio.post('/reports/email', data: {
+      'emails': emails,
+      if (from != null) 'from': from,
+      if (to != null) 'to': to,
+      if (locationId != null) 'location_id': locationId,
+    });
   }
 }
