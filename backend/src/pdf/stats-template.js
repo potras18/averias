@@ -28,7 +28,7 @@ function buildStatsHtml({
     : '<em>Sin datos suficientes</em>'
 
   const topRows = topProblematic.map((m, i) =>
-    `<tr><td>${i + 1}</td><td>${esc(m.name)}</td><td>${m.fault_count}</td></tr>`
+    `<tr><td>${i + 1}</td><td>${esc(m.name)}</td><td>${esc(m.fault_count)}</td></tr>`
   ).join('')
 
   const locLabel = locationName != null ? esc(locationName) : 'Todas las ubicaciones'
