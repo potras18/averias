@@ -5,6 +5,7 @@ import 'package:averias_app/screens/admin_screen.dart';
 import 'package:averias_app/services/api_client.dart';
 import 'package:averias_app/services/storage_service.dart';
 import 'package:averias_app/models/location.dart';
+import 'package:averias_app/models/machine.dart';
 import 'package:averias_app/models/user.dart';
 
 class MockApiClient extends Mock implements ApiClient {}
@@ -16,52 +17,134 @@ void main() {
 
   const adminUser = User(id: 'user-1', name: 'Admin User', email: 'admin@x.com', role: 'admin');
   const techUser  = User(id: 'user-2', name: 'Tech User',  email: 'tech@x.com',  role: 'technician');
+  const loc1 = Location(id: 'loc-1', name: 'Sala A', address: 'Calle 1');
+  final machine1 = Machine(
+    id: 'm-1', name: 'Pinball A', qrCode: 'QR-A',
+    hasRedemptionTickets: false, active: true,
+  );
+  final inactiveMachine = Machine(
+    id: 'm-2', name: 'Old Machine', qrCode: 'QR-B',
+    hasRedemptionTickets: false, active: false,
+  );
 
   setUp(() {
     api     = MockApiClient();
     storage = MockStorageService();
     when(() => storage.getUserId()).thenAnswer((_) async => 'user-1');
-    when(() => api.getLocations()).thenAnswer((_) async => [
-      const Location(id: 'loc-1', name: 'Sala A', address: 'Calle 1'),
-    ]);
+    when(() => api.getLocations()).thenAnswer((_) async => [loc1]);
     when(() => api.getUsers()).thenAnswer((_) async => [adminUser, techUser]);
+    when(() => api.getMachines(includeInactive: false)).thenAnswer((_) async => [machine1]);
+    when(() => api.getMachines(includeInactive: true))
+        .thenAnswer((_) async => [machine1, inactiveMachine]);
   });
 
-  testWidgets('shows location list and user list on init', (tester) async {
+  testWidgets('shows three tabs', (tester) async {
     await tester.pumpWidget(MaterialApp(home: AdminScreen(api: api, storage: storage)));
     await tester.pumpAndSettle();
+    expect(find.text('Ubicaciones'), findsOneWidget);
+    expect(find.text('Máquinas'), findsOneWidget);
+    expect(find.text('Usuarios'), findsOneWidget);
+  });
 
+  testWidgets('Ubicaciones tab shows location list', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: AdminScreen(api: api, storage: storage)));
+    await tester.pumpAndSettle();
     expect(find.text('Sala A'), findsOneWidget);
-    expect(find.text('Admin User'), findsOneWidget);
-    expect(find.text('Tech User'), findsOneWidget);
   });
 
-  testWidgets('shows add location dialog when add button tapped', (tester) async {
+  testWidgets('shows add location dialog when add button tapped on Ubicaciones tab', (tester) async {
     await tester.pumpWidget(MaterialApp(home: AdminScreen(api: api, storage: storage)));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.add));
+    await tester.tap(find.byTooltip('Nueva ubicación'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Nueva ubicación'), findsOneWidget);
+    expect(find.text('Nueva ubicación'), findsWidgets);
     expect(find.text('Cancelar'), findsOneWidget);
     expect(find.text('Guardar'), findsOneWidget);
   });
 
-  testWidgets('role toggle for current user is disabled', (tester) async {
+  testWidgets('Maquinas tab shows machine list', (tester) async {
     await tester.pumpWidget(MaterialApp(home: AdminScreen(api: api, storage: storage)));
     await tester.pumpAndSettle();
 
-    // user-1 (Admin User) is the current user — find its role toggle button by key
+    await tester.tap(find.text('Máquinas'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pinball A'), findsOneWidget);
+  });
+
+  testWidgets('Maquinas tab shows Inactiva chip for inactive machines when toggle on', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: AdminScreen(api: api, storage: storage)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Máquinas'));
+    await tester.pumpAndSettle();
+
+    // toggle Inactivas switch
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Old Machine'), findsOneWidget);
+    expect(find.text('Inactiva'), findsOneWidget);
+    verify(() => api.getMachines(includeInactive: true)).called(1);
+  });
+
+  testWidgets('Dar de baja disabled for already-inactive machine', (tester) async {
+    when(() => api.getMachines(includeInactive: true))
+        .thenAnswer((_) async => [inactiveMachine]);
+
+    await tester.pumpWidget(MaterialApp(home: AdminScreen(api: api, storage: storage)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Máquinas'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+
+    final btn = tester.widget<TextButton>(find.byKey(const Key('decommission-m-2')));
+    expect(btn.onPressed, isNull);
+  });
+
+  testWidgets('Dar de baja calls decommissionMachine on confirm', (tester) async {
+    when(() => api.decommissionMachine('m-1')).thenAnswer((_) async {});
+
+    await tester.pumpWidget(MaterialApp(home: AdminScreen(api: api, storage: storage)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Máquinas'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('decommission-m-1')));
+    await tester.pumpAndSettle();
+
+    // confirmation dialog
+    await tester.tap(find.text('Dar de baja').last);
+    await tester.pumpAndSettle();
+
+    verify(() => api.decommissionMachine('m-1')).called(1);
+  });
+
+  testWidgets('Usuarios tab: role toggle for current user is disabled', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: AdminScreen(api: api, storage: storage)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Usuarios'));
+    await tester.pumpAndSettle();
+
     final ownBtn = tester.widget<TextButton>(find.byKey(const Key('role-toggle-user-1')));
     expect(ownBtn.onPressed, isNull);
   });
 
-  testWidgets('role toggle for other user calls updateUserRole', (tester) async {
+  testWidgets('Usuarios tab: role toggle for other user calls updateUserRole', (tester) async {
     when(() => api.updateUserRole('user-2', 'admin')).thenAnswer((_) async =>
         const User(id: 'user-2', name: 'Tech User', email: 'tech@x.com', role: 'admin'));
 
     await tester.pumpWidget(MaterialApp(home: AdminScreen(api: api, storage: storage)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Usuarios'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('role-toggle-user-2')));
