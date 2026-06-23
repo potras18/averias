@@ -4,6 +4,7 @@ import '../models/machine.dart';
 import '../models/user.dart';
 import '../services/api_client.dart';
 import '../services/storage_service.dart';
+import '../widgets/desktop_shell_scope.dart';
 
 class AdminScreen extends StatefulWidget {
   final ApiClient api;
@@ -394,10 +395,11 @@ class _AdminScreenState extends State<AdminScreen> {
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+    final isDesktop = DesktopShellScope.of(context)?.isDesktop ?? false;
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        appBar: AppBar(
+        appBar: isDesktop ? null : AppBar(
           title: const Text('Administración'),
           bottom: const TabBar(tabs: [
             Tab(text: 'Ubicaciones'),
@@ -405,11 +407,23 @@ class _AdminScreenState extends State<AdminScreen> {
             Tab(text: 'Usuarios'),
           ]),
         ),
-        body: TabBarView(children: [
-          _buildLocationTab(),
-          _buildMachinesTab(),
-          _buildUsersTab(),
-        ]),
+        body: Column(
+          children: [
+            if (isDesktop)
+              const TabBar(tabs: [
+                Tab(text: 'Ubicaciones'),
+                Tab(text: 'Máquinas'),
+                Tab(text: 'Usuarios'),
+              ]),
+            Expanded(
+              child: TabBarView(children: [
+                _buildLocationTab(),
+                _buildMachinesTab(),
+                _buildUsersTab(),
+              ]),
+            ),
+          ],
+        ),
       ),
     );
   }

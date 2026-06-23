@@ -3,6 +3,7 @@ import '../services/api_client.dart';
 import '../models/location.dart';
 import '../models/stats.dart';
 import '../utils/download_file.dart';
+import '../widgets/desktop_shell_scope.dart';
 
 class StatsScreen extends StatefulWidget {
   final ApiClient api;
@@ -149,8 +150,9 @@ class _StatsScreenState extends State<StatsScreen> {
         ? '$_fromStr — $_toStr'
         : 'Seleccionar período';
 
+    final isDesktop = DesktopShellScope.of(context)?.isDesktop ?? false;
     return Scaffold(
-      appBar: AppBar(title: const Text('Estadísticas')),
+      appBar: isDesktop ? null : AppBar(title: const Text('Estadísticas')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(

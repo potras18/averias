@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/api_client.dart';
+import '../widgets/desktop_shell_scope.dart';
 
 class QrScannerScreen extends StatefulWidget {
   final ApiClient api;
@@ -34,6 +35,24 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = DesktopShellScope.of(context)?.isDesktop ?? false;
+    if (isDesktop) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.qr_code_scanner, size: 64, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text(
+                'Usa la app móvil para escanear QR',
+                style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('Escanear QR')),
       body: Stack(

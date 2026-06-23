@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api_client.dart';
 import '../models/location.dart';
 import '../utils/download_file.dart';
+import '../widgets/desktop_shell_scope.dart';
 
 class ReportScreen extends StatefulWidget {
   final ApiClient api;
@@ -131,8 +132,9 @@ class _ReportScreenState extends State<ReportScreen> {
         ? '${_fromStr} — ${_toStr}'
         : 'Seleccionar período';
 
+    final isDesktop = DesktopShellScope.of(context)?.isDesktop ?? false;
     return Scaffold(
-      appBar: AppBar(title: const Text('Informes')),
+      appBar: isDesktop ? null : AppBar(title: const Text('Informes')),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(

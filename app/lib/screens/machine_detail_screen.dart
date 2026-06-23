@@ -9,6 +9,7 @@ import '../models/inspection.dart';
 import '../services/api_client.dart';
 import '../widgets/status_badge.dart';
 import '../utils/download_file.dart';
+import '../widgets/desktop_shell_scope.dart';
 
 class MachineDetailScreen extends StatefulWidget {
   final ApiClient api;
@@ -54,6 +55,7 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = DesktopShellScope.of(context)?.isDesktop ?? false;
     return FutureBuilder<Machine>(
       future: _future,
       builder: (context, snap) {
@@ -62,11 +64,17 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
         }
         if (snap.hasError) {
           return Scaffold(
-            appBar: AppBar(),
+            appBar: isDesktop ? null : AppBar(),
             body: Center(child: Text('Error: ${snap.error}')),
           );
         }
         final machine = snap.data!;
+        if (isDesktop) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) context.go('/machines?selected=${machine.id}');
+          });
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
         return Scaffold(
           appBar: AppBar(title: Text(machine.name)),
           body: ListView(
