@@ -10,7 +10,7 @@ class DesktopShellScope extends InheritedWidget {
   });
 
   static DesktopShellScope? of(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<DesktopShellScope>();
+      context.getInheritedWidgetOfExactType<DesktopShellScope>();
 
   @override
   bool updateShouldNotify(DesktopShellScope old) => old.isDesktop != isDesktop;
