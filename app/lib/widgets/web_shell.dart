@@ -157,12 +157,13 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
+      selected: selected,
+      selectedTileColor: Colors.white.withValues(alpha: 0.15),
       leading: Icon(icon, color: selected ? Colors.white : Colors.white70),
       title: Text(
         label,
         style: TextStyle(color: selected ? Colors.white : Colors.white70),
       ),
-      tileColor: selected ? Colors.white.withOpacity(0.15) : null,
       onTap: onTap,
     );
   }
