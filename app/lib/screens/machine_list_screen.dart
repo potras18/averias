@@ -8,7 +8,8 @@ import '../widgets/machine_card.dart';
 class MachineListScreen extends StatefulWidget {
   final ApiClient api;
   final StorageService storage;
-  const MachineListScreen({super.key, required this.api, required this.storage});
+  final String? preselectedId;
+  const MachineListScreen({super.key, required this.api, required this.storage, this.preselectedId});
 
   @override
   State<MachineListScreen> createState() => _MachineListScreenState();
