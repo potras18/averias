@@ -49,6 +49,7 @@ class MachineListScreen extends StatefulWidget {
 class _MachineListScreenState extends State<MachineListScreen> {
   List<Machine> _machines = [];
   bool _loadingList = true;
+  String? _error;
   String? _role;
   // Desktop state
   String? _selectedMachineId;
@@ -80,12 +81,16 @@ class _MachineListScreenState extends State<MachineListScreen> {
       setState(() {
         _machines = machines;
         _loadingList = false;
+        _error = null;
       });
       // Auto-select first machine on desktop
       final initialId = widget.preselectedId ?? (machines.isNotEmpty ? machines.first.id : null);
       if (initialId != null) _selectMachine(initialId);
     } catch (_) {
-      if (mounted) setState(() => _loadingList = false);
+      if (mounted) setState(() {
+        _loadingList = false;
+        _error = 'Error al cargar máquinas';
+      });
     }
   }
 
@@ -147,9 +152,19 @@ class _MachineListScreenState extends State<MachineListScreen> {
       ),
       body: _loadingList
           ? const Center(child: CircularProgressIndicator())
-          : _machines.isEmpty
-              ? const Center(child: Text('Sin máquinas registradas'))
-              : RefreshIndicator(
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_error!),
+                      TextButton(onPressed: _loadList, child: const Text('Reintentar')),
+                    ],
+                  ),
+                )
+              : _machines.isEmpty
+                  ? const Center(child: Text('Sin máquinas registradas'))
+                  : RefreshIndicator(
                   onRefresh: _loadList,
                   child: ListView.separated(
                     itemCount: _machines.length,
@@ -242,7 +257,7 @@ class _MachineListScreenState extends State<MachineListScreen> {
               _InfoRow('Tickets redemption', machine.hasRedemptionTickets ? 'Sí' : 'No'),
               Row(children: [
                 const Text('Estado: '),
-                Expanded(child: StatusBadge(status: machine.lastStatus)),
+                StatusBadge(status: machine.lastStatus),
               ]),
               const SizedBox(height: 16),
               Center(
