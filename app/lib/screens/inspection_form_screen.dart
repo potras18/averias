@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/api_client.dart';
+import '../widgets/desktop_shell_scope.dart';
 
 const _statusOptions = [
   ('operative', 'Operativa'),
@@ -77,6 +78,24 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = DesktopShellScope.of(context)?.isDesktop ?? false;
+    if (isDesktop) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.edit_note, size: 64, color: Colors.grey),
+              const SizedBox(height: 16),
+              Text(
+                'Usa la app móvil para registrar inspecciones',
+                style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('Registrar inspección')),
       body: ListView(

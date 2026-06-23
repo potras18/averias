@@ -57,6 +57,7 @@ class _MachineListScreenState extends State<MachineListScreen> {
   bool _showForm = false;
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
+  bool _isDesktop = false;
 
   @override
   void initState() {
@@ -83,9 +84,10 @@ class _MachineListScreenState extends State<MachineListScreen> {
         _loadingList = false;
         _error = null;
       });
-      // Auto-select first machine on desktop
-      final initialId = widget.preselectedId ?? (machines.isNotEmpty ? machines.first.id : null);
-      if (initialId != null) _selectMachine(initialId);
+      if (_isDesktop && machines.isNotEmpty) {
+        final initialId = widget.preselectedId ?? machines.first.id;
+        _selectMachine(initialId);
+      }
     } catch (_) {
       if (mounted) setState(() {
         _loadingList = false;
@@ -117,8 +119,8 @@ class _MachineListScreenState extends State<MachineListScreen> {
   // ── MOBILE BUILD ─────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final isDesktop = DesktopShellScope.of(context)?.isDesktop ?? false;
-    if (isDesktop) return _buildDesktop(context);
+    _isDesktop = DesktopShellScope.of(context)?.isDesktop ?? false;
+    if (_isDesktop) return _buildDesktop(context);
     return _buildMobile(context);
   }
 
@@ -242,8 +244,8 @@ class _MachineListScreenState extends State<MachineListScreen> {
     return FutureBuilder<Machine>(
       future: _detailFuture,
       builder: (context, snap) {
-        if (!snap.hasData) return const Center(child: CircularProgressIndicator());
         if (snap.hasError) return Center(child: Text('Error: ${snap.error}'));
+        if (!snap.hasData) return const Center(child: CircularProgressIndicator());
         final machine = snap.data!;
         return SingleChildScrollView(
           padding: const EdgeInsets.all(24),

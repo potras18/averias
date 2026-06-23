@@ -22,6 +22,7 @@ class MachineDetailScreen extends StatefulWidget {
 
 class _MachineDetailScreenState extends State<MachineDetailScreen> {
   late Future<Machine> _future;
+  bool _redirected = false;
 
   @override
   void initState() {
@@ -70,9 +71,12 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
         }
         final machine = snap.data!;
         if (isDesktop) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) context.go('/machines?selected=${machine.id}');
-          });
+          if (!_redirected) {
+            _redirected = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) context.go('/machines?selected=${machine.id}');
+            });
+          }
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
         return Scaffold(
