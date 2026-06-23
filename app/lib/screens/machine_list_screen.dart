@@ -185,18 +185,20 @@ class _MachineListScreenState extends State<MachineListScreen> {
     final filtered = _filtered;
     final selectedVisible = _selectedMachineId != null &&
         filtered.any((m) => m.id == _selectedMachineId);
-    return Row(
-      children: [
-        SizedBox(width: 320, child: _buildListPanel()),
-        const VerticalDivider(width: 1, thickness: 1),
-        Expanded(
-          child: selectedVisible && _showForm
-              ? _buildFormPanel()
-              : selectedVisible
-                  ? _buildDetailPanel()
-                  : const Center(child: Text('Selecciona una máquina')),
-        ),
-      ],
+    return Scaffold(
+      body: Row(
+        children: [
+          SizedBox(width: 320, child: _buildListPanel()),
+          const VerticalDivider(width: 1, thickness: 1),
+          Expanded(
+            child: selectedVisible && _showForm
+                ? _buildFormPanel()
+                : selectedVisible
+                    ? _buildDetailPanel()
+                    : const Center(child: Text('Selecciona una máquina')),
+          ),
+        ],
+      ),
     );
   }
 
