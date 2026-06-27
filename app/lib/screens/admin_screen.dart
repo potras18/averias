@@ -98,16 +98,10 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
       ),
     );
 
-    if (confirmed != true) {
-      nameCtrl.dispose();
-      addrCtrl.dispose();
-      return;
-    }
-
     final name    = nameCtrl.text.trim();
     final address = addrCtrl.text.trim();
-    nameCtrl.dispose();
-    addrCtrl.dispose();
+
+    if (confirmed != true) return;
 
     if (location == null) {
       await widget.api.createLocation(name: name, address: address.isEmpty ? null : address);
@@ -115,6 +109,8 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
       await widget.api.updateLocation(location.id, name: name, address: address.isEmpty ? null : address);
     }
     await _load();
+    nameCtrl.dispose();
+    addrCtrl.dispose();
   }
 
   Future<void> _deleteLocation(Location location) async {
@@ -201,13 +197,9 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
       ),
     );
 
-    if (confirmed != true) {
-      nameCtrl.dispose();
-      return;
-    }
-
     final name = nameCtrl.text.trim();
-    nameCtrl.dispose();
+
+    if (confirmed != true) return;
 
     if (machine == null) {
       await widget.api.createMachineAdmin(
@@ -224,6 +216,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
       );
     }
     await _load();
+    nameCtrl.dispose();
   }
 
   Future<void> _decommissionMachine(Machine machine) async {
