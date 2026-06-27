@@ -282,20 +282,11 @@ class _MachineListScreenState extends State<MachineListScreen> {
                 final m = _filtered[i];
                 return ListTile(
                   selected: m.id == _selectedMachineId,
-                  isThreeLine: m.inspected != null,
                   title: Text(m.name),
                   subtitle: Text(m.locationName ?? ''),
-                  trailing: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      StatusBadge(status: m.lastStatus),
-                      if (m.inspected != null) ...[
-                        const SizedBox(height: 4),
-                        InspectionChip(inspected: m.inspected!),
-                      ],
-                    ],
-                  ),
+                  trailing: m.inspected != null
+                      ? InspectionChip(inspected: m.inspected!)
+                      : null,
                   onTap: () => _selectMachine(m.id),
                 );
               },
