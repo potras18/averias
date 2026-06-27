@@ -76,7 +76,20 @@ module.exports = async function machinesRoutes(app) {
     return machine
   })
 
-  app.get('/', { preHandler: [app.authenticate] }, async (req) => {
+  app.get('/', {
+    preHandler: [app.authenticate],
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          location_id: { type: 'string' },
+          include_inactive: { type: 'string' },
+          inspection_date: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
+        },
+        additionalProperties: false,
+      },
+    },
+  }, async (req) => {
     const { location_id, include_inactive, inspection_date } = req.query
     const where = []
     const params = []
@@ -86,7 +99,7 @@ module.exports = async function machinesRoutes(app) {
 
     let inspectedField = ''
     if (inspection_date) {
-      params.push(inspection_date)
+      params.push(inspection_date)  // $${i} — must stay paired with the placeholder below
       inspectedField = `, EXISTS (
       SELECT 1 FROM inspections
       WHERE machine_id = m.id

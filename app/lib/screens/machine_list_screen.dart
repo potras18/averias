@@ -68,6 +68,12 @@ class _MachineListScreenState extends State<MachineListScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _isDesktop = DesktopShellScope.of(context)?.isDesktop ?? false;
+  }
+
+  @override
   void dispose() {
     _searchCtrl.dispose();
     super.dispose();
@@ -161,7 +167,6 @@ class _MachineListScreenState extends State<MachineListScreen> {
   // ── MOBILE BUILD ─────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    _isDesktop = DesktopShellScope.of(context)?.isDesktop ?? false;
     if (_isDesktop) return _buildDesktop(context);
     return _buildMobile(context);
   }

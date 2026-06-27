@@ -145,81 +145,84 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     bool hasTickets = machine?.hasRedemptionTickets ?? false;
     final formKey = GlobalKey<FormState>();
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: Text(machine == null ? 'Nueva máquina' : 'Editar máquina'),
-          content: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'Nombre *'),
-                  validator: (v) =>
-                      v == null || v.trim().isEmpty ? 'Requerido' : null,
-                ),
-                DropdownButtonFormField<String?>(
-                  value: selectedLocationId,
-                  decoration: const InputDecoration(labelText: 'Ubicación'),
-                  items: [
-                    const DropdownMenuItem<String?>(
-                        value: null, child: Text('Sin ubicación')),
-                    ..._locations.map((l) => DropdownMenuItem<String?>(
-                          value: l.id,
-                          child: Text(l.name),
-                        )),
-                  ],
-                  onChanged: (v) =>
-                      setDialogState(() { selectedLocationId = v; }),
-                ),
-                SwitchListTile(
-                  title: const Text('Tickets de redención'),
-                  value: hasTickets,
-                  onChanged: (v) =>
-                      setDialogState(() { hasTickets = v; }),
-                ),
-              ],
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (_) => StatefulBuilder(
+          builder: (ctx, setDialogState) => AlertDialog(
+            title: Text(machine == null ? 'Nueva máquina' : 'Editar máquina'),
+            content: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(labelText: 'Nombre *'),
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'Requerido' : null,
+                  ),
+                  DropdownButtonFormField<String?>(
+                    value: selectedLocationId,
+                    decoration: const InputDecoration(labelText: 'Ubicación'),
+                    items: [
+                      const DropdownMenuItem<String?>(
+                          value: null, child: Text('Sin ubicación')),
+                      ..._locations.map((l) => DropdownMenuItem<String?>(
+                            value: l.id,
+                            child: Text(l.name),
+                          )),
+                    ],
+                    onChanged: (v) =>
+                        setDialogState(() { selectedLocationId = v; }),
+                  ),
+                  SwitchListTile(
+                    title: const Text('Tickets de redención'),
+                    value: hasTickets,
+                    onChanged: (v) =>
+                        setDialogState(() { hasTickets = v; }),
+                  ),
+                ],
+              ),
             ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (formKey.currentState!.validate()) Navigator.pop(ctx, true);
+                },
+                child: const Text('Guardar'),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (formKey.currentState!.validate()) Navigator.pop(ctx, true);
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
         ),
-      ),
-    );
-
-    final name = nameCtrl.text.trim();
-
-    if (confirmed != true) return;
-
-    if (machine == null) {
-      await widget.api.createMachineAdmin(
-        name: name,
-        locationId: selectedLocationId,
-        hasRedemptionTickets: hasTickets,
       );
-    } else {
-      await widget.api.updateMachine(
-        machine.id,
-        name: name,
-        locationId: selectedLocationId,
-        hasRedemptionTickets: hasTickets,
-      );
+
+      final name = nameCtrl.text.trim();
+
+      if (confirmed != true) return;
+
+      if (machine == null) {
+        await widget.api.createMachineAdmin(
+          name: name,
+          locationId: selectedLocationId,
+          hasRedemptionTickets: hasTickets,
+        );
+      } else {
+        await widget.api.updateMachine(
+          machine.id,
+          name: name,
+          locationId: selectedLocationId,
+          hasRedemptionTickets: hasTickets,
+        );
+      }
+      await _load();
+    } finally {
+      nameCtrl.dispose();
     }
-    await _load();
-    nameCtrl.dispose();
   }
 
   Future<void> _decommissionMachine(Machine machine) async {
