@@ -15,7 +15,8 @@ class AdminScreen extends StatefulWidget {
   State<AdminScreen> createState() => _AdminScreenState();
 }
 
-class _AdminScreenState extends State<AdminScreen> {
+class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin {
+  late final TabController _tabController;
   List<Location> _locations = [];
   List<Machine> _machines = [];
   List<User> _users = [];
@@ -26,7 +27,14 @@ class _AdminScreenState extends State<AdminScreen> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     _load();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -390,41 +398,40 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
+  static const _tabs = [
+    Tab(text: 'Ubicaciones'),
+    Tab(text: 'Máquinas'),
+    Tab(text: 'Usuarios'),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
     final isDesktop = DesktopShellScope.of(context)?.isDesktop ?? false;
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        appBar: isDesktop ? null : AppBar(
-          title: const Text('Administración'),
-          bottom: const TabBar(tabs: [
-            Tab(text: 'Ubicaciones'),
-            Tab(text: 'Máquinas'),
-            Tab(text: 'Usuarios'),
-          ]),
-        ),
-        body: Column(
-          children: [
-            if (isDesktop)
-              const TabBar(tabs: [
-                Tab(text: 'Ubicaciones'),
-                Tab(text: 'Máquinas'),
-                Tab(text: 'Usuarios'),
-              ]),
-            Expanded(
-              child: TabBarView(children: [
-                _buildLocationTab(),
-                _buildMachinesTab(),
-                _buildUsersTab(),
-              ]),
+    return Scaffold(
+      appBar: isDesktop
+          ? null
+          : AppBar(
+              title: const Text('Administración'),
+              bottom: TabBar(controller: _tabController, tabs: _tabs),
             ),
-          ],
-        ),
-      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                if (isDesktop)
+                  TabBar(controller: _tabController, tabs: _tabs),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildLocationTab(),
+                      _buildMachinesTab(),
+                      _buildUsersTab(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }
