@@ -284,6 +284,17 @@ class _MachineListScreenState extends State<MachineListScreen> {
                   selected: m.id == _selectedMachineId,
                   title: Text(m.name),
                   subtitle: Text(m.locationName ?? ''),
+                  trailing: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      StatusBadge(status: m.lastStatus),
+                      if (m.inspected != null) ...[
+                        const SizedBox(height: 4),
+                        InspectionChip(inspected: m.inspected!),
+                      ],
+                    ],
+                  ),
                   onTap: () => _selectMachine(m.id),
                 );
               },

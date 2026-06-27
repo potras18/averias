@@ -19,7 +19,7 @@ class MachineCard extends StatelessWidget {
           StatusBadge(status: machine.lastStatus),
           if (machine.inspected != null) ...[
             const SizedBox(height: 4),
-            _InspectionChip(inspected: machine.inspected!),
+            InspectionChip(inspected: machine.inspected!),
           ],
         ],
       ),
@@ -28,9 +28,9 @@ class MachineCard extends StatelessWidget {
   }
 }
 
-class _InspectionChip extends StatelessWidget {
+class InspectionChip extends StatelessWidget {
   final bool inspected;
-  const _InspectionChip({required this.inspected});
+  const InspectionChip({super.key, required this.inspected});
 
   @override
   Widget build(BuildContext context) {
