@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../services/api_client.dart';
 import '../models/location.dart';
 import '../models/stats.dart';
@@ -186,6 +187,176 @@ class _StatsScreenState extends State<StatsScreen> {
     );
   }
 
+  Widget _buildSummaryRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: _MetricCard(
+            title: 'MTTR',
+            child: Text(
+              _stats!.mttrHours != null
+                  ? '${_stats!.mttrHours!.toStringAsFixed(1)} h'
+                  : '—',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _MetricCard(
+            title: 'Total máquinas',
+            child: Text(
+              '${_stats!.totalMachines}',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAvailabilityChart() {
+    final operative = _stats!.pctOperative;
+    final outOfService = _stats!.pctOutOfService;
+    final inRepair = _stats!.pctInRepair;
+    final hasData = operative > 0 || outOfService > 0 || inRepair > 0;
+
+    return _MetricCard(
+      title: 'Disponibilidad',
+      child: hasData
+          ? Column(
+              children: [
+                SizedBox(
+                  height: 160,
+                  child: PieChart(
+                    PieChartData(
+                      sectionsSpace: 2,
+                      centerSpaceRadius: 0,
+                      sections: [
+                        if (operative > 0)
+                          PieChartSectionData(
+                            value: operative,
+                            color: Colors.green[600]!,
+                            title: '${operative.toStringAsFixed(0)}%',
+                            titleStyle: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold),
+                            radius: 75,
+                          ),
+                        if (outOfService > 0)
+                          PieChartSectionData(
+                            value: outOfService,
+                            color: Colors.red[600]!,
+                            title: '${outOfService.toStringAsFixed(0)}%',
+                            titleStyle: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold),
+                            radius: 75,
+                          ),
+                        if (inRepair > 0)
+                          PieChartSectionData(
+                            value: inRepair,
+                            color: Colors.orange[600]!,
+                            title: '${inRepair.toStringAsFixed(0)}%',
+                            titleStyle: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold),
+                            radius: 75,
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _LegendItem(
+                    color: Colors.green[600]!,
+                    label: 'Operativa',
+                    value: operative),
+                _LegendItem(
+                    color: Colors.red[600]!,
+                    label: 'Fuera de servicio',
+                    value: outOfService),
+                _LegendItem(
+                    color: Colors.orange[600]!,
+                    label: 'En reparación',
+                    value: inRepair),
+              ],
+            )
+          : const Center(child: Text('Sin datos')),
+    );
+  }
+
+  Widget _buildTopProblematic() {
+    final machines = _stats!.topProblematic;
+    if (machines.isEmpty) {
+      return _MetricCard(
+        title: 'Top 5 problemáticas',
+        child: const Text('Sin averías en el período'),
+      );
+    }
+    final maxCount = machines.first.faultCount;
+    return _MetricCard(
+      title: 'Top 5 problemáticas',
+      child: Column(
+        children: machines.map((m) {
+          final name = m.name.length > 16 ? '${m.name.substring(0, 15)}…' : m.name;
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 90,
+                  child: Text(name,
+                      style: const TextStyle(fontSize: 12),
+                      overflow: TextOverflow.ellipsis),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: maxCount > 0 ? m.faultCount / maxCount : 0,
+                      color: Colors.red[400],
+                      backgroundColor: Colors.red[50],
+                      minHeight: 18,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text('${m.faultCount}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 12)),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildCharts(bool isDesktop) {
+    if (isDesktop) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: _buildAvailabilityChart()),
+          const SizedBox(width: 12),
+          Expanded(child: _buildTopProblematic()),
+        ],
+      );
+    }
+    return Column(
+      children: [
+        _buildAvailabilityChart(),
+        const SizedBox(height: 12),
+        _buildTopProblematic(),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDesktop = DesktopShellScope.of(context)?.isDesktop ?? false;
@@ -220,56 +391,9 @@ class _StatsScreenState extends State<StatsScreen> {
             ],
             if (_stats != null) ...[
               const SizedBox(height: 8),
-              // Charts added in Task 2 — for now keep existing text cards
-              _MetricCard(
-                title: 'MTTR',
-                child: Text(
-                  _stats!.mttrHours != null
-                      ? '${_stats!.mttrHours!.toStringAsFixed(1)} h'
-                      : 'Sin datos suficientes',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-              ),
+              _buildSummaryRow(),
               const SizedBox(height: 12),
-              _MetricCard(
-                title: 'Disponibilidad',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${_stats!.pctOperative.toStringAsFixed(1)}%',
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    _StatusRow('Operativo', _stats!.pctOperative),
-                    _StatusRow('Fuera de servicio', _stats!.pctOutOfService),
-                    _StatusRow('En reparación', _stats!.pctInRepair),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              _MetricCard(
-                title: 'Top 5 problemáticas',
-                child: _stats!.topProblematic.isEmpty
-                    ? const Text('Sin datos')
-                    : Column(
-                        children: _stats!.topProblematic
-                            .asMap()
-                            .entries
-                            .map((e) => Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 2),
-                                  child: Row(
-                                    children: [
-                                      Text('${e.key + 1}. ',
-                                          style: const TextStyle(fontWeight: FontWeight.bold)),
-                                      Expanded(child: Text(e.value.name)),
-                                      Text('${e.value.faultCount} averías'),
-                                    ],
-                                  ),
-                                ))
-                            .toList(),
-                      ),
-              ),
+              _buildCharts(isDesktop),
               const SizedBox(height: 20),
               Wrap(
                 spacing: 12,
@@ -321,16 +445,31 @@ class _MetricCard extends StatelessWidget {
   }
 }
 
-class _StatusRow extends StatelessWidget {
+class _LegendItem extends StatelessWidget {
+  final Color color;
   final String label;
-  final double pct;
-  const _StatusRow(this.label, this.pct);
+  final double value;
+  const _LegendItem(
+      {required this.color, required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [Text(label), Text('${pct.toStringAsFixed(1)}%')],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration:
+                BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: Text(label, style: const TextStyle(fontSize: 13))),
+          Text('${value.toStringAsFixed(1)}%',
+              style: const TextStyle(fontSize: 13)),
+        ],
+      ),
     );
   }
 }

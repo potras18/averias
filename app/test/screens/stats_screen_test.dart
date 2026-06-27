@@ -134,4 +134,42 @@ void main() {
       locationId: any(named: 'locationId'),
     )).called(1);
   });
+
+  testWidgets('shows machine name from topProblematic after load', (tester) async {
+    await tester.pumpWidget(_wrap(StatsScreen(api: api)));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Máquina A'), 200);
+    expect(find.text('Máquina A'), findsOneWidget);
+  });
+
+  testWidgets('shows Sin averias text when topProblematic is empty', (tester) async {
+    when(() => api.getStats(
+      from: any(named: 'from'),
+      to: any(named: 'to'),
+      locationId: any(named: 'locationId'),
+    )).thenAnswer((_) async => const StatsResult(
+      mttrHours: null,
+      pctOperative: 0,
+      pctOutOfService: 0,
+      pctInRepair: 0,
+      totalMachines: 0,
+      topProblematic: [],
+    ));
+
+    await tester.pumpWidget(_wrap(StatsScreen(api: api)));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Sin averías en el período'), 200);
+    expect(find.text('Sin averías en el período'), findsOneWidget);
+  });
+
+  testWidgets('desktop: shows two-column layout with Row', (tester) async {
+    await tester.pumpWidget(_wrap(StatsScreen(api: api), isDesktop: true));
+    await tester.pumpAndSettle();
+
+    // Desktop layout wraps charts in a Row — verify both chart cards visible
+    expect(find.text('Disponibilidad'), findsOneWidget);
+    expect(find.text('Top 5 problemáticas'), findsOneWidget);
+  });
 }
