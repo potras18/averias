@@ -51,7 +51,7 @@ void main() {
     api = MockApiClient();
     storage = MockStorageService();
     when(() => storage.getRole()).thenAnswer((_) async => 'technician');
-    when(() => api.getMachines()).thenAnswer((_) async => [machine1, machine2]);
+    when(() => api.getMachines(inspectionDate: any(named: 'inspectionDate'))).thenAnswer((_) async => [machine1, machine2]);
     when(() => api.getMachineById('m-1')).thenAnswer((_) async => machine1);
     when(() => api.getMachineById('m-2')).thenAnswer((_) async => machine2);
   });

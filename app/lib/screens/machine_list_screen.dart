@@ -84,7 +84,7 @@ class _MachineListScreenState extends State<MachineListScreen> {
         _loadingList = false;
         _error = null;
       });
-      if (_isDesktop && machines.isNotEmpty) {
+      if (_isDesktop && machines.isNotEmpty && _selectedMachineId == null) {
         final initialId = widget.preselectedId ?? machines.first.id;
         _selectMachine(initialId);
       }
@@ -107,11 +107,14 @@ class _MachineListScreenState extends State<MachineListScreen> {
       initialDate: _inspectionDate,
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
+      locale: const Locale('es', 'ES'),
     );
     if (picked != null && mounted) {
       setState(() {
         _inspectionDate = picked;
         _loadingList = true;
+        _searchCtrl.clear();
+        _searchQuery = '';
       });
       await _loadList();
     }
@@ -127,7 +130,9 @@ class _MachineListScreenState extends State<MachineListScreen> {
         children: [
           const Icon(Icons.calendar_today, size: 18),
           const SizedBox(width: 8),
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+          Expanded(
+            child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+          ),
           const SizedBox(width: 8),
           TextButton(
             onPressed: _pickDate,
