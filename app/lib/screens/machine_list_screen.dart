@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import '../models/machine.dart';
 import '../models/inspection.dart';
 import '../services/api_client.dart';
@@ -312,16 +311,11 @@ class _MachineListScreenState extends State<MachineListScreen> {
               Text(machine.name, style: Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height: 12),
               _InfoRow('Local', machine.locationName ?? '-'),
-              _InfoRow('Código QR', machine.qrCode),
               _InfoRow('Tickets redemption', machine.hasRedemptionTickets ? 'Sí' : 'No'),
               Row(children: [
                 const Text('Estado: '),
                 StatusBadge(status: machine.lastStatus),
               ]),
-              const SizedBox(height: 16),
-              Center(
-                child: QrImageView(data: machine.qrCode, version: QrVersions.auto, size: 180),
-              ),
               const SizedBox(height: 24),
               FilledButton.icon(
                 icon: const Icon(Icons.edit_note),

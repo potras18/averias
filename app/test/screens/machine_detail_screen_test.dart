@@ -23,12 +23,12 @@ void main() {
     when(() => api.getMachineById('machine-1')).thenAnswer((_) async => testMachine);
   });
 
-  testWidgets('displays machine QR code', (tester) async {
+  testWidgets('displays machine name and details', (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: MachineDetailScreen(api: api, machineId: 'machine-1'),
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text(testMachine.qrCode), findsWidgets);
+    expect(find.text(testMachine.name), findsWidgets);
   });
 }
