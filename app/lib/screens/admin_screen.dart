@@ -252,15 +252,20 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   Future<void> _showQrDialog(Machine machine) async {
     await showDialog<void>(
       context: context,
+      barrierDismissible: true,
       builder: (ctx) => AlertDialog(
         title: Text(machine.name),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            QrImageView(
-              data: machine.qrCode,
-              version: QrVersions.auto,
-              size: 200,
+            SizedBox(
+              width: 200,
+              height: 200,
+              child: QrImageView(
+                data: machine.qrCode,
+                version: QrVersions.auto,
+                size: 200,
+              ),
             ),
             const SizedBox(height: 16),
             Row(
@@ -295,6 +300,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
         ],
       ),
     );
+    if (mounted) FocusScope.of(context).unfocus();
   }
 
   Future<void> _downloadQrPng(String qrCode) async {
