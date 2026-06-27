@@ -43,29 +43,27 @@ class _WebShellState extends State<WebShell> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      final isDesktop = constraints.maxWidth >= 900;
-      return DesktopShellScope(
-        isDesktop: isDesktop,
-        child: isDesktop
-            ? Row(
-                children: [
-                  SizedBox(
-                    width: 220,
-                    child: _Sidebar(
-                      currentRoute: widget.currentRoute,
-                      role: _role,
-                      onLogout: _logout,
-                      onNavigate: (route) => context.go(route),
-                    ),
+    final isDesktop = MediaQuery.of(context).size.width >= 900;
+    return DesktopShellScope(
+      isDesktop: isDesktop,
+      child: isDesktop
+          ? Row(
+              children: [
+                SizedBox(
+                  width: 220,
+                  child: _Sidebar(
+                    currentRoute: widget.currentRoute,
+                    role: _role,
+                    onLogout: _logout,
+                    onNavigate: (route) => context.go(route),
                   ),
-                  const VerticalDivider(width: 1, thickness: 1),
-                  Expanded(child: widget.child),
-                ],
-              )
-            : widget.child,
-      );
-    });
+                ),
+                const VerticalDivider(width: 1, thickness: 1),
+                Expanded(child: widget.child),
+              ],
+            )
+          : widget.child,
+    );
   }
 }
 
@@ -102,32 +100,40 @@ class _Sidebar extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          _NavItem(
-            icon: Icons.list_alt,
-            label: 'Máquinas',
-            selected: currentRoute == '/machines',
-            onTap: () => onNavigate('/machines'),
-          ),
-          _NavItem(
-            icon: Icons.assessment,
-            label: 'Reportes',
-            selected: currentRoute == '/reports',
-            onTap: () => onNavigate('/reports'),
-          ),
-          _NavItem(
-            icon: Icons.bar_chart,
-            label: 'Estadísticas',
-            selected: currentRoute == '/stats',
-            onTap: () => onNavigate('/stats'),
-          ),
-          if (role == 'admin')
-            _NavItem(
-              icon: Icons.settings,
-              label: 'Admin',
-              selected: currentRoute == '/admin',
-              onTap: () => onNavigate('/admin'),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _NavItem(
+                    icon: Icons.list_alt,
+                    label: 'Máquinas',
+                    selected: currentRoute == '/machines',
+                    onTap: () => onNavigate('/machines'),
+                  ),
+                  _NavItem(
+                    icon: Icons.assessment,
+                    label: 'Reportes',
+                    selected: currentRoute == '/reports',
+                    onTap: () => onNavigate('/reports'),
+                  ),
+                  _NavItem(
+                    icon: Icons.bar_chart,
+                    label: 'Estadísticas',
+                    selected: currentRoute == '/stats',
+                    onTap: () => onNavigate('/stats'),
+                  ),
+                  if (role == 'admin')
+                    _NavItem(
+                      icon: Icons.settings,
+                      label: 'Admin',
+                      selected: currentRoute == '/admin',
+                      onTap: () => onNavigate('/admin'),
+                    ),
+                ],
+              ),
             ),
-          const Spacer(),
+          ),
           _NavItem(
             icon: Icons.logout,
             label: 'Cerrar sesión',
