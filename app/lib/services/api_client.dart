@@ -48,10 +48,16 @@ class ApiClient {
   }
 
   // Machines
-  Future<List<Machine>> getMachines({String? locationId, bool includeInactive = false}) async {
+  Future<List<Machine>> getMachines({
+    String? locationId,
+    bool includeInactive = false,
+    DateTime? inspectionDate,
+  }) async {
     final res = await _dio.get('/machines', queryParameters: {
       if (locationId != null) 'location_id': locationId,
       if (includeInactive) 'include_inactive': 'true',
+      if (inspectionDate != null)
+        'inspection_date': inspectionDate.toIso8601String().substring(0, 10),
     });
     return (res.data as List).map((j) => Machine.fromJson(j as Map<String, dynamic>)).toList();
   }

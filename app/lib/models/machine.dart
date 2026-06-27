@@ -11,6 +11,7 @@ class Machine {
   final String? lastStatus;
   final DateTime? lastInspectedAt;
   final List<Inspection> inspections;
+  final bool? inspected;
 
   const Machine({
     required this.id,
@@ -23,6 +24,7 @@ class Machine {
     this.lastStatus,
     this.lastInspectedAt,
     this.inspections = const [],
+    this.inspected,
   });
 
   factory Machine.fromJson(Map<String, dynamic> json) => Machine(
@@ -41,5 +43,6 @@ class Machine {
                 ?.map((e) => Inspection.fromJson(e as Map<String, dynamic>))
                 .toList() ??
             [],
+        inspected: json['inspected'] as bool?,
       );
 }
