@@ -6,105 +6,125 @@ import 'package:averias_app/screens/stats_screen.dart';
 import 'package:averias_app/services/api_client.dart';
 import 'package:averias_app/models/location.dart';
 import 'package:averias_app/models/stats.dart';
+import 'package:averias_app/widgets/desktop_shell_scope.dart';
 
 class MockApiClient extends Mock implements ApiClient {}
 
+const fakeStats = StatsResult(
+  mttrHours: 4.5,
+  pctOperative: 75.0,
+  pctOutOfService: 15.0,
+  pctInRepair: 10.0,
+  totalMachines: 12,
+  topProblematic: [
+    TopMachine(name: 'Máquina A', faultCount: 5),
+    TopMachine(name: 'Máquina B', faultCount: 2),
+  ],
+);
+
+Widget _wrap(Widget child, {bool isDesktop = false}) => DesktopShellScope(
+  isDesktop: isDesktop,
+  child: SizedBox(
+    width: isDesktop ? 1100.0 : 400.0,
+    height: 800.0,
+    child: MaterialApp(home: child),
+  ),
+);
+
 void main() {
   late MockApiClient api;
-
-  const fakeStats = StatsResult(
-    mttrHours: 4.5,
-    pctOperative: 75.0,
-    pctOutOfService: 15.0,
-    pctInRepair: 10.0,
-    totalMachines: 12,
-    topProblematic: [
-      TopMachine(name: 'Máquina A', faultCount: 5),
-    ],
-  );
 
   setUp(() {
     api = MockApiClient();
     when(() => api.getLocations()).thenAnswer((_) async => [
       const Location(id: 'loc-1', name: 'Local A'),
     ]);
-  });
-
-  testWidgets('shows Consultar button and filter controls on init', (tester) async {
-    await tester.pumpWidget(MaterialApp(home: StatsScreen(api: api)));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Consultar'), findsOneWidget);
-    expect(find.text('Seleccionar período'), findsOneWidget);
-    expect(find.text('Todos los locales'), findsOneWidget);
-  });
-
-  testWidgets('shows metric cards after successful load', (tester) async {
     when(() => api.getStats(
       from: any(named: 'from'),
       to: any(named: 'to'),
       locationId: any(named: 'locationId'),
     )).thenAnswer((_) async => fakeStats);
-
-    await tester.pumpWidget(MaterialApp(home: StatsScreen(api: api)));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Consultar'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('4.5 h'), findsOneWidget);
-    expect(find.text('75.0%'), findsAtLeastNWidgets(1));
-    expect(find.text('Máquina A'), findsOneWidget);
   });
 
-  testWidgets('shows PDF and email buttons after stats loaded', (tester) async {
-    when(() => api.getStats(
+  testWidgets('shows period chips on init — no Consultar button', (tester) async {
+    await tester.pumpWidget(_wrap(StatsScreen(api: api)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('7d'), findsOneWidget);
+    expect(find.text('30d'), findsOneWidget);
+    expect(find.text('90d'), findsOneWidget);
+    expect(find.text('Personalizado'), findsOneWidget);
+    expect(find.text('Consultar'), findsNothing);
+  });
+
+  testWidgets('auto-loads stats on entry — calls getStats without user action', (tester) async {
+    await tester.pumpWidget(_wrap(StatsScreen(api: api)));
+    await tester.pumpAndSettle();
+
+    verify(() => api.getStats(
       from: any(named: 'from'),
       to: any(named: 'to'),
       locationId: any(named: 'locationId'),
-    )).thenAnswer((_) async => fakeStats);
-
-    await tester.pumpWidget(MaterialApp(home: StatsScreen(api: api)));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Consultar'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Generar PDF'), findsOneWidget);
-    expect(find.text('Enviar por email'), findsOneWidget);
+    )).called(1);
   });
 
-  testWidgets('shows error text on getStats failure', (tester) async {
+  testWidgets('30d chip selected by default', (tester) async {
+    await tester.pumpWidget(_wrap(StatsScreen(api: api)));
+    await tester.pumpAndSettle();
+
+    final chip = tester.widget<ChoiceChip>(
+      find.widgetWithText(ChoiceChip, '30d'),
+    );
+    expect(chip.selected, isTrue);
+  });
+
+  testWidgets('tapping 7d chip triggers reload', (tester) async {
+    await tester.pumpWidget(_wrap(StatsScreen(api: api)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('7d'));
+    await tester.pumpAndSettle();
+
+    verify(() => api.getStats(
+      from: any(named: 'from'),
+      to: any(named: 'to'),
+      locationId: any(named: 'locationId'),
+    )).called(2); // 1 on init + 1 on chip tap
+  });
+
+  testWidgets('shows error text when getStats throws', (tester) async {
     when(() => api.getStats(
       from: any(named: 'from'),
       to: any(named: 'to'),
       locationId: any(named: 'locationId'),
     )).thenThrow(Exception('network error'));
 
-    await tester.pumpWidget(MaterialApp(home: StatsScreen(api: api)));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Consultar'));
+    await tester.pumpWidget(_wrap(StatsScreen(api: api)));
     await tester.pumpAndSettle();
 
     expect(find.text('Error al cargar estadísticas'), findsOneWidget);
   });
 
+  testWidgets('PDF and email buttons visible after load', (tester) async {
+    await tester.pumpWidget(_wrap(StatsScreen(api: api)));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Generar PDF'), 200);
+    expect(find.text('Generar PDF'), findsOneWidget);
+    expect(find.text('Enviar por email'), findsOneWidget);
+  });
+
   testWidgets('tapping Generar PDF calls getStatsPdf', (tester) async {
-    when(() => api.getStats(
-      from: any(named: 'from'),
-      to: any(named: 'to'),
-      locationId: any(named: 'locationId'),
-    )).thenAnswer((_) async => fakeStats);
     when(() => api.getStatsPdf(
       from: any(named: 'from'),
       to: any(named: 'to'),
       locationId: any(named: 'locationId'),
     )).thenAnswer((_) async => Uint8List.fromList([1, 2, 3]));
 
-    await tester.pumpWidget(MaterialApp(home: StatsScreen(api: api)));
+    await tester.pumpWidget(_wrap(StatsScreen(api: api)));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Consultar'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Generar PDF'));
-    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Generar PDF'), 200);
     await tester.tap(find.text('Generar PDF'));
     await tester.pumpAndSettle();
 
