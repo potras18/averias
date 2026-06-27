@@ -282,6 +282,7 @@ class _MachineListScreenState extends State<MachineListScreen> {
                 final m = _filtered[i];
                 return ListTile(
                   selected: m.id == _selectedMachineId,
+                  isThreeLine: m.inspected != null,
                   title: Text(m.name),
                   subtitle: Text(m.locationName ?? ''),
                   trailing: Column(
