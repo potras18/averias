@@ -12,17 +12,9 @@ class MachineCard extends StatelessWidget {
     return ListTile(
       title: Text(machine.name),
       subtitle: machine.locationName != null ? Text(machine.locationName!) : null,
-      trailing: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          StatusBadge(status: machine.lastStatus),
-          if (machine.inspected != null) ...[
-            const SizedBox(height: 4),
-            InspectionChip(inspected: machine.inspected!),
-          ],
-        ],
-      ),
+      trailing: machine.inspected != null
+          ? InspectionChip(inspected: machine.inspected!)
+          : StatusBadge(status: machine.lastStatus),
       onTap: onTap,
     );
   }
