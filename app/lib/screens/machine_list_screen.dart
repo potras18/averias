@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'dart:ui' as ui;
-import 'dart:typed_data';
 import '../models/machine.dart';
 import '../models/inspection.dart';
 import '../services/api_client.dart';
@@ -10,7 +8,6 @@ import '../services/storage_service.dart';
 import '../widgets/desktop_shell_scope.dart';
 import '../widgets/machine_card.dart';
 import '../widgets/status_badge.dart';
-import '../utils/download_file.dart';
 
 // Inspection form options (same as InspectionFormScreen)
 const _statusOptions = [
@@ -58,6 +55,7 @@ class _MachineListScreenState extends State<MachineListScreen> {
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
   bool _isDesktop = false;
+  DateTime _inspectionDate = DateTime.now();
 
   @override
   void initState() {
@@ -77,7 +75,9 @@ class _MachineListScreenState extends State<MachineListScreen> {
 
   Future<void> _loadList() async {
     try {
-      final machines = await widget.api.getMachines();
+      final machines = await widget.api.getMachines(
+        inspectionDate: _inspectionDate,
+      );
       if (!mounted) return;
       setState(() {
         _machines = machines;
@@ -99,6 +99,43 @@ class _MachineListScreenState extends State<MachineListScreen> {
   Future<void> _loadRole() async {
     final role = await widget.storage.getRole();
     if (mounted) setState(() => _role = role);
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _inspectionDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _inspectionDate = picked;
+        _loadingList = true;
+      });
+      await _loadList();
+    }
+  }
+
+  Widget _buildDatePickerRow() {
+    final d = _inspectionDate;
+    final label =
+        '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Row(
+        children: [
+          const Icon(Icons.calendar_today, size: 18),
+          const SizedBox(width: 8),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: _pickDate,
+            child: const Text('Cambiar'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _selectMachine(String id) {
@@ -152,31 +189,38 @@ class _MachineListScreenState extends State<MachineListScreen> {
           ),
         ],
       ),
-      body: _loadingList
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(_error!),
-                      TextButton(onPressed: _loadList, child: const Text('Reintentar')),
-                    ],
-                  ),
-                )
-              : _machines.isEmpty
-                  ? const Center(child: Text('Sin máquinas registradas'))
-                  : RefreshIndicator(
-                  onRefresh: _loadList,
-                  child: ListView.separated(
-                    itemCount: _machines.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (_, i) => MachineCard(
-                      machine: _machines[i],
-                      onTap: () => context.push('/machines/${_machines[i].id}'),
-                    ),
-                  ),
-                ),
+      body: Column(
+        children: [
+          _buildDatePickerRow(),
+          Expanded(
+            child: _loadingList
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(_error!),
+                            TextButton(onPressed: _loadList, child: const Text('Reintentar')),
+                          ],
+                        ),
+                      )
+                    : _machines.isEmpty
+                        ? const Center(child: Text('Sin máquinas registradas'))
+                        : RefreshIndicator(
+                            onRefresh: _loadList,
+                            child: ListView.separated(
+                              itemCount: _machines.length,
+                              separatorBuilder: (_, __) => const Divider(height: 1),
+                              itemBuilder: (_, i) => MachineCard(
+                                machine: _machines[i],
+                                onTap: () => context.push('/machines/${_machines[i].id}'),
+                              ),
+                            ),
+                          ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -217,6 +261,7 @@ class _MachineListScreenState extends State<MachineListScreen> {
             ),
           ),
         ),
+        _buildDatePickerRow(),
         if (_loadingList)
           const Expanded(child: Center(child: CircularProgressIndicator()))
         else
@@ -267,25 +312,6 @@ class _MachineListScreenState extends State<MachineListScreen> {
               Center(
                 child: QrImageView(data: machine.qrCode, version: QrVersions.auto, size: 180),
               ),
-              const SizedBox(height: 8),
-              Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.image),
-                      label: const Text('PNG'),
-                      onPressed: () => _downloadQrPng(machine.qrCode),
-                    ),
-                    const SizedBox(width: 12),
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.picture_as_pdf),
-                      label: const Text('PDF'),
-                      onPressed: () => _downloadQrPdf(machine),
-                    ),
-                  ],
-                ),
-              ),
               const SizedBox(height: 24),
               FilledButton.icon(
                 icon: const Icon(Icons.edit_note),
@@ -321,25 +347,6 @@ class _MachineListScreenState extends State<MachineListScreen> {
     );
   }
 
-  Future<void> _downloadQrPng(String qrCode) async {
-    final painter = QrPainter(
-      data: qrCode,
-      version: QrVersions.auto,
-      eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.black),
-      dataModuleStyle: const QrDataModuleStyle(
-        dataModuleShape: QrDataModuleShape.square,
-        color: Colors.black,
-      ),
-    );
-    final img = await painter.toImage(512);
-    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
-    await downloadFile(byteData!.buffer.asUint8List(), 'qr-$qrCode.png', 'image/png');
-  }
-
-  Future<void> _downloadQrPdf(Machine machine) async {
-    final bytes = await widget.api.getMachineQrPdf(machine.id);
-    await downloadFile(bytes, 'qr-${machine.name.replaceAll(' ', '-')}.pdf', 'application/pdf');
-  }
 }
 
 // ── Helper widgets ───────────────────────────────────────────────────────────
