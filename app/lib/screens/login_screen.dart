@@ -1,4 +1,5 @@
 // averias/app/lib/screens/login_screen.dart
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/api_client.dart';
@@ -42,8 +43,11 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await _auth.login(_emailCtrl.text.trim(), _passCtrl.text);
       if (mounted) context.go('/machines');
-    } catch (_) {
-      setState(() { _error = 'Credenciales incorrectas'; });
+    } catch (e) {
+      final msg = (e is DioException && e.type != DioExceptionType.badResponse)
+          ? 'No se puede conectar al servidor (${e.message})'
+          : 'Credenciales incorrectas';
+      setState(() { _error = msg; });
     } finally {
       if (mounted) setState(() { _loading = false; });
     }
