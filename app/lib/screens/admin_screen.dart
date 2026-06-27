@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'dart:ui' as ui;
 import '../models/location.dart';
 import '../models/machine.dart';
 import '../models/user.dart';
 import '../services/api_client.dart';
 import '../services/storage_service.dart';
+import '../utils/download_file.dart';
 import '../widgets/desktop_shell_scope.dart';
 
 class AdminScreen extends StatefulWidget {
@@ -243,6 +246,78 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     await _load();
   }
 
+  Future<void> _showQrDialog(Machine machine) async {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(machine.name),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            QrImageView(
+              data: machine.qrCode,
+              version: QrVersions.auto,
+              size: 200,
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.image),
+                  label: const Text('PNG'),
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    await _downloadQrPng(machine.qrCode);
+                  },
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.picture_as_pdf),
+                  label: const Text('PDF'),
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    await _downloadQrPdf(machine);
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _downloadQrPng(String qrCode) async {
+    final painter = QrPainter(
+      data: qrCode,
+      version: QrVersions.auto,
+      eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.black),
+      dataModuleStyle: const QrDataModuleStyle(
+        dataModuleShape: QrDataModuleShape.square,
+        color: Colors.black,
+      ),
+    );
+    final img = await painter.toImage(512);
+    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+    await downloadFile(byteData!.buffer.asUint8List(), 'qr-$qrCode.png', 'image/png');
+  }
+
+  Future<void> _downloadQrPdf(Machine machine) async {
+    final bytes = await widget.api.getMachineQrPdf(machine.id);
+    await downloadFile(
+      bytes,
+      'qr-${machine.name.replaceAll(' ', '-')}.pdf',
+      'application/pdf',
+    );
+  }
+
   Future<void> _toggleRole(User user) async {
     final newRole = user.role == 'admin' ? 'technician' : 'admin';
     await widget.api.updateUserRole(user.id, newRole);
@@ -332,6 +407,11 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          IconButton(
+                            icon: const Icon(Icons.qr_code),
+                            tooltip: 'Ver QR',
+                            onPressed: () => _showQrDialog(m),
+                          ),
                           IconButton(
                             icon: const Icon(Icons.edit),
                             tooltip: 'Editar',
