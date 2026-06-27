@@ -302,7 +302,7 @@ class _StatsScreenState extends State<StatsScreen> {
       title: 'Top 5 problemáticas',
       child: Column(
         children: machines.map((m) {
-          final name = m.name.length > 16 ? '${m.name.substring(0, 15)}…' : m.name;
+          final name = m.name.length > 15 ? '${m.name.substring(0, 15)}…' : m.name;
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 5),
             child: Row(
