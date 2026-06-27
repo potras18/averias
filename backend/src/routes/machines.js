@@ -20,9 +20,11 @@ async function getMachineWithInspections(db, id) {
   if (!machines.length) return null
   const machine = machines[0]
   const { rows: inspections } = await db.query(
-    `SELECT i.id, i.status, i.card_reader_ok, i.card_reader_failure_type, i.comment, i.inspected_at,
+    `SELECT i.id, i.machine_id, i.status, i.card_reader_ok, i.card_reader_failure_type, i.comment, i.inspected_at,
             u.name AS technician_name,
-            tc.dispenser_ok, tc.ticket_level
+            CASE WHEN tc.inspection_id IS NOT NULL
+                 THEN json_build_object('dispenser_ok', tc.dispenser_ok, 'ticket_level', tc.ticket_level)
+                 ELSE NULL END AS ticket_check
      FROM inspections i
      JOIN users u ON u.id = i.technician_id
      LEFT JOIN ticket_checks tc ON tc.inspection_id = i.id
@@ -75,15 +77,26 @@ module.exports = async function machinesRoutes(app) {
   })
 
   app.get('/', { preHandler: [app.authenticate] }, async (req) => {
-    const { location_id, include_inactive } = req.query
+    const { location_id, include_inactive, inspection_date } = req.query
     const where = []
     const params = []
     let i = 1
     if (include_inactive !== 'true') { where.push('m.active = true') }
     if (location_id) { where.push(`m.location_id = $${i++}`); params.push(location_id) }
+
+    let inspectedField = ''
+    if (inspection_date) {
+      params.push(inspection_date)
+      inspectedField = `, EXISTS (
+      SELECT 1 FROM inspections
+      WHERE machine_id = m.id
+        AND inspected_at::date = $${i++}
+    ) AS inspected`
+    }
+
     const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : ''
     const { rows } = await app.db.query(
-      `SELECT ${MACHINE_FIELDS} FROM machines m LEFT JOIN locations l ON l.id = m.location_id ${whereClause} ORDER BY m.name`,
+      `SELECT ${MACHINE_FIELDS}${inspectedField} FROM machines m LEFT JOIN locations l ON l.id = m.location_id ${whereClause} ORDER BY m.name`,
       params
     )
     return rows
