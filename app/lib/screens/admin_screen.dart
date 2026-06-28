@@ -26,6 +26,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   String? _currentUserId;
   bool _loading = true;
   bool _showInactive = false;
+  bool _showInactiveUsers = false;
 
   @override
   void initState() {
@@ -43,7 +44,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   Future<void> _load() async {
     final locFuture   = widget.api.getLocations();
     final machFuture  = widget.api.getMachines(includeInactive: _showInactive);
-    final usersFuture = widget.api.getUsers();
+    final usersFuture = widget.api.getUsers(includeInactive: _showInactiveUsers);
     final idFuture    = widget.storage.getUserId();
     final locs        = await locFuture;
     final machines    = await machFuture;
@@ -333,6 +334,142 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     await _load();
   }
 
+  Future<void> _showUserDialog({User? user}) async {
+    final nameCtrl  = TextEditingController(text: user?.name ?? '');
+    final emailCtrl = TextEditingController(text: user?.email ?? '');
+    final passCtrl  = TextEditingController();
+    String selectedRole = user?.role ?? 'technician';
+    final formKey = GlobalKey<FormState>();
+
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (_) => StatefulBuilder(
+          builder: (ctx, setDialogState) => AlertDialog(
+            title: Text(user == null ? 'Nuevo usuario' : 'Editar usuario'),
+            content: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(labelText: 'Nombre *'),
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'Requerido' : null,
+                  ),
+                  TextFormField(
+                    controller: emailCtrl,
+                    decoration: const InputDecoration(labelText: 'Email *'),
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'Requerido' : null,
+                  ),
+                  TextFormField(
+                    controller: passCtrl,
+                    decoration: InputDecoration(
+                      labelText: user == null
+                          ? 'Contraseña *'
+                          : 'Nueva contraseña (opcional)',
+                    ),
+                    obscureText: true,
+                    validator: user == null
+                        ? (v) => (v == null || v.length < 6)
+                            ? 'Mínimo 6 caracteres'
+                            : null
+                        : (v) => (v != null && v.isNotEmpty && v.length < 6)
+                            ? 'Mínimo 6 caracteres'
+                            : null,
+                  ),
+                  DropdownButtonFormField<String>(
+                    value: selectedRole,
+                    decoration: const InputDecoration(labelText: 'Rol'),
+                    items: const [
+                      DropdownMenuItem(
+                          value: 'technician', child: Text('Técnico')),
+                      DropdownMenuItem(
+                          value: 'admin', child: Text('Administrador')),
+                    ],
+                    onChanged: (v) =>
+                        setDialogState(() { selectedRole = v!; }),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (formKey.currentState!.validate()) {
+                    Navigator.pop(ctx, true);
+                  }
+                },
+                child: const Text('Guardar'),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (confirmed != true) return;
+
+      final name     = nameCtrl.text.trim();
+      final email    = emailCtrl.text.trim();
+      final password = passCtrl.text;
+
+      if (user == null) {
+        await widget.api.createUser(
+          name: name,
+          email: email,
+          role: selectedRole,
+          password: password,
+        );
+      } else {
+        await widget.api.updateUser(
+          user.id,
+          name: name,
+          email: email,
+          password: password.isEmpty ? null : password,
+        );
+        if (selectedRole != user.role) {
+          await widget.api.updateUserRole(user.id, selectedRole);
+        }
+      }
+      await _load();
+    } finally {
+      nameCtrl.dispose();
+      emailCtrl.dispose();
+      passCtrl.dispose();
+    }
+  }
+
+  Future<void> _deactivateUser(User user) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Desactivar usuario'),
+        content:
+            Text('¿Desactivar "${user.name}"? Permanecerá en el histórico.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Desactivar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await widget.api.deactivateUser(user.id);
+    await _load();
+  }
+
   Widget _buildLocationTab() {
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -444,38 +581,90 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   }
 
   Widget _buildUsersTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    final activeAdminCount =
+        _users.where((u) => u.role == 'admin' && u.active).length;
+    return Column(
       children: [
-        const Text('Usuarios',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        ..._users.map((user) {
-          final isOwn = user.id == _currentUserId;
-          return ListTile(
-            title: Text(user.name),
-            subtitle: Text(user.email),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Chip(
-                  label: Text(user.role == 'admin' ? 'Admin' : 'Técnico'),
-                  backgroundColor: user.role == 'admin'
-                      ? Colors.indigo[100]
-                      : Colors.grey[200],
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              const Text('Usuarios',
+                  style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+              const Spacer(),
+              const Text('Inactivos'),
+              Switch(
+                key: const Key('users-inactive-switch'),
+                value: _showInactiveUsers,
+                onChanged: (v) {
+                  setState(() { _showInactiveUsers = v; });
+                  _load();
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.add),
+                tooltip: 'Nuevo usuario',
+                onPressed: () => _showUserDialog(),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            children: _users.map((user) {
+              final isOwn = user.id == _currentUserId;
+              final isLastAdmin =
+                  user.role == 'admin' && activeAdminCount <= 1;
+              return ListTile(
+                title: Row(
+                  children: [
+                    Flexible(child: Text(user.name)),
+                    if (!user.active) ...[
+                      const SizedBox(width: 8),
+                      const Chip(label: Text('Inactivo')),
+                    ],
+                  ],
                 ),
-                const SizedBox(width: 8),
-                TextButton(
-                  key: Key('role-toggle-${user.id}'),
-                  onPressed: isOwn ? null : () => _toggleRole(user),
-                  child: Text(user.role == 'admin'
-                      ? 'Revocar admin'
-                      : 'Hacer admin'),
+                subtitle: Text(user.email),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Chip(
+                      label: Text(
+                          user.role == 'admin' ? 'Admin' : 'Técnico'),
+                      backgroundColor: user.role == 'admin'
+                          ? Colors.indigo[100]
+                          : Colors.grey[200],
+                    ),
+                    const SizedBox(width: 4),
+                    if (user.active) ...[
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        tooltip: 'Editar',
+                        onPressed: () => _showUserDialog(user: user),
+                      ),
+                      TextButton(
+                        key: Key('deactivate-${user.id}'),
+                        onPressed: (isOwn || isLastAdmin)
+                            ? null
+                            : () => _deactivateUser(user),
+                        child: const Text('Desactivar'),
+                      ),
+                    ],
+                    TextButton(
+                      key: Key('role-toggle-${user.id}'),
+                      onPressed: isOwn ? null : () => _toggleRole(user),
+                      child: Text(user.role == 'admin'
+                          ? 'Revocar admin'
+                          : 'Hacer admin'),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          );
-        }),
+              );
+            }).toList(),
+          ),
+        ),
       ],
     );
   }
