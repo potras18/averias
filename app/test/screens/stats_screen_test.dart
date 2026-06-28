@@ -10,6 +10,20 @@ import 'package:averias_app/widgets/desktop_shell_scope.dart';
 
 class MockApiClient extends Mock implements ApiClient {}
 
+const fakeCardReaderStats = CardReaderStats(
+  pctOk: 80.0,
+  pctFail: 20.0,
+  topFailureType: 'no_lee',
+);
+
+const fakeDispenserStats = DispenserStats(
+  pctOk: 70.0,
+  pctNoCheck: 10.0,
+  pctFull: 40.0,
+  pctLow: 30.0,
+  pctEmpty: 20.0,
+);
+
 const fakeStats = StatsResult(
   mttrHours: 4.5,
   pctOperative: 75.0,
@@ -20,6 +34,9 @@ const fakeStats = StatsResult(
     TopMachine(name: 'Máquina A', faultCount: 5),
     TopMachine(name: 'Máquina B', faultCount: 2),
   ],
+  dailyBreakdown: [],
+  cardReaderStats: fakeCardReaderStats,
+  dispenserStats: fakeDispenserStats,
 );
 
 Widget _wrap(Widget child, {bool isDesktop = false}) => DesktopShellScope(
@@ -148,13 +165,18 @@ void main() {
       from: any(named: 'from'),
       to: any(named: 'to'),
       locationId: any(named: 'locationId'),
-    )).thenAnswer((_) async => const StatsResult(
+    )).thenAnswer((_) async => StatsResult(
       mttrHours: null,
       pctOperative: 0,
       pctOutOfService: 0,
       pctInRepair: 0,
       totalMachines: 0,
-      topProblematic: [],
+      topProblematic: const [],
+      dailyBreakdown: const [],
+      cardReaderStats: const CardReaderStats(pctOk: 0, pctFail: 0),
+      dispenserStats: const DispenserStats(
+        pctOk: 0, pctNoCheck: 100, pctFull: 0, pctLow: 0, pctEmpty: 0,
+      ),
     ));
 
     await tester.pumpWidget(_wrap(StatsScreen(api: api)));
