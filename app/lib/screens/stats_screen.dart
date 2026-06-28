@@ -6,22 +6,22 @@ import '../models/stats.dart';
 import '../utils/download_file.dart';
 import '../widgets/desktop_shell_scope.dart';
 
-enum _Period { d7, d30, d90, custom }
+enum _Period { d7, d15, d30, custom }
 
 extension _PeriodLabel on _Period {
   String get label => switch (this) {
-    _Period.d7 => '7d',
-    _Period.d30 => '30d',
-    _Period.d90 => '90d',
+    _Period.d7     => '7d',
+    _Period.d15    => '15d',
+    _Period.d30    => '30d',
     _Period.custom => 'Personalizado',
   };
 
   DateTimeRange? get defaultRange {
     final today = DateTime.now();
     final start = switch (this) {
-      _Period.d7 => today.subtract(const Duration(days: 7)),
-      _Period.d30 => today.subtract(const Duration(days: 30)),
-      _Period.d90 => today.subtract(const Duration(days: 90)),
+      _Period.d7     => today.subtract(const Duration(days: 7)),
+      _Period.d15    => today.subtract(const Duration(days: 15)),
+      _Period.d30    => today.subtract(const Duration(days: 30)),
       _Period.custom => null,
     };
     if (start == null) return null;
@@ -215,6 +215,189 @@ class _StatsScreenState extends State<StatsScreen> {
     );
   }
 
+  Widget _buildTrendChart() {
+    final data = _stats!.dailyBreakdown;
+    return _MetricCard(
+      title: 'Tendencia de inspecciones',
+      child: data.isEmpty
+          ? const Center(child: Text('Sin datos en el período'))
+          : SizedBox(
+              height: 180,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: (data.length * 28.0).clamp(200.0, double.infinity),
+                  child: BarChart(
+                    BarChartData(
+                      barGroups: data.asMap().entries.map((e) {
+                        final idx = e.key;
+                        final day = e.value;
+                        final total = (day.operative + day.outOfService + day.inRepair).toDouble();
+                        if (total == 0) {
+                          return BarChartGroupData(x: idx, barRods: [
+                            BarChartRodData(toY: 0, width: 18),
+                          ]);
+                        }
+                        final op = day.operative.toDouble();
+                        final oos = day.outOfService.toDouble();
+                        final ir = day.inRepair.toDouble();
+                        return BarChartGroupData(
+                          x: idx,
+                          barRods: [
+                            BarChartRodData(
+                              toY: total,
+                              width: 18,
+                              rodStackItems: [
+                                BarChartRodStackItem(0, op, Colors.green[600]!),
+                                BarChartRodStackItem(op, op + oos, Colors.red[600]!),
+                                BarChartRodStackItem(op + oos, op + oos + ir, Colors.orange[600]!),
+                              ],
+                            ),
+                          ],
+                        );
+                      }).toList(),
+                      titlesData: FlTitlesData(
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 22,
+                            getTitlesWidget: (value, meta) {
+                              final idx = value.toInt();
+                              if (idx < 0 || idx >= data.length) return const SizedBox.shrink();
+                              final showEvery = data.length > 15 ? 5 : 1;
+                              if (idx % showEvery != 0) return const SizedBox.shrink();
+                              final d = data[idx].date;
+                              return Text(
+                                '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}',
+                                style: const TextStyle(fontSize: 9),
+                              );
+                            },
+                          ),
+                        ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 28,
+                            getTitlesWidget: (value, meta) => Text(
+                              value.toInt().toString(),
+                              style: const TextStyle(fontSize: 9),
+                            ),
+                          ),
+                        ),
+                        topTitles:   const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      ),
+                      borderData: FlBorderData(show: false),
+                      gridData:   const FlGridData(show: true),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildCardReaderCard() {
+    final cr = _stats!.cardReaderStats;
+    return _MetricCard(
+      title: 'Lector de tarjeta',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: cr.pctOk / 100,
+              color: Colors.green[600],
+              backgroundColor: Colors.red[100],
+              minHeight: 14,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 16,
+            runSpacing: 4,
+            children: [
+              Text('✓ OK: ${cr.pctOk.toStringAsFixed(1)}%',
+                  style: TextStyle(color: Colors.green[700], fontSize: 13)),
+              Text('✗ Fallo: ${cr.pctFail.toStringAsFixed(1)}%',
+                  style: TextStyle(color: Colors.red[700], fontSize: 13)),
+            ],
+          ),
+          if (cr.topFailureType != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Fallo más frecuente: ${cr.topFailureType}',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDispenserCard() {
+    final d = _stats!.dispenserStats;
+    return _MetricCard(
+      title: 'Dispensador de tickets',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: d.pctOk / 100,
+              color: Colors.green[600],
+              backgroundColor: Colors.green[50],
+              minHeight: 14,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text('✓ OK: ${d.pctOk.toStringAsFixed(1)}%',
+              style: TextStyle(color: Colors.green[700], fontSize: 13)),
+          if (d.pctNoCheck > 0) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Sin registro: ${d.pctNoCheck.toStringAsFixed(1)}%',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              if (d.pctFull > 0)
+                Chip(
+                  label: Text('Lleno: ${d.pctFull.toStringAsFixed(1)}%',
+                      style: const TextStyle(fontSize: 11)),
+                  backgroundColor: Colors.green[100],
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  padding: EdgeInsets.zero,
+                ),
+              if (d.pctLow > 0)
+                Chip(
+                  label: Text('Bajo: ${d.pctLow.toStringAsFixed(1)}%',
+                      style: const TextStyle(fontSize: 11)),
+                  backgroundColor: Colors.orange[100],
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  padding: EdgeInsets.zero,
+                ),
+              if (d.pctEmpty > 0)
+                Chip(
+                  label: Text('Vacío: ${d.pctEmpty.toStringAsFixed(1)}%',
+                      style: const TextStyle(fontSize: 11)),
+                  backgroundColor: Colors.red[100],
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  padding: EdgeInsets.zero,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAvailabilityChart() {
     final operative = _stats!.pctOperative;
     final outOfService = _stats!.pctOutOfService;
@@ -339,12 +522,28 @@ class _StatsScreenState extends State<StatsScreen> {
 
   Widget _buildCharts(bool isDesktop) {
     if (isDesktop) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(child: _buildAvailabilityChart()),
-          const SizedBox(width: 12),
-          Expanded(child: _buildTopProblematic()),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _buildAvailabilityChart()),
+              const SizedBox(width: 12),
+              Expanded(child: _buildTopProblematic()),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildTrendChart(),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _buildCardReaderCard()),
+              const SizedBox(width: 12),
+              Expanded(child: _buildDispenserCard()),
+            ],
+          ),
         ],
       );
     }
@@ -353,6 +552,12 @@ class _StatsScreenState extends State<StatsScreen> {
         _buildAvailabilityChart(),
         const SizedBox(height: 12),
         _buildTopProblematic(),
+        const SizedBox(height: 12),
+        _buildTrendChart(),
+        const SizedBox(height: 12),
+        _buildCardReaderCard(),
+        const SizedBox(height: 12),
+        _buildDispenserCard(),
       ],
     );
   }

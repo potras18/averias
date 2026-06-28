@@ -63,15 +63,16 @@ void main() {
     )).thenAnswer((_) async => fakeStats);
   });
 
-  testWidgets('shows period chips on init — no Consultar button', (tester) async {
+  testWidgets('shows period chips — 7d/15d/30d/Personalizado, no 90d', (tester) async {
     await tester.pumpWidget(_wrap(StatsScreen(api: api)));
     await tester.pumpAndSettle();
 
-    expect(find.text('7d'), findsOneWidget);
-    expect(find.text('30d'), findsOneWidget);
-    expect(find.text('90d'), findsOneWidget);
+    expect(find.text('7d'),            findsOneWidget);
+    expect(find.text('15d'),           findsOneWidget);
+    expect(find.text('30d'),           findsOneWidget);
     expect(find.text('Personalizado'), findsOneWidget);
-    expect(find.text('Consultar'), findsNothing);
+    expect(find.text('90d'),           findsNothing);
+    expect(find.text('Consultar'),     findsNothing);
   });
 
   testWidgets('auto-loads stats on entry — calls getStats without user action', (tester) async {
@@ -193,5 +194,57 @@ void main() {
     // Desktop layout wraps charts in a Row — verify both chart cards visible
     expect(find.text('Disponibilidad'), findsOneWidget);
     expect(find.text('Top 5 problemáticas'), findsOneWidget);
+  });
+
+  testWidgets('trend chart card visible when dailyBreakdown has data', (tester) async {
+    when(() => api.getStats(
+      from: any(named: 'from'),
+      to: any(named: 'to'),
+      locationId: any(named: 'locationId'),
+    )).thenAnswer((_) async => StatsResult(
+      mttrHours: null,
+      pctOperative: 0,
+      pctOutOfService: 0,
+      pctInRepair: 0,
+      totalMachines: 1,
+      topProblematic: const [],
+      dailyBreakdown: [
+        DailyBreakdown(date: DateTime(2026, 6, 1), operative: 2, outOfService: 1, inRepair: 0),
+      ],
+      cardReaderStats: const CardReaderStats(pctOk: 100, pctFail: 0),
+      dispenserStats: const DispenserStats(
+        pctOk: 0, pctNoCheck: 100, pctFull: 0, pctLow: 0, pctEmpty: 0,
+      ),
+    ));
+
+    await tester.pumpWidget(_wrap(StatsScreen(api: api)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tendencia de inspecciones'), findsOneWidget);
+  });
+
+  testWidgets('trend chart shows "Sin datos" when dailyBreakdown is empty', (tester) async {
+    await tester.pumpWidget(_wrap(StatsScreen(api: api)));
+    await tester.pumpAndSettle();
+
+    // fakeStats has dailyBreakdown: []
+    await tester.scrollUntilVisible(find.text('Sin datos en el período'), 200);
+    expect(find.text('Sin datos en el período'), findsOneWidget);
+  });
+
+  testWidgets('card reader stats card visible after load', (tester) async {
+    await tester.pumpWidget(_wrap(StatsScreen(api: api)));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Lector de tarjeta'), 200);
+    expect(find.text('Lector de tarjeta'), findsOneWidget);
+  });
+
+  testWidgets('dispenser stats card visible after load', (tester) async {
+    await tester.pumpWidget(_wrap(StatsScreen(api: api)));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Dispensador de tickets'), 200);
+    expect(find.text('Dispensador de tickets'), findsOneWidget);
   });
 }
