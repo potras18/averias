@@ -64,6 +64,17 @@ describe('POST /auth/login', () => {
     expect(res.status).toBe(401)
     await app.close()
   })
+
+  test('returns 401 for inactive user', async () => {
+    await seedUser({ email: 'inactive@x.com', password: 'pass123', active: false })
+    const { app } = buildTestApp()
+    await app.ready()
+    const res = await require('supertest')(app.server)
+      .post('/auth/login')
+      .send({ email: 'inactive@x.com', password: 'pass123' })
+    expect(res.status).toBe(401)
+    await app.close()
+  })
 })
 
 describe('POST /auth/refresh', () => {

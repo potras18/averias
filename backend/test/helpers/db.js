@@ -10,17 +10,12 @@ async function resetDb() {
   )
 }
 
-async function seedUser({ name = 'Tech User', email = 'tech@example.com', password = 'secret123', role } = {}) {
+async function seedUser({ name = 'Tech User', email = 'tech@example.com', password = 'secret123', role, active = true } = {}) {
   const hash = await bcrypt.hash(password, 12)
-  const { rows } = role
-    ? await pool.query(
-        'INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
-        [name, email, hash, role]
-      )
-    : await pool.query(
-        'INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, name, email',
-        [name, email, hash]
-      )
+  const { rows } = await pool.query(
+    'INSERT INTO users (name, email, password_hash, role, active) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, role, active',
+    [name, email, hash, role ?? 'technician', active]
+  )
   return { ...rows[0], password }
 }
 

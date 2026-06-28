@@ -20,7 +20,7 @@ module.exports = async function authRoutes(app) {
   }, async (req, reply) => {
     const { email, password } = req.body
     const { rows } = await app.db.query(
-      'SELECT id, name, email, password_hash, role FROM users WHERE email = $1',
+      'SELECT id, name, email, password_hash, role FROM users WHERE email = $1 AND active = true',
       [email]
     )
     if (!rows.length || !(await bcrypt.compare(password, rows[0].password_hash))) {
