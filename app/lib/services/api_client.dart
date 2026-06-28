@@ -210,15 +210,52 @@ class ApiClient {
   }
 
   // Admin — Users
-  Future<List<User>> getUsers() async {
-    final res = await _dio.get('/users');
+  Future<List<User>> getUsers({bool includeInactive = false}) async {
+    final res = await _dio.get(
+      '/users',
+      queryParameters: includeInactive ? {'include_inactive': 'true'} : null,
+    );
     return (res.data as List)
         .map((j) => User.fromJson(j as Map<String, dynamic>))
         .toList();
   }
 
+  Future<User> createUser({
+    required String name,
+    required String email,
+    required String role,
+    required String password,
+  }) async {
+    final res = await _dio.post('/users', data: {
+      'name': name,
+      'email': email,
+      'role': role,
+      'password': password,
+    });
+    return User.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<User> updateUser(
+    String id, {
+    String? name,
+    String? email,
+    String? password,
+  }) async {
+    final res = await _dio.patch('/users/$id', data: {
+      if (name != null) 'name': name,
+      if (email != null) 'email': email,
+      if (password != null && password.isNotEmpty) 'password': password,
+    });
+    return User.fromJson(res.data as Map<String, dynamic>);
+  }
+
   Future<User> updateUserRole(String id, String role) async {
     final res = await _dio.patch('/users/$id/role', data: {'role': role});
+    return User.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<User> deactivateUser(String id) async {
+    final res = await _dio.patch('/users/$id/deactivate');
     return User.fromJson(res.data as Map<String, dynamic>);
   }
 }
