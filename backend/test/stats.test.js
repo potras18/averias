@@ -63,6 +63,51 @@ describe('GET /stats', () => {
     const res = await st.get('/stats?from=2026-01-01&to=2026-12-31').set(auth())
     expect(res.status).toBe(200)
   })
+
+  it('includes daily_breakdown array', async () => {
+    const res = await st.get('/stats').set(auth())
+    expect(res.status).toBe(200)
+    expect(res.body.daily_breakdown).toBeInstanceOf(Array)
+    if (res.body.daily_breakdown.length > 0) {
+      expect(res.body.daily_breakdown[0]).toMatchObject({
+        date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        operative:     expect.any(Number),
+        out_of_service: expect.any(Number),
+        in_repair:     expect.any(Number),
+      })
+    }
+  })
+
+  it('daily_breakdown has an entry for today with operative >= 1', async () => {
+    const today = new Date().toISOString().substring(0, 10)
+    const res = await st.get('/stats').set(auth())
+    const entry = res.body.daily_breakdown.find(e => e.date === today)
+    expect(entry).toBeDefined()
+    expect(entry.operative).toBeGreaterThanOrEqual(1)
+  })
+
+  it('card_reader_stats shape and seeded inspection is 100% ok', async () => {
+    const res = await st.get('/stats').set(auth())
+    expect(res.body.card_reader_stats).toMatchObject({
+      pct_ok:           expect.any(Number),
+      pct_fail:         expect.any(Number),
+      top_failure_type: null,
+    })
+    expect(res.body.card_reader_stats.pct_ok).toBe(100)
+  })
+
+  it('dispenser_stats shape and 100% no_check when no ticket_checks seeded', async () => {
+    const res = await st.get('/stats').set(auth())
+    expect(res.body.dispenser_stats).toMatchObject({
+      pct_ok:       expect.any(Number),
+      pct_no_check: expect.any(Number),
+      pct_full:     expect.any(Number),
+      pct_low:      expect.any(Number),
+      pct_empty:    expect.any(Number),
+    })
+    expect(res.body.dispenser_stats.pct_no_check).toBe(100)
+    expect(res.body.dispenser_stats.pct_ok).toBe(0)
+  })
 })
 
 describe('GET /stats/pdf', () => {

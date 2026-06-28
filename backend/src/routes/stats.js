@@ -5,6 +5,7 @@ const { buildStatsHtml } = require('../pdf/stats-template')
 const { sendReport }     = require('../email/mailer')
 const {
   getInspectionRows, getMttrHours, getTopProblematic, buildSummary,
+  getDailyBreakdown, getCardReaderStats, getDispenserStats,
 } = require('../reports/queries')
 
 module.exports = async function statsRoutes(app) {
@@ -19,11 +20,15 @@ module.exports = async function statsRoutes(app) {
   }
 
   async function buildStatsData(db, filters) {
-    const [rows, mttrHours, topProblematic] = await Promise.all([
-      getInspectionRows(db, filters),
-      getMttrHours(db, filters),
-      getTopProblematic(db, filters),
-    ])
+    const [rows, mttrHours, topProblematic, dailyBreakdown, cardReaderStats, dispenserStats] =
+      await Promise.all([
+        getInspectionRows(db, filters),
+        getMttrHours(db, filters),
+        getTopProblematic(db, filters),
+        getDailyBreakdown(db, filters),
+        getCardReaderStats(db, filters),
+        getDispenserStats(db, filters),
+      ])
     const summary = buildSummary(rows)
     return {
       mttrHours,
@@ -32,6 +37,9 @@ module.exports = async function statsRoutes(app) {
       pctInRepair:     summary.pctInRepair,
       totalMachines:   summary.total,
       topProblematic,
+      dailyBreakdown,
+      cardReaderStats,
+      dispenserStats,
     }
   }
 
@@ -42,12 +50,15 @@ module.exports = async function statsRoutes(app) {
     const { from, to, location_id } = req.query
     const data = await buildStatsData(app.db, { from, to, locationId: location_id })
     return reply.send({
-      mttr_hours:         data.mttrHours,
-      pct_operative:      data.pctOperative,
-      pct_out_of_service: data.pctOutOfService,
-      pct_in_repair:      data.pctInRepair,
-      total_machines:     data.totalMachines,
-      top_problematic:    data.topProblematic,
+      mttr_hours:          data.mttrHours,
+      pct_operative:       data.pctOperative,
+      pct_out_of_service:  data.pctOutOfService,
+      pct_in_repair:       data.pctInRepair,
+      total_machines:      data.totalMachines,
+      top_problematic:     data.topProblematic,
+      daily_breakdown:     data.dailyBreakdown,
+      card_reader_stats:   data.cardReaderStats,
+      dispenser_stats:     data.dispenserStats,
     })
   })
 

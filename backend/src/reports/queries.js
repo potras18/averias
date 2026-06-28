@@ -95,4 +95,121 @@ function groupByLocation(rows) {
   return Array.from(map.values())
 }
 
-module.exports = { getInspectionRows, getMttrHours, getTopProblematic, buildSummary, groupByLocation }
+async function getDailyBreakdown(db, { from, to, locationId }) {
+  const conditions = []
+  const params = []
+  let idx = 1
+  if (from)       { conditions.push(`i.inspected_at >= $${idx++}`); params.push(from) }
+  if (to)         { conditions.push(`i.inspected_at <= $${idx++}`); params.push(to) }
+  if (locationId) { conditions.push(`m.location_id = $${idx++}`);   params.push(locationId) }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+  const { rows } = await db.query(
+    `SELECT
+       to_char(inspected_at::date, 'YYYY-MM-DD') AS date,
+       COUNT(*) FILTER (WHERE i.status = 'operative')      AS operative,
+       COUNT(*) FILTER (WHERE i.status = 'out_of_service') AS out_of_service,
+       COUNT(*) FILTER (WHERE i.status = 'in_repair')      AS in_repair
+     FROM inspections i
+     JOIN machines m ON m.id = i.machine_id
+     ${where}
+     GROUP BY inspected_at::date
+     ORDER BY inspected_at::date ASC`,
+    params
+  )
+  return rows.map(r => ({
+    date:          r.date,
+    operative:     Number(r.operative),
+    out_of_service: Number(r.out_of_service),
+    in_repair:     Number(r.in_repair),
+  }))
+}
+
+async function getCardReaderStats(db, { from, to, locationId }) {
+  const conditions = []
+  const params = []
+  let idx = 1
+  if (from)       { conditions.push(`i.inspected_at >= $${idx++}`); params.push(from) }
+  if (to)         { conditions.push(`i.inspected_at <= $${idx++}`); params.push(to) }
+  if (locationId) { conditions.push(`m.location_id = $${idx++}`);   params.push(locationId) }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+
+  const { rows: [totals] } = await db.query(
+    `SELECT
+       COUNT(*) FILTER (WHERE i.card_reader_ok IS TRUE)  AS ok_count,
+       COUNT(*) FILTER (WHERE i.card_reader_ok IS FALSE) AS fail_count,
+       COUNT(*)                                           AS total
+     FROM inspections i
+     JOIN machines m ON m.id = i.machine_id
+     ${where}`,
+    params
+  )
+  const total = Number(totals.total)
+  if (total === 0) return { pct_ok: 0, pct_fail: 0, top_failure_type: null }
+
+  const okCount   = Number(totals.ok_count)
+  const failCount = Number(totals.fail_count)
+  let topFailureType = null
+
+  if (failCount > 0) {
+    const failWhere = `WHERE i.card_reader_ok IS FALSE${conditions.length ? ' AND ' + conditions.join(' AND ') : ''}`
+    const { rows: failRows } = await db.query(
+      `SELECT card_reader_failure_type, COUNT(*) AS n
+       FROM inspections i
+       JOIN machines m ON m.id = i.machine_id
+       ${failWhere}
+       GROUP BY card_reader_failure_type
+       ORDER BY n DESC
+       LIMIT 1`,
+      params
+    )
+    if (failRows.length > 0) topFailureType = failRows[0].card_reader_failure_type
+  }
+
+  return {
+    pct_ok:           (okCount   / total) * 100,
+    pct_fail:         (failCount / total) * 100,
+    top_failure_type: topFailureType,
+  }
+}
+
+async function getDispenserStats(db, { from, to, locationId }) {
+  const conditions = []
+  const params = []
+  let idx = 1
+  if (from)       { conditions.push(`i.inspected_at >= $${idx++}`); params.push(from) }
+  if (to)         { conditions.push(`i.inspected_at <= $${idx++}`); params.push(to) }
+  if (locationId) { conditions.push(`m.location_id = $${idx++}`);   params.push(locationId) }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+
+  const { rows: [totRow] } = await db.query(
+    `SELECT COUNT(*) AS total FROM inspections i
+     JOIN machines m ON m.id = i.machine_id ${where}`,
+    params
+  )
+  const total = Number(totRow.total)
+  if (total === 0) return { pct_ok: 0, pct_no_check: 0, pct_full: 0, pct_low: 0, pct_empty: 0 }
+
+  const { rows: [d] } = await db.query(
+    `SELECT
+       COUNT(tc.id)                                          AS checked,
+       COUNT(*) FILTER (WHERE tc.dispenser_ok IS TRUE)      AS ok_count,
+       COUNT(*) FILTER (WHERE tc.ticket_level = 'full')     AS full_count,
+       COUNT(*) FILTER (WHERE tc.ticket_level = 'low')      AS low_count,
+       COUNT(*) FILTER (WHERE tc.ticket_level = 'empty')    AS empty_count
+     FROM inspections i
+     JOIN machines m ON m.id = i.machine_id
+     LEFT JOIN ticket_checks tc ON tc.inspection_id = i.id
+     ${where}`,
+    params
+  )
+  const checked = Number(d.checked)
+  return {
+    pct_ok:       checked > 0 ? (Number(d.ok_count)    / total) * 100 : 0,
+    pct_no_check: ((total - checked)                    / total) * 100,
+    pct_full:     (Number(d.full_count)                 / total) * 100,
+    pct_low:      (Number(d.low_count)                  / total) * 100,
+    pct_empty:    (Number(d.empty_count)                / total) * 100,
+  }
+}
+
+module.exports = { getInspectionRows, getMttrHours, getTopProblematic, buildSummary, groupByLocation, getDailyBreakdown, getCardReaderStats, getDispenserStats }
