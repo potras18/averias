@@ -79,7 +79,7 @@ module.exports = async function usersRoutes(app) {
     values.push(id)
     try {
       const { rows } = await app.db.query(
-        `UPDATE users SET ${updates.join(', ')} WHERE id = $${i} RETURNING id, name, email, role, active`,
+        `UPDATE users SET ${updates.join(', ')} WHERE id = $${i} AND active = true RETURNING id, name, email, role, active`,
         values
       )
       if (!rows.length) return reply.code(404).send({ error: 'User not found' })
@@ -115,7 +115,7 @@ module.exports = async function usersRoutes(app) {
       }
     }
     const { rows } = await app.db.query(
-      'UPDATE users SET role = $1 WHERE id = $2 RETURNING id, name, email, role, active',
+      'UPDATE users SET role = $1 WHERE id = $2 AND active = true RETURNING id, name, email, role, active',
       [role, id]
     )
     if (!rows.length) return reply.code(404).send({ error: 'User not found' })

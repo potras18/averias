@@ -420,25 +420,33 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
       final email    = emailCtrl.text.trim();
       final password = passCtrl.text;
 
-      if (user == null) {
-        await widget.api.createUser(
-          name: name,
-          email: email,
-          role: selectedRole,
-          password: password,
-        );
-      } else {
-        await widget.api.updateUser(
-          user.id,
-          name: name,
-          email: email,
-          password: password.isEmpty ? null : password,
-        );
-        if (selectedRole != user.role) {
-          await widget.api.updateUserRole(user.id, selectedRole);
+      try {
+        if (user == null) {
+          await widget.api.createUser(
+            name: name,
+            email: email,
+            role: selectedRole,
+            password: password,
+          );
+        } else {
+          await widget.api.updateUser(
+            user.id,
+            name: name,
+            email: email,
+            password: password.isEmpty ? null : password,
+          );
+          if (selectedRole != user.role) {
+            await widget.api.updateUserRole(user.id, selectedRole);
+          }
+        }
+        await _load();
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error al guardar usuario')),
+          );
         }
       }
-      await _load();
     } finally {
       nameCtrl.dispose();
       emailCtrl.dispose();
@@ -651,14 +659,14 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                             : () => _deactivateUser(user),
                         child: const Text('Desactivar'),
                       ),
+                      TextButton(
+                        key: Key('role-toggle-${user.id}'),
+                        onPressed: isOwn ? null : () => _toggleRole(user),
+                        child: Text(user.role == 'admin'
+                            ? 'Revocar admin'
+                            : 'Hacer admin'),
+                      ),
                     ],
-                    TextButton(
-                      key: Key('role-toggle-${user.id}'),
-                      onPressed: isOwn ? null : () => _toggleRole(user),
-                      child: Text(user.role == 'admin'
-                          ? 'Revocar admin'
-                          : 'Hacer admin'),
-                    ),
                   ],
                 ),
               );
