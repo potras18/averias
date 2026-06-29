@@ -123,11 +123,9 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
     }
     return Scaffold(
       appBar: AppBar(title: Text(_isEdit ? 'Editar inspección' : 'Registrar inspección')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
           Text('Estado', style: Theme.of(context).textTheme.titleSmall),
           ..._statusOptions.map((opt) => RadioListTile<String>(
                 title: Text(opt.$2),
@@ -171,6 +169,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                   dense: true,
                 )),
           ],
+          const Divider(),
           TextField(
             controller: _commentCtrl,
             decoration: const InputDecoration(
@@ -178,26 +177,21 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
               hintText: 'Observaciones adicionales...',
               border: OutlineInputBorder(),
             ),
-            maxLines: 2,
+            maxLines: 3,
           ),
           if (_error != null) ...[
             const SizedBox(height: 8),
             Text(_error!, style: const TextStyle(color: Colors.red)),
           ],
-        ],
-        ),
-      ),
-      persistentFooterButtons: [
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton(
+          const SizedBox(height: 16),
+          FilledButton(
             onPressed: _saving ? null : _save,
             child: _saving
                 ? const CircularProgressIndicator(color: Colors.white)
                 : Text(_isEdit ? 'Guardar cambios' : 'Guardar inspección'),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

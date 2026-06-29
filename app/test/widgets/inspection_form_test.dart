@@ -76,7 +76,7 @@ void main() {
     ));
     await tester.pump();
     expect(find.text('Editar inspección'), findsOneWidget);
-    expect(find.text('Guardar cambios'), findsOneWidget);
+    expect(find.text('Guardar cambios', skipOffstage: false), findsOneWidget);
   });
 
   testWidgets('edit mode: pre-populates comment field', (tester) async {
@@ -104,6 +104,8 @@ void main() {
       ),
     ));
     await tester.pump();
+    await tester.ensureVisible(find.text('Guardar cambios', skipOffstage: false));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Guardar cambios'));
     await tester.pump();
 
