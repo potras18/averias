@@ -20,7 +20,7 @@ async function getMachineWithInspections(db, id) {
   if (!machines.length) return null
   const machine = machines[0]
   const { rows: inspections } = await db.query(
-    `SELECT i.id, i.machine_id, i.status, i.card_reader_ok, i.card_reader_failure_type, i.comment, i.inspected_at,
+    `SELECT i.id, i.machine_id, i.technician_id, i.status, i.card_reader_ok, i.card_reader_failure_type, i.comment, i.inspected_at,
             u.name AS technician_name,
             CASE WHEN tc.inspection_id IS NOT NULL
                  THEN json_build_object('dispenser_ok', tc.dispenser_ok, 'ticket_level', tc.ticket_level)

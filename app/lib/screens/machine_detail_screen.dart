@@ -27,12 +27,14 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
   late Future<Machine> _future;
   bool _redirected = false;
   String? _role;
+  String? _userId;
 
   @override
   void initState() {
     super.initState();
     _future = widget.api.getMachineById(widget.machineId);
     widget.storage.getRole().then((r) { if (mounted) setState(() => _role = r); });
+    widget.storage.getUserId().then((id) { if (mounted) setState(() => _userId = id); });
   }
 
   void _openEdit(Machine machine, Inspection inspection) {
@@ -107,6 +109,7 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
                 ...machine.inspections.map((i) => _InspectionTile(
                       inspection: i,
                       role: _role,
+                      currentUserId: _userId,
                       onEdit: () => _openEdit(machine, i),
                     )),
             ],
@@ -137,20 +140,24 @@ class _InfoRow extends StatelessWidget {
 class _InspectionTile extends StatelessWidget {
   final Inspection inspection;
   final String? role;
+  final String? currentUserId;
   final VoidCallback? onEdit;
 
   const _InspectionTile({
     required this.inspection,
     this.role,
+    this.currentUserId,
     this.onEdit,
   });
 
   bool _canEdit() {
     if (role == null) return false;
     if (role == 'admin') return true;
+    // technician: must be today AND own inspection
     final today = DateTime.now();
     final d = inspection.inspectedAt;
-    return d.year == today.year && d.month == today.month && d.day == today.day;
+    final isToday = d.year == today.year && d.month == today.month && d.day == today.day;
+    return isToday && inspection.technicianId == currentUserId;
   }
 
   @override

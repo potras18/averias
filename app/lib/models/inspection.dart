@@ -18,6 +18,7 @@ class TicketCheck {
 class Inspection {
   final String id;
   final String machineId;
+  final String? technicianId;
   final String? technicianName;
   final String status; // operative | out_of_service | in_repair
   final bool cardReaderOk;
@@ -29,6 +30,7 @@ class Inspection {
   const Inspection({
     required this.id,
     required this.machineId,
+    this.technicianId,
     this.technicianName,
     required this.status,
     required this.cardReaderOk,
@@ -41,6 +43,7 @@ class Inspection {
   factory Inspection.fromJson(Map<String, dynamic> json) => Inspection(
         id: json['id'] as String,
         machineId: json['machine_id'] as String,
+        technicianId: json['technician_id'] as String?,
         technicianName: json['technician_name'] as String?,
         status: json['status'] as String,
         cardReaderOk: json['card_reader_ok'] as bool,

@@ -13,6 +13,7 @@ class MockStorageService extends Mock implements StorageService {}
 final _todayInspection = Inspection(
   id: 'insp-today',
   machineId: 'machine-1',
+  technicianId: 'user-1',
   status: 'operative',
   cardReaderOk: true,
   inspectedAt: DateTime.now(),
@@ -21,6 +22,7 @@ final _todayInspection = Inspection(
 final _oldInspection = Inspection(
   id: 'insp-old',
   machineId: 'machine-1',
+  technicianId: 'user-1',
   status: 'operative',
   cardReaderOk: true,
   inspectedAt: DateTime(2024, 1, 1),
@@ -77,5 +79,18 @@ void main() {
 
     // Two edit buttons (both inspections)
     expect(find.byIcon(Icons.edit), findsNWidgets(2));
+  });
+
+  testWidgets('technician does not see edit on other tech today inspection', (tester) async {
+    when(() => storage.getRole()).thenAnswer((_) async => 'technician');
+    when(() => storage.getUserId()).thenAnswer((_) async => 'user-OTHER');
+
+    await tester.pumpWidget(MaterialApp(
+      home: MachineDetailScreen(api: api, storage: storage, machineId: 'machine-1'),
+    ));
+    await tester.pumpAndSettle();
+
+    // todayInspection.technicianId is 'user-1', current user is 'user-OTHER' — no edit button
+    expect(find.byIcon(Icons.edit), findsNothing);
   });
 }

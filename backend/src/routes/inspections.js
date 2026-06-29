@@ -116,7 +116,7 @@ module.exports = async function inspectionsRoutes(app) {
       if (status !== undefined)                   { setClauses.push(`status = $${idx++}`);                    params.push(status) }
       if (card_reader_ok !== undefined)           { setClauses.push(`card_reader_ok = $${idx++}`);            params.push(card_reader_ok) }
       if (card_reader_failure_type !== undefined) { setClauses.push(`card_reader_failure_type = $${idx++}`);  params.push(card_reader_failure_type) }
-      if ('comment' in req.body)                  { setClauses.push(`comment = $${idx++}`);                   params.push(req.body.comment || null) }
+      if ('comment' in req.body)                  { setClauses.push(`comment = $${idx++}`);                   params.push(req.body.comment ?? null) }
 
       let rows = [existing[0]]
       if (setClauses.length) {
