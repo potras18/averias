@@ -1,5 +1,5 @@
 'use strict'
-const { buildStatsHtml } = require('../src/pdf/stats-template')
+const { buildStatsHtml, buildPieChartSvg, buildBarChartSvg } = require('../src/pdf/stats-template')
 
 const FIXTURE = {
   from: '2026-01-01',
@@ -64,5 +64,89 @@ describe('buildStatsHtml', () => {
   it('uses "Todas las ubicaciones" when locationName is null', () => {
     const html = buildStatsHtml({ ...FIXTURE, locationName: null })
     expect(html).toContain('Todas las ubicaciones')
+  })
+})
+
+describe('buildPieChartSvg', () => {
+  it('returns Sin datos when all zeros', () => {
+    expect(buildPieChartSvg({ operative: 0, outOfService: 0, inRepair: 0 }))
+      .toContain('Sin datos')
+  })
+
+  it('returns a circle element for 100% single slice', () => {
+    const svg = buildPieChartSvg({ operative: 100, outOfService: 0, inRepair: 0 })
+    expect(svg).toContain('<circle')
+    expect(svg).toContain('#43a047')
+  })
+
+  it('returns path elements for mixed values', () => {
+    const svg = buildPieChartSvg({ operative: 75, outOfService: 15, inRepair: 10 })
+    expect(svg).toContain('<path')
+    expect(svg).toContain('#43a047')
+    expect(svg).toContain('#e53935')
+    expect(svg).toContain('#fb8c00')
+  })
+
+  it('includes legend labels', () => {
+    const svg = buildPieChartSvg({ operative: 75, outOfService: 15, inRepair: 10 })
+    expect(svg).toContain('Operativa')
+    expect(svg).toContain('Fuera de servicio')
+    expect(svg).toContain('En reparación')
+  })
+})
+
+describe('buildBarChartSvg', () => {
+  it('returns Sin datos for empty array', () => {
+    expect(buildBarChartSvg([])).toContain('Sin datos')
+  })
+
+  it('returns Sin datos when all totals are zero', () => {
+    expect(buildBarChartSvg([
+      { date: '2026-01-01', operative: 0, out_of_service: 0, in_repair: 0 },
+      { date: '2026-01-02', operative: 0, out_of_service: 0, in_repair: 0 },
+    ])).toContain('Sin datos')
+  })
+
+  it('returns SVG with rect elements for normal data', () => {
+    const svg = buildBarChartSvg([
+      { date: '2026-01-01', operative: 3, out_of_service: 1, in_repair: 0 },
+      { date: '2026-01-02', operative: 2, out_of_service: 0, in_repair: 1 },
+    ])
+    expect(svg).toContain('<rect')
+    expect(svg).toContain('#43a047')
+    expect(svg).toContain('01/01')
+  })
+
+  it('includes date labels in dd/mm format', () => {
+    const svg = buildBarChartSvg([
+      { date: '2026-03-15', operative: 2, out_of_service: 1, in_repair: 0 },
+      { date: '2026-03-16', operative: 1, out_of_service: 0, in_repair: 1 },
+    ])
+    expect(svg).toContain('15/03')
+    expect(svg).toContain('16/03')
+  })
+})
+
+describe('buildStatsHtml with charts', () => {
+  const DAILY = [
+    { date: '2026-01-10', operative: 3, out_of_service: 1, in_repair: 0 },
+    { date: '2026-01-11', operative: 2, out_of_service: 0, in_repair: 1 },
+  ]
+
+  it('includes SVG pie chart in availability section', () => {
+    const html = buildStatsHtml({ ...FIXTURE, dailyBreakdown: DAILY })
+    expect(html).toContain('<svg')
+    expect(html).toContain('#43a047')
+  })
+
+  it('includes SVG bar chart in tendencia section', () => {
+    const html = buildStatsHtml({ ...FIXTURE, dailyBreakdown: DAILY })
+    expect(html).toContain('Tendencia diaria')
+    expect(html).toContain('<rect')
+  })
+
+  it('works without dailyBreakdown (backward compat)', () => {
+    const html = buildStatsHtml(FIXTURE)
+    expect(html).toContain('Sin datos de tendencia')
   })
 })
