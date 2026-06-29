@@ -96,7 +96,10 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
       } else {
         await widget.api.createInspection(data);
       }
-      if (mounted) context.pop();
+      if (mounted) {
+        if (_isEdit) context.pop();
+        else context.go('/machines');
+      }
     } catch (_) {
       setState(() { _error = 'Error al guardar. Reinténtalo.'; });
     } finally {
