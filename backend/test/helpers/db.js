@@ -35,4 +35,13 @@ async function seedMachine({ locationId, name = 'Machine Test', qrCode = 'QR-001
   return rows[0]
 }
 
-module.exports = { pool, resetDb, seedUser, seedLocation, seedMachine }
+async function seedInspection({ machineId, technicianId, status = 'operative', cardReaderOk = true, inspectedAt = null } = {}) {
+  const { rows } = await pool.query(
+    `INSERT INTO inspections (machine_id, technician_id, status, card_reader_ok, inspected_at)
+     VALUES ($1, $2, $3, $4, COALESCE($5::timestamptz, NOW())) RETURNING *`,
+    [machineId, technicianId, status, cardReaderOk, inspectedAt]
+  )
+  return rows[0]
+}
+
+module.exports = { pool, resetDb, seedUser, seedLocation, seedMachine, seedInspection }
