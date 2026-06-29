@@ -9,6 +9,9 @@ import 'screens/qr_scanner_screen.dart';
 import 'screens/report_screen.dart';
 import 'screens/stats_screen.dart';
 import 'screens/admin_screen.dart';
+import 'screens/spare_parts_screen.dart';
+import 'screens/spare_part_form_screen.dart';
+import 'models/spare_part.dart';
 import 'services/storage_service.dart';
 import 'services/api_client.dart';
 import 'widgets/web_shell.dart';
@@ -87,6 +90,39 @@ final _router = GoRouter(
       path: '/admin',
       builder: (_, __) =>
           _shell(route: '/admin', child: AdminScreen(api: _api, storage: _storage)),
+    ),
+    GoRoute(
+      path: '/repuestos',
+      builder: (_, __) => _shell(
+        route: '/repuestos',
+        child: SparePartsScreen(api: _api, storage: _storage),
+      ),
+    ),
+    GoRoute(
+      path: '/repuestos/new',
+      builder: (_, state) {
+        final extra = state.extra as Map<String, dynamic>? ?? {};
+        return _shell(
+          route: '/repuestos',
+          child: SparePartFormScreen(
+            api: _api,
+            preselectedMachineId: extra['machineId'] as String?,
+          ),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/repuestos/:id/edit',
+      builder: (_, state) {
+        final extra = state.extra as Map<String, dynamic>? ?? {};
+        return _shell(
+          route: '/repuestos',
+          child: SparePartFormScreen(
+            api: _api,
+            sparePart: extra['sparePart'] as SparePart?,
+          ),
+        );
+      },
     ),
   ],
 );

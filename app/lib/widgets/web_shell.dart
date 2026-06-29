@@ -123,6 +123,12 @@ class _Sidebar extends StatelessWidget {
                     selected: currentRoute == '/stats',
                     onTap: () => onNavigate('/stats'),
                   ),
+                  _NavItem(
+                    icon: Icons.build,
+                    label: 'Repuestos',
+                    selected: currentRoute == '/repuestos',
+                    onTap: () => onNavigate('/repuestos'),
+                  ),
                   if (role == 'admin')
                     _NavItem(
                       icon: Icons.settings,
