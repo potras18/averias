@@ -102,11 +102,16 @@ function buildBarChartSvg(dailyBreakdown) {
 
   const axis = `<line x1="${marginL}" y1="${chartH}" x2="${W - marginR}" y2="${chartH}" stroke="#ccc" stroke-width="1"/>`
 
+  const totals = {
+    operative:      dailyBreakdown.reduce((s, d) => s + d.operative, 0),
+    out_of_service: dailyBreakdown.reduce((s, d) => s + d.out_of_service, 0),
+    in_repair:      dailyBreakdown.reduce((s, d) => s + d.in_repair, 0),
+  }
   const lgItems = [
-    { color: '#43a047', label: 'Operativa' },
-    { color: '#e53935', label: 'F. servicio' },
-    { color: '#fb8c00', label: 'En reparación' },
-  ]
+    { color: '#43a047', label: 'Operativa',     key: 'operative' },
+    { color: '#e53935', label: 'F. servicio',   key: 'out_of_service' },
+    { color: '#fb8c00', label: 'En reparación', key: 'in_repair' },
+  ].filter(lg => totals[lg.key] > 0)
   const lgY = chartH + axisH + 4
   const lgSpacing = W / lgItems.length
   const legend = lgItems.map((lg, i) => `

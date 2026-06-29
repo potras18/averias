@@ -93,6 +93,12 @@ describe('buildPieChartSvg', () => {
     expect(svg).toContain('Fuera de servicio')
     expect(svg).toContain('En reparación')
   })
+
+  it('does not show legend entry for zero-value categories', () => {
+    const svg = buildPieChartSvg({ operative: 100, outOfService: 0, inRepair: 0 })
+    expect(svg).not.toContain('Fuera de servicio')
+    expect(svg).not.toContain('En reparación')
+  })
 })
 
 describe('buildBarChartSvg', () => {

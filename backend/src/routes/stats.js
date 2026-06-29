@@ -81,7 +81,7 @@ module.exports = async function statsRoutes(app) {
       pctInRepair:     data.pctInRepair,
       totalMachines:   data.totalMachines,
       topProblematic:  data.topProblematic,
-      dailyBreakdown:  data.dailyBreakdown,
+      dailyBreakdown:  data.dailyBreakdown ?? [],
     })
     const pdfBuffer = await generatePdf(html)
     const fromLabel = from ?? 'todo'
@@ -122,7 +122,7 @@ module.exports = async function statsRoutes(app) {
       pctInRepair:     data.pctInRepair,
       totalMachines:   data.totalMachines,
       topProblematic:  data.topProblematic,
-      dailyBreakdown:  data.dailyBreakdown,
+      dailyBreakdown:  data.dailyBreakdown ?? [],
     })
     const fromLabel = from ?? 'todo'
     const toLabel   = to ?? ''
