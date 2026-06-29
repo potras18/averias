@@ -114,7 +114,8 @@ module.exports = async function inspectionsRoutes(app) {
            comment              = COALESCE($5, comment)
          WHERE id = $1
          RETURNING id, machine_id, technician_id, status, card_reader_ok,
-                   card_reader_failure_type, comment, inspected_at`,
+                   card_reader_failure_type, comment, inspected_at,
+                   (SELECT name FROM users WHERE id = inspections.technician_id) AS technician_name`,
         [id, status ?? null, card_reader_ok ?? null, card_reader_failure_type ?? null, comment ?? null]
       )
 
@@ -140,12 +141,7 @@ module.exports = async function inspectionsRoutes(app) {
 
       await client.query('COMMIT')
 
-      const { rows: userRows } = await app.db.query(
-        'SELECT name FROM users WHERE id = $1',
-        [rows[0].technician_id]
-      )
-
-      return { ...rows[0], technician_name: userRows[0]?.name ?? null, ticket_check: tc }
+      return { ...rows[0], ticket_check: tc }
     } catch (err) {
       await client.query('ROLLBACK')
       throw err
