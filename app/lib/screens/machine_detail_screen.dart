@@ -4,13 +4,20 @@ import 'package:go_router/go_router.dart';
 import '../models/machine.dart';
 import '../models/inspection.dart';
 import '../services/api_client.dart';
+import '../services/storage_service.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/desktop_shell_scope.dart';
 
 class MachineDetailScreen extends StatefulWidget {
   final ApiClient api;
+  final StorageService storage;
   final String machineId;
-  const MachineDetailScreen({super.key, required this.api, required this.machineId});
+  const MachineDetailScreen({
+    super.key,
+    required this.api,
+    required this.storage,
+    required this.machineId,
+  });
 
   @override
   State<MachineDetailScreen> createState() => _MachineDetailScreenState();
@@ -19,11 +26,25 @@ class MachineDetailScreen extends StatefulWidget {
 class _MachineDetailScreenState extends State<MachineDetailScreen> {
   late Future<Machine> _future;
   bool _redirected = false;
+  String? _role;
 
   @override
   void initState() {
     super.initState();
     _future = widget.api.getMachineById(widget.machineId);
+    widget.storage.getRole().then((r) { if (mounted) setState(() => _role = r); });
+  }
+
+  void _openEdit(Machine machine, Inspection inspection) {
+    context.push(
+      '/machines/${machine.id}/inspect',
+      extra: {
+        'hasRedemptionTickets': machine.hasRedemptionTickets,
+        'inspection': inspection,
+      },
+    ).then((_) => setState(() {
+          _future = widget.api.getMachineById(widget.machineId);
+        }));
   }
 
   @override
@@ -69,7 +90,10 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
                 label: const Text('Registrar inspección'),
                 onPressed: () => context
                     .push('/machines/${machine.id}/inspect',
-                        extra: machine.hasRedemptionTickets)
+                        extra: {
+                          'hasRedemptionTickets': machine.hasRedemptionTickets,
+                          'inspection': null,
+                        })
                     .then((_) => setState(() {
                           _future = widget.api.getMachineById(widget.machineId);
                         })),
@@ -80,7 +104,11 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
               if (machine.inspections.isEmpty)
                 const Text('Sin inspecciones previas')
               else
-                ...machine.inspections.map((i) => _InspectionTile(inspection: i)),
+                ...machine.inspections.map((i) => _InspectionTile(
+                      inspection: i,
+                      role: _role,
+                      onEdit: () => _openEdit(machine, i),
+                    )),
             ],
           ),
         );
@@ -108,10 +136,27 @@ class _InfoRow extends StatelessWidget {
 
 class _InspectionTile extends StatelessWidget {
   final Inspection inspection;
-  const _InspectionTile({required this.inspection});
+  final String? role;
+  final VoidCallback? onEdit;
+
+  const _InspectionTile({
+    required this.inspection,
+    this.role,
+    this.onEdit,
+  });
+
+  bool _canEdit() {
+    if (role == null) return false;
+    if (role == 'admin') return true;
+    final today = DateTime.now();
+    final d = inspection.inspectedAt;
+    return d.year == today.year && d.month == today.month && d.day == today.day;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final dateStr =
+        '${inspection.inspectedAt.day}/${inspection.inspectedAt.month}/${inspection.inspectedAt.year}';
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
@@ -119,16 +164,21 @@ class _InspectionTile extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(inspection.comment ?? ''),
+            Text(dateStr, style: Theme.of(context).textTheme.bodySmall),
+            if (inspection.comment != null && inspection.comment!.isNotEmpty)
+              Text(inspection.comment!),
             if (inspection.cardReaderFailureType != null)
               Text('Lector: ${inspection.cardReaderFailureType}',
                   style: const TextStyle(color: Colors.red)),
           ],
         ),
-        trailing: Text(
-          '${inspection.inspectedAt.day}/${inspection.inspectedAt.month}/${inspection.inspectedAt.year}',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
+        trailing: _canEdit()
+            ? IconButton(
+                icon: const Icon(Icons.edit),
+                tooltip: 'Editar inspección',
+                onPressed: onEdit,
+              )
+            : null,
       ),
     );
   }

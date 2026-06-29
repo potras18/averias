@@ -51,20 +51,25 @@ final _router = GoRouter(
         route: '/machines',
         child: MachineDetailScreen(
           api: _api,
+          storage: _storage,
           machineId: state.pathParameters['id']!,
         ),
       ),
     ),
     GoRoute(
       path: '/machines/:id/inspect',
-      builder: (_, state) => _shell(
-        route: '/machines',
-        child: InspectionFormScreen(
-          api: _api,
-          machineId: state.pathParameters['id']!,
-          hasRedemptionTickets: state.extra as bool? ?? false,
-        ),
-      ),
+      builder: (_, state) {
+        final extra = state.extra as Map<String, dynamic>? ?? {};
+        return _shell(
+          route: '/machines',
+          child: InspectionFormScreen(
+            api: _api,
+            machineId: state.pathParameters['id']!,
+            hasRedemptionTickets: extra['hasRedemptionTickets'] as bool? ?? false,
+            inspection: extra['inspection'] as dynamic,
+          ),
+        );
+      },
     ),
     GoRoute(
       path: '/scan',
