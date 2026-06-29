@@ -49,9 +49,12 @@ function buildPieChartSvg({ operative, outOfService, inRepair }) {
     })
   }
 
-  const legend = vals.map((val, i) => `
-    <rect x="192" y="${18 + i * 28}" width="13" height="13" fill="${COLORS[i]}" rx="2"/>
-    <text x="211" y="${29 + i * 28}" font-size="12" fill="#333">${LABELS[i]}: ${Math.round(val)}%</text>
+  const legend = vals
+    .map((val, i) => ({ val, color: COLORS[i], label: LABELS[i] }))
+    .filter(e => e.val > 0)
+    .map((e, j) => `
+    <rect x="192" y="${18 + j * 28}" width="13" height="13" fill="${e.color}" rx="2"/>
+    <text x="211" y="${29 + j * 28}" font-size="12" fill="#333">${e.label}: ${Math.round(e.val)}%</text>
   `).join('')
 
   return `<svg width="360" height="180" xmlns="http://www.w3.org/2000/svg">${pieSvg}${legend}</svg>`
