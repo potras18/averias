@@ -1,15 +1,23 @@
-// averias/app/lib/screens/login_screen.dart
+// app/lib/screens/login_screen.dart
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
+import '../services/biometric_service.dart';
 import '../services/storage_service.dart';
 
 class LoginScreen extends StatefulWidget {
   final ApiClient api;
   final StorageService storage;
-  const LoginScreen({super.key, required this.api, required this.storage});
+  final BiometricService? biometric;
+
+  const LoginScreen({
+    super.key,
+    required this.api,
+    required this.storage,
+    this.biometric,
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -23,11 +31,14 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _error;
 
   late final AuthService _auth;
+  late final BiometricService _biometric;
 
   @override
   void initState() {
     super.initState();
     _auth = AuthService(api: widget.api, storage: widget.storage);
+    _biometric = widget.biometric ?? BiometricService();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _tryBiometric());
   }
 
   @override
@@ -37,11 +48,20 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  Future<void> _tryBiometric() async {
+    final token = await widget.storage.getAccessToken();
+    final enabled = await widget.storage.getBiometricEnabled();
+    if (!mounted || token == null || !enabled) return;
+    final ok = await _biometric.authenticate();
+    if (mounted && ok) context.go('/machines');
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _loading = true; _error = null; });
     try {
       await _auth.login(_emailCtrl.text.trim(), _passCtrl.text);
+      await _offerBiometric();
       if (mounted) context.go('/machines');
     } catch (e) {
       final msg = (e is DioException && e.type != DioExceptionType.badResponse)
@@ -51,6 +71,31 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       if (mounted) setState(() { _loading = false; });
     }
+  }
+
+  Future<void> _offerBiometric() async {
+    final alreadyEnabled = await widget.storage.getBiometricEnabled();
+    if (alreadyEnabled) return;
+    final available = await _biometric.isAvailable();
+    if (!available || !mounted) return;
+    final accept = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Acceso con huella'),
+        content: const Text('¿Activar el acceso con huella dactilar la próxima vez?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Ahora no'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Activar'),
+          ),
+        ],
+      ),
+    );
+    if (accept == true) await widget.storage.setBiometricEnabled(true);
   }
 
   @override
