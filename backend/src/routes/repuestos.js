@@ -1,6 +1,18 @@
 'use strict'
 module.exports = async function repuestosRoutes(app) {
-  app.get('/', { preHandler: [app.authenticate] }, async (req) => {
+  app.get('/', {
+    preHandler: [app.authenticate],
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          machine_id: { type: 'string' },
+          status: { type: 'string', enum: ['pendiente', 'pedido', 'recibido'] },
+        },
+        additionalProperties: false,
+      },
+    },
+  }, async (req) => {
     const { machine_id, status } = req.query
     const conditions = [], params = []
     if (machine_id) { params.push(machine_id); conditions.push(`sp.machine_id = $${params.length}`) }
@@ -70,11 +82,20 @@ module.exports = async function repuestosRoutes(app) {
     if (status      !== undefined) { params.push(status);      sets.push(`status = $${params.length}`) }
     params.push(id)
     const { rows } = await app.db.query(
-      `UPDATE spare_parts SET ${sets.join(', ')} WHERE id = $${params.length} RETURNING *`,
+      `UPDATE spare_parts SET ${sets.join(', ')} WHERE id = $${params.length}
+       RETURNING id, machine_id, description, quantity, status,
+                 created_by, updated_by, created_at, updated_at`,
       params
     )
     if (!rows.length) return reply.code(404).send({ error: 'Repuesto not found' })
-    return rows[0]
+    const updated = rows[0]
+    const { rows: joined } = await app.db.query(
+      `SELECT m.name AS machine_name, u.name AS created_by_name
+       FROM machines m, users u
+       WHERE m.id = $1 AND u.id = $2`,
+      [updated.machine_id, updated.created_by]
+    )
+    return { ...updated, ...joined[0] }
   })
 
   app.delete('/:id', {
