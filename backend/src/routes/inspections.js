@@ -72,7 +72,7 @@ module.exports = async function inspectionsRoutes(app) {
         properties: {
           status: { type: 'string', enum: ['operative', 'out_of_service', 'in_repair'] },
           card_reader_ok: { type: 'boolean' },
-          card_reader_failure_type: { type: 'string', enum: ['no_lee', 'error_comunicacion', 'dano_fisico', 'otro'] },
+          card_reader_failure_type: { type: ['string', 'null'], enum: ['no_lee', 'error_comunicacion', 'dano_fisico', 'otro', null] },
           comment: { type: ['string', 'null'] },
           ticket_check: {
             type: 'object',
