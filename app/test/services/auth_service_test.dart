@@ -47,4 +47,15 @@ void main() {
     verify(() => mockStorage.clear()).called(1);
     expect(authService.currentUser, isNull);
   });
+
+  test('storage: getBiometricEnabled returns mocked value', () async {
+    when(() => mockStorage.getBiometricEnabled()).thenAnswer((_) async => true);
+    expect(await mockStorage.getBiometricEnabled(), isTrue);
+  });
+
+  test('storage: setBiometricEnabled calls mock without error', () async {
+    when(() => mockStorage.setBiometricEnabled(true)).thenAnswer((_) async {});
+    await mockStorage.setBiometricEnabled(true);
+    verify(() => mockStorage.setBiometricEnabled(true)).called(1);
+  });
 }
