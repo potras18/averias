@@ -5,6 +5,7 @@ import '../models/inspection.dart';
 import '../models/location.dart';
 import '../models/stats.dart';
 import '../models/user.dart';
+import '../models/spare_part.dart';
 import 'storage_service.dart';
 
 class ApiClient {
@@ -262,5 +263,47 @@ class ApiClient {
   Future<User> deactivateUser(String id) async {
     final res = await _dio.patch('/users/$id/deactivate');
     return User.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  // Spare Parts
+  Future<List<SparePart>> getSpareParts({String? machineId, String? status}) async {
+    final res = await _dio.get('/repuestos', queryParameters: {
+      if (machineId != null) 'machine_id': machineId,
+      if (status != null) 'status': status,
+    });
+    return (res.data as List)
+        .map((j) => SparePart.fromJson(j as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<SparePart> createSparePart({
+    required String machineId,
+    required String description,
+    required int quantity,
+  }) async {
+    final res = await _dio.post('/repuestos', data: {
+      'machine_id': machineId,
+      'description': description,
+      'quantity': quantity,
+    });
+    return SparePart.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<SparePart> updateSparePart(
+    String id, {
+    String? description,
+    int? quantity,
+    String? status,
+  }) async {
+    final res = await _dio.patch('/repuestos/$id', data: {
+      if (description != null) 'description': description,
+      if (quantity != null) 'quantity': quantity,
+      if (status != null) 'status': status,
+    });
+    return SparePart.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<void> deleteSparePart(String id) async {
+    await _dio.delete('/repuestos/$id');
   }
 }
