@@ -6,14 +6,17 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 
 async function resetDb() {
   await pool.query(
-    'TRUNCATE refresh_tokens, ticket_checks, inspections, machines, locations, users RESTART IDENTITY CASCADE'
+    'TRUNCATE refresh_tokens, ticket_checks, spare_parts, inspections, machines, locations RESTART IDENTITY CASCADE'
   )
 }
+
 
 async function seedUser({ name = 'Tech User', email = 'tech@example.com', password = 'secret123', role, active = true } = {}) {
   const hash = await bcrypt.hash(password, 12)
   const { rows } = await pool.query(
-    'INSERT INTO users (name, email, password_hash, role, active) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, role, active',
+    `INSERT INTO users (name, email, password_hash, role, active) VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, active = EXCLUDED.active
+     RETURNING id, name, email, role, active`,
     [name, email, hash, role ?? 'technician', active]
   )
   return { ...rows[0], password }
@@ -44,4 +47,13 @@ async function seedInspection({ machineId, technicianId, status = 'operative', c
   return rows[0]
 }
 
-module.exports = { pool, resetDb, seedUser, seedLocation, seedMachine, seedInspection }
+async function seedSparePart({ machineId, createdBy, description = 'Palanca rota', quantity = 1, status = 'pendiente' } = {}) {
+  const { rows } = await pool.query(
+    `INSERT INTO spare_parts (machine_id, created_by, description, quantity, status)
+     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [machineId, createdBy, description, quantity, status]
+  )
+  return rows[0]
+}
+
+module.exports = { pool, resetDb, seedUser, seedLocation, seedMachine, seedInspection, seedSparePart }
