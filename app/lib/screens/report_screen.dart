@@ -262,7 +262,7 @@ class _ReportScreenState extends State<ReportScreen> {
             _buildPicker(),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              initialValue: _selectedLocationId,
+              value: _selectedLocationId,
               decoration:
                   const InputDecoration(labelText: 'Local (opcional)'),
               items: [
