@@ -117,6 +117,11 @@ class ApiClient {
     return Inspection.fromJson(res.data as Map<String, dynamic>);
   }
 
+  Future<Inspection> updateInspection(String id, Map<String, dynamic> data) async {
+    final res = await _dio.patch('/inspections/$id', data: data);
+    return Inspection.fromJson(res.data as Map<String, dynamic>);
+  }
+
   // Reports
   Future<Uint8List> getReportPdf({String? from, String? to, String? locationId}) async {
     final params = <String, String>{
