@@ -61,6 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       await _auth.login(_emailCtrl.text.trim(), _passCtrl.text);
+      if (mounted) setState(() { _loading = false; });
       await _offerBiometric();
       if (mounted) context.go('/machines');
     } catch (e) {

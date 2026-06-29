@@ -6,9 +6,13 @@ class BiometricService {
   BiometricService({LocalAuthentication? auth}) : _auth = auth ?? LocalAuthentication();
 
   Future<bool> isAvailable() async {
-    if (!await _auth.canCheckBiometrics) return false;
-    final biometrics = await _auth.getAvailableBiometrics();
-    return biometrics.isNotEmpty;
+    try {
+      if (!await _auth.canCheckBiometrics) return false;
+      final biometrics = await _auth.getAvailableBiometrics();
+      return biometrics.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<bool> authenticate() async {
