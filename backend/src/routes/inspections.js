@@ -73,7 +73,7 @@ module.exports = async function inspectionsRoutes(app) {
           status: { type: 'string', enum: ['operative', 'out_of_service', 'in_repair'] },
           card_reader_ok: { type: 'boolean' },
           card_reader_failure_type: { type: 'string', enum: ['no_lee', 'error_comunicacion', 'dano_fisico', 'otro'] },
-          comment: { type: 'string' },
+          comment: { type: ['string', 'null'] },
           ticket_check: {
             type: 'object',
             required: ['dispenser_ok', 'ticket_level'],
@@ -89,7 +89,7 @@ module.exports = async function inspectionsRoutes(app) {
     },
   }, async (req, reply) => {
     const { id } = req.params
-    const { status, card_reader_ok, card_reader_failure_type, comment, ticket_check } = req.body
+    const { status, card_reader_ok, card_reader_failure_type, ticket_check } = req.body
     const role = req.user.role
 
     const { rows: existing } = await app.db.query(
@@ -101,23 +101,44 @@ module.exports = async function inspectionsRoutes(app) {
     if (role === 'technician' && !existing[0].is_today) {
       return reply.code(403).send({ error: 'Solo puedes editar inspecciones del día de hoy' })
     }
+    if (role === 'technician' && existing[0].technician_id !== req.user.sub) {
+      return reply.code(403).send({ error: 'No puedes editar inspecciones de otros técnicos' })
+    }
 
     const client = await app.db.connect()
     try {
       await client.query('BEGIN')
 
-      const { rows } = await client.query(
-        `UPDATE inspections SET
-           status               = COALESCE($2, status),
-           card_reader_ok       = COALESCE($3, card_reader_ok),
-           card_reader_failure_type = COALESCE($4, card_reader_failure_type),
-           comment              = COALESCE($5, comment)
-         WHERE id = $1
-         RETURNING id, machine_id, technician_id, status, card_reader_ok,
-                   card_reader_failure_type, comment, inspected_at,
-                   (SELECT name FROM users WHERE id = inspections.technician_id) AS technician_name`,
-        [id, status ?? null, card_reader_ok ?? null, card_reader_failure_type ?? null, comment ?? null]
-      )
+      const setClauses = []
+      const params = [id]
+      let idx = 2
+
+      if (status !== undefined)                   { setClauses.push(`status = $${idx++}`);                    params.push(status) }
+      if (card_reader_ok !== undefined)           { setClauses.push(`card_reader_ok = $${idx++}`);            params.push(card_reader_ok) }
+      if (card_reader_failure_type !== undefined) { setClauses.push(`card_reader_failure_type = $${idx++}`);  params.push(card_reader_failure_type) }
+      if ('comment' in req.body)                  { setClauses.push(`comment = $${idx++}`);                   params.push(req.body.comment || null) }
+
+      let rows = [existing[0]]
+      if (setClauses.length) {
+        const result = await client.query(
+          `UPDATE inspections SET ${setClauses.join(', ')}
+           WHERE id = $1
+           RETURNING id, machine_id, technician_id, status, card_reader_ok,
+                     card_reader_failure_type, comment, inspected_at,
+                     (SELECT name FROM users WHERE id = inspections.technician_id) AS technician_name`,
+          params
+        )
+        rows = result.rows
+      } else {
+        const result = await client.query(
+          `SELECT id, machine_id, technician_id, status, card_reader_ok,
+                  card_reader_failure_type, comment, inspected_at,
+                  (SELECT name FROM users WHERE id = inspections.technician_id) AS technician_name
+           FROM inspections WHERE id = $1`,
+          [id]
+        )
+        rows = result.rows
+      }
 
       let tc = null
       if (ticket_check) {

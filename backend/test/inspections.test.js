@@ -5,7 +5,7 @@ const { resetDb, seedUser, seedLocation, seedMachine, seedInspection } = require
 const { buildApp } = require('../src/app')
 
 let app, st, token, machine, ticketMachine, userId
-let adminToken, techToken, techUserId, adminUserId
+let adminToken, techToken, techUserId, adminUserId, tech2Token
 
 beforeAll(async () => {
   app = buildApp()
@@ -24,6 +24,10 @@ beforeAll(async () => {
   const adminRes = await st.post('/auth/login').send({ email: admin.email, password: admin.password })
   adminToken = adminRes.body.accessToken
   adminUserId = adminRes.body.user.id
+
+  const tech2 = await seedUser({ name: 'Tech2', email: 'tech2@example.com', password: 'secret123', role: 'technician' })
+  const tech2Res = await st.post('/auth/login').send({ email: tech2.email, password: tech2.password })
+  tech2Token = tech2Res.body.accessToken
 
   const loc = await seedLocation()
   machine = await seedMachine({ locationId: loc.id, qrCode: 'INS-1' })
@@ -179,4 +183,19 @@ test('PATCH /inspections/:id inserts ticket_check when it did not exist', async 
   expect(res.status).toBe(200)
   expect(res.body.ticket_check.dispenser_ok).toBe(true)
   expect(res.body.ticket_check.ticket_level).toBe('low')
+})
+
+test('PATCH /inspections/:id technician cannot edit another technician today inspection', async () => {
+  const created = await st.post('/inspections').set(auth()).send({
+    machine_id: machine.id,
+    status: 'operative',
+    card_reader_ok: true,
+  })
+  const id = created.body.id
+
+  const res = await st.patch(`/inspections/${id}`)
+    .set({ Authorization: `Bearer ${tech2Token}` })
+    .send({ status: 'in_repair' })
+  expect(res.status).toBe(403)
+  expect(res.body.error).toBe('No puedes editar inspecciones de otros técnicos')
 })

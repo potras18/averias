@@ -84,7 +84,9 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         'status': _status,
         'card_reader_ok': _cardReaderOk,
         if (!_cardReaderOk) 'card_reader_failure_type': _failureType,
-        if (_commentCtrl.text.trim().isNotEmpty) 'comment': _commentCtrl.text.trim(),
+        if (_isEdit)
+          'comment': _commentCtrl.text.trim().isEmpty ? null : _commentCtrl.text.trim(),
+        if (!_isEdit && _commentCtrl.text.trim().isNotEmpty) 'comment': _commentCtrl.text.trim(),
         if (widget.hasRedemptionTickets)
           'ticket_check': {'dispenser_ok': _dispenserOk, 'ticket_level': _ticketLevel},
       };
