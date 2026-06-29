@@ -1,19 +1,39 @@
-// averias/app/test/widgets/inspection_form_test.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:averias_app/models/machine.dart';
 import 'package:averias_app/models/inspection.dart';
 import 'package:averias_app/services/api_client.dart';
 import 'package:averias_app/screens/inspection_form_screen.dart';
 
 class MockApiClient extends Mock implements ApiClient {}
 
+final _editInspection = Inspection(
+  id: 'insp-99',
+  machineId: 'machine-1',
+  status: 'out_of_service',
+  cardReaderOk: false,
+  cardReaderFailureType: 'dano_fisico',
+  comment: 'ya roto',
+  inspectedAt: DateTime.now(),
+  ticketCheck: null,
+);
+
 void main() {
   late MockApiClient mockApi;
 
   setUp(() {
     mockApi = MockApiClient();
+  });
+
+  // --- existing tests (create mode) ---
+
+  testWidgets('create mode: shows title Registrar inspección', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: InspectionFormScreen(api: mockApi, machineId: '123'),
+    ));
+    await tester.pump();
+    expect(find.text('Registrar inspección'), findsOneWidget);
+    expect(find.text('Guardar inspección'), findsOneWidget);
   });
 
   testWidgets('form shows card reader section', (tester) async {
@@ -42,5 +62,52 @@ void main() {
     ));
     await tester.pump();
     expect(find.text('Tickets redemption'), findsOneWidget);
+  });
+
+  // --- new edit mode tests ---
+
+  testWidgets('edit mode: shows title Editar inspección', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: InspectionFormScreen(
+        api: mockApi,
+        machineId: 'machine-1',
+        inspection: _editInspection,
+      ),
+    ));
+    await tester.pump();
+    expect(find.text('Editar inspección'), findsOneWidget);
+    expect(find.text('Guardar cambios'), findsOneWidget);
+  });
+
+  testWidgets('edit mode: pre-populates comment field', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: InspectionFormScreen(
+        api: mockApi,
+        machineId: 'machine-1',
+        inspection: _editInspection,
+      ),
+    ));
+    await tester.pump();
+    final commentField = find.byType(TextField);
+    expect(tester.widget<TextField>(commentField).controller?.text, 'ya roto');
+  });
+
+  testWidgets('edit mode: save calls updateInspection not createInspection', (tester) async {
+    when(() => mockApi.updateInspection(any(), any()))
+        .thenAnswer((_) async => _editInspection);
+
+    await tester.pumpWidget(MaterialApp(
+      home: InspectionFormScreen(
+        api: mockApi,
+        machineId: 'machine-1',
+        inspection: _editInspection,
+      ),
+    ));
+    await tester.pump();
+    await tester.tap(find.text('Guardar cambios'));
+    await tester.pump();
+
+    verify(() => mockApi.updateInspection('insp-99', any())).called(1);
+    verifyNever(() => mockApi.createInspection(any()));
   });
 }

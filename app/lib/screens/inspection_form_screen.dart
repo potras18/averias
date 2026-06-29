@@ -1,6 +1,7 @@
 // averias/app/lib/screens/inspection_form_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../models/inspection.dart';
 import '../services/api_client.dart';
 import '../widgets/desktop_shell_scope.dart';
 
@@ -27,12 +28,14 @@ class InspectionFormScreen extends StatefulWidget {
   final ApiClient api;
   final String machineId;
   final bool hasRedemptionTickets;
+  final Inspection? inspection;
 
   const InspectionFormScreen({
     super.key,
     required this.api,
     required this.machineId,
     this.hasRedemptionTickets = false,
+    this.inspection,
   });
 
   @override
@@ -49,6 +52,24 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   bool _saving = false;
   String? _error;
 
+  bool get _isEdit => widget.inspection != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final i = widget.inspection;
+    if (i != null) {
+      _status = i.status;
+      _cardReaderOk = i.cardReaderOk;
+      _failureType = i.cardReaderFailureType ?? 'no_lee';
+      _commentCtrl.text = i.comment ?? '';
+      if (i.ticketCheck != null) {
+        _dispenserOk = i.ticketCheck!.dispenserOk;
+        _ticketLevel = i.ticketCheck!.ticketLevel;
+      }
+    }
+  }
+
   @override
   void dispose() {
     _commentCtrl.dispose();
@@ -59,7 +80,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
     setState(() { _saving = true; _error = null; });
     try {
       final data = <String, dynamic>{
-        'machine_id': widget.machineId,
+        if (!_isEdit) 'machine_id': widget.machineId,
         'status': _status,
         'card_reader_ok': _cardReaderOk,
         if (!_cardReaderOk) 'card_reader_failure_type': _failureType,
@@ -67,7 +88,11 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         if (widget.hasRedemptionTickets)
           'ticket_check': {'dispenser_ok': _dispenserOk, 'ticket_level': _ticketLevel},
       };
-      await widget.api.createInspection(data);
+      if (_isEdit) {
+        await widget.api.updateInspection(widget.inspection!.id, data);
+      } else {
+        await widget.api.createInspection(data);
+      }
       if (mounted) context.pop();
     } catch (_) {
       setState(() { _error = 'Error al guardar. Reinténtalo.'; });
@@ -97,23 +122,26 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
       );
     }
     return Scaffold(
-      appBar: AppBar(title: const Text('Registrar inspección')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
+      appBar: AppBar(title: Text(_isEdit ? 'Editar inspección' : 'Registrar inspección')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           Text('Estado', style: Theme.of(context).textTheme.titleSmall),
           ..._statusOptions.map((opt) => RadioListTile<String>(
                 title: Text(opt.$2),
                 value: opt.$1,
                 groupValue: _status,
                 onChanged: (v) => setState(() => _status = v!),
+                dense: true,
               )),
-          const Divider(),
           Text('Lector de tarjetas', style: Theme.of(context).textTheme.titleSmall),
           SwitchListTile(
             title: const Text('Funciona correctamente'),
             value: _cardReaderOk,
             onChanged: (v) => setState(() => _cardReaderOk = v),
+            dense: true,
           ),
           if (!_cardReaderOk) ...[
             Text('Tipo de fallo', style: Theme.of(context).textTheme.titleSmall),
@@ -122,6 +150,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                   value: opt.$1,
                   groupValue: _failureType,
                   onChanged: (v) => setState(() => _failureType = v!),
+                  dense: true,
                 )),
           ],
           if (widget.hasRedemptionTickets) ...[
@@ -131,6 +160,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
               title: const Text('Dispensador OK'),
               value: _dispenserOk,
               onChanged: (v) => setState(() => _dispenserOk = v),
+              dense: true,
             ),
             Text('Nivel de tickets', style: Theme.of(context).textTheme.titleSmall),
             ..._ticketLevels.map((opt) => RadioListTile<String>(
@@ -138,9 +168,9 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                   value: opt.$1,
                   groupValue: _ticketLevel,
                   onChanged: (v) => setState(() => _ticketLevel = v!),
+                  dense: true,
                 )),
           ],
-          const Divider(),
           TextField(
             controller: _commentCtrl,
             decoration: const InputDecoration(
@@ -148,19 +178,26 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
               hintText: 'Observaciones adicionales...',
               border: OutlineInputBorder(),
             ),
-            maxLines: 3,
+            maxLines: 2,
           ),
           if (_error != null) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Text(_error!, style: const TextStyle(color: Colors.red)),
           ],
-          const SizedBox(height: 24),
-          FilledButton(
-            onPressed: _saving ? null : _save,
-            child: _saving ? const CircularProgressIndicator(color: Colors.white) : const Text('Guardar inspección'),
-          ),
         ],
+        ),
       ),
+      persistentFooterButtons: [
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: _saving ? null : _save,
+            child: _saving
+                ? const CircularProgressIndicator(color: Colors.white)
+                : Text(_isEdit ? 'Guardar cambios' : 'Guardar inspección'),
+          ),
+        ),
+      ],
     );
   }
 }
