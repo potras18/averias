@@ -138,8 +138,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Usuarios'));
     await tester.pumpAndSettle();
-    final ownBtn = tester.widget<TextButton>(find.byKey(const Key('role-toggle-user-1')));
-    expect(ownBtn.onPressed, isNull);
+    await tester.tap(find.byKey(const Key('user-actions-user-1')));
+    await tester.pumpAndSettle();
+    final item = tester.widget<PopupMenuItem<String>>(find.byKey(const Key('role-toggle-user-1')));
+    expect(item.enabled, isFalse);
+    await tester.tapAt(const Offset(0, 0));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('Usuarios tab: role toggle for other user calls updateUserRole', (tester) async {
@@ -148,6 +152,8 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: AdminScreen(api: api, storage: storage)));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Usuarios'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('user-actions-user-2')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('role-toggle-user-2')));
     await tester.pumpAndSettle();
@@ -159,8 +165,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Usuarios'));
     await tester.pumpAndSettle();
-    final btn = tester.widget<TextButton>(find.byKey(const Key('deactivate-user-1')));
-    expect(btn.onPressed, isNull);
+    await tester.tap(find.byKey(const Key('user-actions-user-1')));
+    await tester.pumpAndSettle();
+    final item = tester.widget<PopupMenuItem<String>>(find.byKey(const Key('deactivate-user-1')));
+    expect(item.enabled, isFalse);
+    await tester.tapAt(const Offset(0, 0));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('Usuarios tab: deactivate button disabled when user is last active admin', (tester) async {
@@ -170,8 +180,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Usuarios'));
     await tester.pumpAndSettle();
-    final btn = tester.widget<TextButton>(find.byKey(const Key('deactivate-user-1')));
-    expect(btn.onPressed, isNull);
+    await tester.tap(find.byKey(const Key('user-actions-user-1')));
+    await tester.pumpAndSettle();
+    final item = tester.widget<PopupMenuItem<String>>(find.byKey(const Key('deactivate-user-1')));
+    expect(item.enabled, isFalse);
+    await tester.tapAt(const Offset(0, 0));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('Usuarios tab: deactivate calls deactivateUser on confirm', (tester) async {
@@ -180,6 +194,8 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: AdminScreen(api: api, storage: storage)));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Usuarios'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('user-actions-user-2')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('deactivate-user-2')));
     await tester.pumpAndSettle();

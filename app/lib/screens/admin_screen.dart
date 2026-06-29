@@ -645,28 +645,48 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                           ? Colors.indigo[100]
                           : Colors.grey[200],
                     ),
-                    const SizedBox(width: 4),
-                    if (user.active) ...[
-                      IconButton(
-                        icon: const Icon(Icons.edit),
-                        tooltip: 'Editar',
-                        onPressed: () => _showUserDialog(user: user),
+                    if (user.active)
+                      PopupMenuButton<String>(
+                        key: Key('user-actions-${user.id}'),
+                        icon: const Icon(Icons.more_vert),
+                        onSelected: (value) {
+                          if (value == 'edit') _showUserDialog(user: user);
+                          if (value == 'deactivate') _deactivateUser(user);
+                          if (value == 'role') _toggleRole(user);
+                        },
+                        itemBuilder: (_) => [
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: ListTile(
+                              leading: Icon(Icons.edit),
+                              title: Text('Editar'),
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          PopupMenuItem(
+                            key: Key('deactivate-${user.id}'),
+                            value: 'deactivate',
+                            enabled: !isOwn && !isLastAdmin,
+                            child: const ListTile(
+                              leading: Icon(Icons.person_off),
+                              title: Text('Desactivar'),
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          PopupMenuItem(
+                            key: Key('role-toggle-${user.id}'),
+                            value: 'role',
+                            enabled: !isOwn,
+                            child: ListTile(
+                              leading: const Icon(Icons.admin_panel_settings),
+                              title: Text(user.role == 'admin'
+                                  ? 'Revocar admin'
+                                  : 'Hacer admin'),
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ],
                       ),
-                      TextButton(
-                        key: Key('deactivate-${user.id}'),
-                        onPressed: (isOwn || isLastAdmin)
-                            ? null
-                            : () => _deactivateUser(user),
-                        child: const Text('Desactivar'),
-                      ),
-                      TextButton(
-                        key: Key('role-toggle-${user.id}'),
-                        onPressed: isOwn ? null : () => _toggleRole(user),
-                        child: Text(user.role == 'admin'
-                            ? 'Revocar admin'
-                            : 'Hacer admin'),
-                      ),
-                    ],
                   ],
                 ),
               );
