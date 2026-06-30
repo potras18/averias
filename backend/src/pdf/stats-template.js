@@ -155,6 +155,7 @@ function buildStatsHtml({
 </style>
 </head>
 <body>
+<p style="font-size:14px;font-weight:bold;color:#555;margin-bottom:2px;">Cocamatic</p>
 <h1>Estadísticas de Averías</h1>
 <div class="subtitle">
   Período: ${fmtDate(from)} — ${fmtDate(to)} &nbsp;|&nbsp;

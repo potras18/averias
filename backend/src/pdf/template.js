@@ -71,6 +71,7 @@ function buildReportHtml({ from, to, generatedAt, technicianName, summary, locat
   </style>
 </head>
 <body>
+  <p style="font-size:14px;font-weight:bold;color:#555;margin-bottom:2px;">Cocamatic</p>
   <h1>Informe de Averías</h1>
   <p><strong>Período:</strong> ${fmtDate(from)} — ${fmtDate(to)}</p>
   <p><strong>Técnico:</strong> ${esc(technicianName)}</p>
