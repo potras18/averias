@@ -8,6 +8,30 @@ async function resetDb() {
   await pool.query(
     'TRUNCATE refresh_tokens, ticket_checks, spare_parts, inspections, machines, locations RESTART IDENTITY CASCADE'
   )
+  await pool.query(`
+    UPDATE settings SET value = CASE
+      WHEN key = 'smtp_port' THEN '587'
+      WHEN key = 'email_recipients' THEN '[]'
+      ELSE ''
+    END, updated_at = now()
+  `)
+}
+
+async function seedSettings(overrides = {}) {
+  const updates = {
+    smtp_host: '',
+    smtp_port: '587',
+    smtp_user: '',
+    smtp_pass: '',
+    smtp_from: '',
+    email_recipients: '[]',
+    ...overrides,
+  }
+  await Promise.all(
+    Object.entries(updates).map(([key, value]) =>
+      pool.query('UPDATE settings SET value = $1, updated_at = now() WHERE key = $2', [String(value), key])
+    )
+  )
 }
 
 
@@ -56,4 +80,4 @@ async function seedSparePart({ machineId, createdBy, description = 'Palanca rota
   return rows[0]
 }
 
-module.exports = { pool, resetDb, seedUser, seedLocation, seedMachine, seedInspection, seedSparePart }
+module.exports = { pool, resetDb, seedUser, seedLocation, seedMachine, seedInspection, seedSparePart, seedSettings }

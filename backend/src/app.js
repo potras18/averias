@@ -13,6 +13,7 @@ const reportsRoutes = require('./routes/reports')
 const statsRoutes = require('./routes/stats')
 const usersRoutes = require('./routes/users')
 const repuestosRoutes = require('./routes/repuestos')
+const settingsRoutes = require('./routes/settings')
 
 function buildApp(opts = {}) {
   const app = Fastify({ logger: opts.logger ?? false })
@@ -28,6 +29,7 @@ function buildApp(opts = {}) {
   app.register(statsRoutes, { prefix: '/stats' })
   app.register(usersRoutes, { prefix: '/users' })
   app.register(repuestosRoutes, { prefix: '/repuestos' })
+  app.register(settingsRoutes, { prefix: '/settings' })
   return app
 }
 
