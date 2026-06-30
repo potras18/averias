@@ -110,7 +110,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   @override
   Widget build(BuildContext context) {
     final isDesktop = DesktopShellScope.of(context)?.isDesktop ?? false;
-    if (isDesktop) {
+    if (isDesktop && !_isEdit) {
       return Scaffold(
         body: Center(
           child: Column(
