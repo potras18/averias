@@ -6,7 +6,7 @@
 
 | Requisito | Versión mínima |
 |-----------|---------------|
-| Node.js | 18+ |
+| Node.js | 22.12.0+ (requerido por Puppeteer para generación de PDF) |
 | PostgreSQL | 14+ (necesita extensión `pgcrypto`) |
 | npm | 9+ |
 
@@ -42,7 +42,8 @@ JWT_SECRET=cambia-esto-por-una-cadena-aleatoria-larga
 # Puerto del servidor (por defecto 3000)
 PORT=3000
 
-# Configuración SMTP para envío de emails
+# Configuración SMTP para envío de emails (fallback)
+# Alternativa: configurarlo desde la app en Ajustes (panel de administrador)
 SMTP_HOST=smtp.ejemplo.com
 SMTP_PORT=587
 SMTP_USER=correo@ejemplo.com
@@ -51,6 +52,8 @@ SMTP_FROM=correo@ejemplo.com
 ```
 
 > **Seguridad:** `JWT_SECRET` debe ser una cadena aleatoria larga. Nunca usar el valor por defecto en producción.
+
+> **SMTP:** Los valores SMTP del `.env` son un fallback. Si se configuran desde la app (Ajustes → pestaña Ajustes como administrador), tienen prioridad sobre el `.env`.
 
 ---
 
