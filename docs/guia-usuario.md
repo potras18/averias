@@ -47,7 +47,7 @@ Muestra la información completa de una máquina en dos pestañas:
 **Pestaña Inspecciones:**
 - Nombre, localización, estado actual.
 - Código QR de la máquina (para imprimir etiquetas).
-- Historial de las últimas 10 inspecciones con técnico y fecha.
+- Historial de las últimas 5 inspecciones con técnico y fecha.
 - Si la máquina tiene dispensador de tickets: estado del dispensador y nivel de tickets en cada revisión.
 
 **Pestaña Repuestos:**
