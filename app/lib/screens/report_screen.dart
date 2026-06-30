@@ -151,21 +151,12 @@ class _ReportScreenState extends State<ReportScreen> {
         ],
       ),
     );
-    final emailText = emailCtrl.text;
     emailCtrl.dispose();
     if (confirmed != true) return;
-
-    final emails = emailText
-        .split(',')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
-    if (emails.isEmpty) return;
 
     setState(() { _loading = true; _error = null; });
     try {
       await widget.api.sendReportByEmail(
-        emails: emails,
         from: _fromStr,
         to: _toStr,
         locationId: _selectedLocationId,

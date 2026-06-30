@@ -5,6 +5,7 @@ import '../models/inspection.dart';
 import '../models/location.dart';
 import '../models/stats.dart';
 import '../models/user.dart';
+import '../models/settings.dart';
 import '../models/spare_part.dart';
 import 'storage_service.dart';
 
@@ -139,13 +140,11 @@ class ApiClient {
   }
 
   Future<void> sendReportByEmail({
-    required List<String> emails,
     String? from,
     String? to,
     String? locationId,
   }) async {
     await _dio.post('/reports/email', data: {
-      'emails': emails,
       if (from != null) 'from': from,
       if (to != null) 'to': to,
       if (locationId != null) 'location_id': locationId,
@@ -181,17 +180,26 @@ class ApiClient {
   }
 
   Future<void> sendStatsByEmail({
-    required List<String> emails,
     String? from,
     String? to,
     String? locationId,
   }) async {
     await _dio.post('/stats/email', data: {
-      'emails': emails,
       if (from != null) 'from': from,
       if (to != null) 'to': to,
       if (locationId != null) 'location_id': locationId,
     });
+  }
+
+  // Settings
+  Future<Settings> getSettings() async {
+    final res = await _dio.get('/settings');
+    return Settings.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<Settings> updateSettings(Map<String, dynamic> body) async {
+    final res = await _dio.put('/settings', data: body);
+    return Settings.fromJson(res.data as Map<String, dynamic>);
   }
 
   // Admin — Locations

@@ -146,19 +146,11 @@ class _StatsScreenState extends State<StatsScreen> {
         ],
       ),
     );
-    final emailText = emailCtrl.text;
     emailCtrl.dispose();
     if (confirmed != true) return;
-    final emails = emailText
-        .split(',')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
-    if (emails.isEmpty) return;
     if (mounted) setState(() { _loading = true; _error = null; });
     try {
       await widget.api.sendStatsByEmail(
-        emails: emails,
         from: _fromStr,
         to: _toStr,
         locationId: _selectedLocationId,
