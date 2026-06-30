@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../models/machine.dart';
 import '../models/inspection.dart';
+import '../models/spare_part.dart';
 import '../services/api_client.dart';
 import '../services/storage_service.dart';
 import '../widgets/desktop_shell_scope.dart';
@@ -50,6 +51,8 @@ class _MachineListScreenState extends State<MachineListScreen> {
   // Desktop state
   String? _selectedMachineId;
   Future<Machine>? _detailFuture;
+  Future<List<SparePart>>? _partsFuture;
+  String? _userId;
   bool _showForm = false;
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
@@ -61,6 +64,7 @@ class _MachineListScreenState extends State<MachineListScreen> {
     super.initState();
     _loadList();
     _loadRole();
+    widget.storage.getUserId().then((id) { if (mounted) setState(() => _userId = id); });
     _searchCtrl.addListener(() {
       setState(() => _searchQuery = _searchCtrl.text);
     });
@@ -153,6 +157,7 @@ class _MachineListScreenState extends State<MachineListScreen> {
       _selectedMachineId = id;
       _showForm = false;
       _detailFuture = widget.api.getMachineById(id);
+      _partsFuture = widget.api.getSpareParts(machineId: id);
     });
   }
 
@@ -337,7 +342,77 @@ class _MachineListScreenState extends State<MachineListScreen> {
               if (machine.inspections.isEmpty)
                 const Text('Sin inspecciones previas')
               else
-                ...machine.inspections.map((i) => _InspectionTile(inspection: i)),
+                ...machine.inspections.map((i) => _InspectionTile(
+                      inspection: i,
+                      role: _role,
+                      currentUserId: _userId,
+                      onEdit: () => context.push(
+                        '/machines/${machine.id}/inspect',
+                        extra: {
+                          'hasRedemptionTickets': machine.hasRedemptionTickets,
+                          'inspection': i,
+                        },
+                      ).then((_) => setState(() {
+                            _detailFuture = widget.api.getMachineById(_selectedMachineId!);
+                            _partsFuture = widget.api.getSpareParts(machineId: _selectedMachineId!);
+                          })),
+                    )),
+              const SizedBox(height: 32),
+              Text('Repuestos', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              FutureBuilder<List<SparePart>>(
+                future: _partsFuture,
+                builder: (context, partsSnap) {
+                  if (_partsFuture == null || partsSnap.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (partsSnap.hasError) return Text('Error: ${partsSnap.error}');
+                  final parts = partsSnap.data ?? [];
+                  if (parts.isEmpty) return const Text('Sin repuestos');
+                  return Column(
+                    children: [
+                      ...parts.map((p) => _SparePartTile(
+                            part: p,
+                            role: _role,
+                            onEdit: () => context.push(
+                              '/repuestos/${p.id}/edit',
+                              extra: {'sparePart': p},
+                            ).then((_) => setState(() {
+                                  _partsFuture = widget.api.getSpareParts(machineId: _selectedMachineId!);
+                                })),
+                            onDelete: () async {
+                              final ok = await showDialog<bool>(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text('Eliminar repuesto'),
+                                  content: Text('¿Eliminar "${p.description}"?'),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                                    FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Eliminar')),
+                                  ],
+                                ),
+                              );
+                              if (ok == true && mounted) {
+                                await widget.api.deleteSparePart(p.id);
+                                if (mounted) setState(() { _partsFuture = widget.api.getSpareParts(machineId: _selectedMachineId!); });
+                              }
+                            },
+                          )),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.add),
+                label: const Text('Añadir repuesto'),
+                onPressed: () => context.push(
+                  '/repuestos/new',
+                  extra: {'machineId': machine.id},
+                ).then((_) => setState(() {
+                      _partsFuture = widget.api.getSpareParts(machineId: _selectedMachineId!);
+                    })),
+              ),
             ],
           ),
         );
@@ -382,7 +457,25 @@ class _InfoRow extends StatelessWidget {
 
 class _InspectionTile extends StatelessWidget {
   final Inspection inspection;
-  const _InspectionTile({required this.inspection});
+  final String? role;
+  final String? currentUserId;
+  final VoidCallback? onEdit;
+
+  const _InspectionTile({
+    required this.inspection,
+    this.role,
+    this.currentUserId,
+    this.onEdit,
+  });
+
+  bool _canEdit() {
+    if (role == null) return false;
+    if (role == 'admin') return true;
+    final today = DateTime.now();
+    final d = inspection.inspectedAt;
+    final isToday = d.year == today.year && d.month == today.month && d.day == today.day;
+    return isToday && inspection.technicianId == currentUserId;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -399,9 +492,74 @@ class _InspectionTile extends StatelessWidget {
                   style: const TextStyle(color: Colors.red)),
           ],
         ),
-        trailing: Text(
-          '${inspection.inspectedAt.day}/${inspection.inspectedAt.month}/${inspection.inspectedAt.year}',
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${inspection.inspectedAt.day}/${inspection.inspectedAt.month}/${inspection.inspectedAt.year}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            if (_canEdit())
+              IconButton(
+                icon: const Icon(Icons.edit),
+                tooltip: 'Editar inspección',
+                onPressed: onEdit,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SparePartTile extends StatelessWidget {
+  final SparePart part;
+  final String? role;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _SparePartTile({
+    required this.part,
+    required this.role,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  Color _statusColor() => switch (part.status) {
+        'pedido'   => Colors.blue,
+        'recibido' => Colors.green,
+        _          => Colors.orange,
+      };
+
+  String _statusLabel() => switch (part.status) {
+        'pedido'   => 'Pedido',
+        'recibido' => 'Recibido',
+        _          => 'Pendiente',
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        title: Text(part.description),
+        subtitle: Text(
+          'Cantidad: ${part.quantity}  ·  ${part.createdByName}',
           style: Theme.of(context).textTheme.bodySmall,
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Chip(
+              label: Text(_statusLabel(),
+                  style: const TextStyle(color: Colors.white, fontSize: 12)),
+              backgroundColor: _statusColor(),
+              padding: EdgeInsets.zero,
+            ),
+            IconButton(icon: const Icon(Icons.edit), tooltip: 'Editar', onPressed: onEdit),
+            if (role == 'admin')
+              IconButton(icon: const Icon(Icons.delete_outline), tooltip: 'Eliminar', onPressed: onDelete),
+          ],
         ),
       ),
     );
