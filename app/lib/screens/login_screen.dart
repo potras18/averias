@@ -120,6 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _emailCtrl,
                     decoration: const InputDecoration(labelText: 'Email'),
                     keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
                     validator: (v) => (v == null || !v.contains('@')) ? 'Email inválido' : null,
                   ),
                   const SizedBox(height: 16),
@@ -127,6 +128,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _passCtrl,
                     decoration: const InputDecoration(labelText: 'Contraseña'),
                     obscureText: true,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _loading ? null : _submit(),
                     validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null,
                   ),
                   if (_error != null) ...[
