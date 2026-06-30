@@ -46,6 +46,7 @@ class _StatsScreenState extends State<StatsScreen> {
   StatsResult? _stats;
   bool _loading = false;
   String? _error;
+  String? _success;
 
   DateTimeRange? get _activeRange =>
       _period == _Period.custom ? _customRange : _period.defaultRange;
@@ -71,7 +72,7 @@ class _StatsScreenState extends State<StatsScreen> {
   }
 
   Future<void> _loadStats() async {
-    if (mounted) setState(() { _loading = true; _error = null; });
+    if (mounted) setState(() { _loading = true; _error = null; _success = null; });
     try {
       final stats = await widget.api.getStats(
         from: _fromStr,
@@ -104,7 +105,7 @@ class _StatsScreenState extends State<StatsScreen> {
   }
 
   Future<void> _generatePdf() async {
-    if (mounted) setState(() { _loading = true; _error = null; });
+    if (mounted) setState(() { _loading = true; _error = null; _success = null; });
     try {
       final bytes = await widget.api.getStatsPdf(
         from: _fromStr,
@@ -122,18 +123,14 @@ class _StatsScreenState extends State<StatsScreen> {
   }
 
   Future<void> _sendByEmail() async {
-    if (mounted) setState(() { _loading = true; _error = null; });
+    if (mounted) setState(() { _loading = true; _error = null; _success = null; });
     try {
       await widget.api.sendStatsByEmail(
         from: _fromStr,
         to: _toStr,
         locationId: _selectedLocationId,
       );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Estadísticas enviadas correctamente')),
-        );
-      }
+      if (mounted) setState(() => _success = 'Estadísticas enviadas correctamente');
     } on DioException catch (e) {
       if (e.response?.statusCode == 422) {
         final errorCode = e.response?.data?['error'];
@@ -570,6 +567,10 @@ class _StatsScreenState extends State<StatsScreen> {
             if (_error != null) ...[
               const SizedBox(height: 12),
               Text(_error!, style: const TextStyle(color: Colors.red)),
+            ],
+            if (_success != null) ...[
+              const SizedBox(height: 12),
+              Text(_success!, style: const TextStyle(color: Colors.green)),
             ],
             if (_stats != null) ...[
               const SizedBox(height: 8),

@@ -27,6 +27,7 @@ class _ReportScreenState extends State<ReportScreen> {
   String?        _selectedLocationId;
   bool           _loading = false;
   String?        _error;
+  String?        _success;
 
   static const _monthNames = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -102,7 +103,7 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 
   Future<void> _generatePdf() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() { _loading = true; _error = null; _success = null; });
     try {
       final bytes = await widget.api.getReportPdf(
         from: _fromStr,
@@ -126,18 +127,14 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 
   Future<void> _sendByEmail() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() { _loading = true; _error = null; _success = null; });
     try {
       await widget.api.sendReportByEmail(
         from: _fromStr,
         to: _toStr,
         locationId: _selectedLocationId,
       );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Informe enviado correctamente')),
-        );
-      }
+      if (mounted) setState(() => _success = 'Informe enviado correctamente');
     } on DioException catch (e) {
       if (e.response?.statusCode == 422) {
         final errorCode = e.response?.data?['error'];
@@ -258,6 +255,10 @@ class _ReportScreenState extends State<ReportScreen> {
             const SizedBox(height: 28),
             if (_error != null) ...[
               Text(_error!, style: const TextStyle(color: Colors.red)),
+              const SizedBox(height: 12),
+            ],
+            if (_success != null) ...[
+              Text(_success!, style: const TextStyle(color: Colors.green)),
               const SizedBox(height: 12),
             ],
             if (_loading)
