@@ -3,6 +3,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'dart:ui' as ui;
 import '../models/location.dart';
 import '../models/machine.dart';
+import '../models/settings.dart';
 import '../models/user.dart';
 import '../services/api_client.dart';
 import '../services/storage_service.dart';
@@ -31,7 +32,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _load();
   }
 
@@ -701,6 +702,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     Tab(text: 'Ubicaciones'),
     Tab(text: 'Máquinas'),
     Tab(text: 'Usuarios'),
+    Tab(text: 'Ajustes'),
   ];
 
   @override
@@ -726,11 +728,210 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                       _buildLocationTab(),
                       _buildMachinesTab(),
                       _buildUsersTab(),
+                      _AdminSettingsTab(api: widget.api),
                     ],
                   ),
                 ),
               ],
             ),
+    );
+  }
+}
+
+class _AdminSettingsTab extends StatefulWidget {
+  final ApiClient api;
+  const _AdminSettingsTab({required this.api});
+
+  @override
+  State<_AdminSettingsTab> createState() => _AdminSettingsTabState();
+}
+
+class _AdminSettingsTabState extends State<_AdminSettingsTab> {
+  final _formKey        = GlobalKey<FormState>();
+  final _hostCtrl       = TextEditingController();
+  final _portCtrl       = TextEditingController();
+  final _userCtrl       = TextEditingController();
+  final _passCtrl       = TextEditingController();
+  final _fromCtrl       = TextEditingController();
+  final _newEmailCtrl   = TextEditingController();
+
+  List<String> _recipients = [];
+  bool _passWasSet = false;
+  bool _loading    = true;
+  bool _saving     = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _hostCtrl.dispose();
+    _portCtrl.dispose();
+    _userCtrl.dispose();
+    _passCtrl.dispose();
+    _fromCtrl.dispose();
+    _newEmailCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final s = await widget.api.getSettings();
+      if (!mounted) return;
+      setState(() {
+        _hostCtrl.text  = s.smtpHost;
+        _portCtrl.text  = s.smtpPort;
+        _userCtrl.text  = s.smtpUser;
+        _fromCtrl.text  = s.smtpFrom;
+        _passWasSet     = s.smtpPass == '***';
+        _passCtrl.text  = '';
+        _recipients     = List<String>.from(s.emailRecipients);
+        _loading        = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() { _error = 'Error al cargar ajustes'; _loading = false; });
+    }
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    try {
+      final body = <String, dynamic>{
+        'smtp_host':        _hostCtrl.text.trim(),
+        'smtp_port':        _portCtrl.text.trim(),
+        'smtp_user':        _userCtrl.text.trim(),
+        'smtp_from':        _fromCtrl.text.trim(),
+        'email_recipients': _recipients,
+      };
+      final newPass = _passCtrl.text;
+      if (newPass.isNotEmpty) body['smtp_pass'] = newPass;
+
+      await widget.api.updateSettings(body);
+      if (!mounted) return;
+      _passCtrl.clear();
+      setState(() => _passWasSet = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ajustes guardados')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error al guardar ajustes')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  void _addRecipient() {
+    final email = _newEmailCtrl.text.trim();
+    if (!email.contains('@') || _recipients.contains(email)) return;
+    setState(() {
+      _recipients.add(email);
+      _newEmailCtrl.clear();
+    });
+  }
+
+  void _removeRecipient(String email) {
+    setState(() => _recipients.remove(email));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) return Center(child: Text(_error!));
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Servidor SMTP', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _hostCtrl,
+            decoration: const InputDecoration(labelText: 'Host SMTP'),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _portCtrl,
+            decoration: const InputDecoration(labelText: 'Puerto'),
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _userCtrl,
+            decoration: const InputDecoration(labelText: 'Usuario'),
+            keyboardType: TextInputType.emailAddress,
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _passCtrl,
+            obscureText: true,
+            decoration: InputDecoration(
+              labelText: 'Contraseña',
+              hintText: _passWasSet ? 'Contraseña guardada' : null,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _fromCtrl,
+            decoration: const InputDecoration(labelText: 'Remitente (From)'),
+            keyboardType: TextInputType.emailAddress,
+          ),
+          const SizedBox(height: 24),
+          Text('Destinatarios', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 12),
+          if (_recipients.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: Text('Sin destinatarios', style: TextStyle(color: Colors.grey)),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: _recipients.map((email) => Chip(
+                label: Text(email),
+                onDeleted: () => _removeRecipient(email),
+              )).toList(),
+            ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _newEmailCtrl,
+                  decoration: const InputDecoration(labelText: 'Añadir email'),
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _addRecipient(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              TextButton(
+                onPressed: _addRecipient,
+                child: const Text('Añadir'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          FilledButton(
+            onPressed: _saving ? null : _save,
+            child: _saving
+                ? const SizedBox(
+                    height: 18, width: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Text('Guardar'),
+          ),
+        ],
+      ),
     );
   }
 }

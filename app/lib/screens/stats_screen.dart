@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:dio/dio.dart';
 import '../services/api_client.dart';
 import '../models/location.dart';
 import '../models/stats.dart';
@@ -121,33 +122,6 @@ class _StatsScreenState extends State<StatsScreen> {
   }
 
   Future<void> _sendByEmail() async {
-    final emailCtrl = TextEditingController();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Enviar por email'),
-        content: TextField(
-          controller: emailCtrl,
-          decoration: const InputDecoration(
-            labelText: 'Email(s), separados por coma',
-          ),
-          keyboardType: TextInputType.emailAddress,
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Enviar'),
-          ),
-        ],
-      ),
-    );
-    emailCtrl.dispose();
-    if (confirmed != true) return;
     if (mounted) setState(() { _loading = true; _error = null; });
     try {
       await widget.api.sendStatsByEmail(
@@ -159,6 +133,17 @@ class _StatsScreenState extends State<StatsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Estadísticas enviadas correctamente')),
         );
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 422) {
+        final errorCode = e.response?.data?['error'];
+        if (mounted) {
+          setState(() => _error = errorCode == 'sin_destinatarios'
+              ? 'No hay destinatarios configurados. Ve a Ajustes para añadirlos.'
+              : 'No hay registros para el período seleccionado');
+        }
+      } else {
+        if (mounted) setState(() => _error = 'Error al enviar las estadísticas');
       }
     } catch (_) {
       if (mounted) setState(() => _error = 'Error al enviar las estadísticas');
