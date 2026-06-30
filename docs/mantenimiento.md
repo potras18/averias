@@ -24,6 +24,7 @@ El script (`backend/migrations/run.js`) aplica solo las migraciones pendientes; 
 | `007_users_role.sql` | Columna `role` en usuarios |
 | `008_machines_active.sql` | Columna `active` en máquinas |
 | `009_users_active.sql` | Columna `active` en usuarios |
+| `010_spare_parts.sql` | Tabla de repuestos (solicitudes de compra) |
 
 ### Añadir una nueva migración
 
@@ -81,6 +82,17 @@ refresh_tokens
   token_hash TEXT UNIQUE
   expires_at TIMESTAMPTZ
   created_at TIMESTAMPTZ
+
+spare_parts
+  id UUID PK
+  machine_id UUID → machines
+  description TEXT           -- qué repuesto hay que comprar
+  quantity INTEGER           -- mínimo 1
+  status TEXT                -- 'pendiente' | 'pedido' | 'recibido'
+  created_by UUID → users
+  updated_by UUID → users    -- nullable
+  created_at TIMESTAMPTZ
+  updated_at TIMESTAMPTZ
 ```
 
 ---

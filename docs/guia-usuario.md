@@ -4,8 +4,8 @@
 
 | Rol | Permisos |
 |-----|----------|
-| **Técnico** | Consultar máquinas, crear inspecciones, ver informes y estadísticas |
-| **Administrador** | Todo lo anterior + gestionar usuarios, localizaciones y máquinas |
+| **Técnico** | Consultar máquinas, crear inspecciones, ver informes y estadísticas, gestionar repuestos |
+| **Administrador** | Todo lo anterior + gestionar usuarios, localizaciones y máquinas, eliminar repuestos |
 
 ---
 
@@ -40,13 +40,19 @@ Vista principal. Muestra todas las máquinas activas con su estado y fecha de ú
 
 ---
 
-### Detalle de máquina
+### Detalle de máquina *(solo móvil)*
 
-Muestra la información completa de una máquina:
+Muestra la información completa de una máquina en dos pestañas:
+
+**Pestaña Inspecciones:**
 - Nombre, localización, estado actual.
 - Código QR de la máquina (para imprimir etiquetas).
 - Historial de las últimas 10 inspecciones con técnico y fecha.
 - Si la máquina tiene dispensador de tickets: estado del dispensador y nivel de tickets en cada revisión.
+
+**Pestaña Repuestos:**
+- Lista de solicitudes de repuestos para esta máquina.
+- Botón "+" para crear una nueva solicitud con la máquina preseleccionada.
 
 ---
 
@@ -98,6 +104,37 @@ Genera informes PDF de inspecciones por periodo y localización.
 - MTTR (tiempo medio de reparación en horas).
 - Top 5 máquinas con más averías.
 - Desglose por localización.
+
+---
+
+### Repuestos
+
+Sección para gestionar solicitudes de compra de piezas o repuestos para las máquinas. Accesible para técnicos y administradores.
+
+**Vista de lista:**
+- Muestra todas las solicitudes con máquina, descripción, cantidad, estado y creador.
+- Filtro por estado en la parte superior: **Todos / Pendiente / Pedido / Recibido**.
+- Botón "+" para crear una nueva solicitud.
+- Botón de edición en cada ítem para modificar descripción, cantidad o avanzar el estado.
+- Solo los administradores ven el botón de eliminación.
+
+**Formulario de creación:**
+- Seleccionar máquina.
+- Descripción del repuesto (texto libre).
+- Cantidad (mínimo 1).
+
+**Formulario de edición:**
+- Los mismos campos más el selector de estado.
+
+**Ciclo de vida de una solicitud:**
+
+| Estado | Significado |
+|--------|-------------|
+| **Pendiente** | Solicitado, aún no pedido al proveedor |
+| **Pedido** | Encargado al proveedor |
+| **Recibido** | Ya en el local, listo para instalar |
+
+Cualquier usuario (técnico o admin) puede crear solicitudes y cambiar el estado. Solo los administradores pueden eliminarlas.
 
 ---
 
