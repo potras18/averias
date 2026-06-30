@@ -51,10 +51,19 @@ module.exports = async function repuestosRoutes(app) {
     const { machine_id, description, quantity } = req.body
     const { rows } = await app.db.query(
       `INSERT INTO spare_parts (machine_id, description, quantity, created_by)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, machine_id, description, quantity, status,
+                 created_by, updated_by, created_at, updated_at`,
       [machine_id, description, quantity, req.user.sub]
     )
-    return reply.code(201).send(rows[0])
+    const inserted = rows[0]
+    const { rows: joined } = await app.db.query(
+      `SELECT m.name AS machine_name, u.name AS created_by_name
+       FROM machines m, users u
+       WHERE m.id = $1 AND u.id = $2`,
+      [inserted.machine_id, inserted.created_by]
+    )
+    return reply.code(201).send({ ...inserted, ...joined[0] })
   })
 
   app.patch('/:id', {
