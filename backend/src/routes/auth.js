@@ -33,7 +33,7 @@ module.exports = async function authRoutes(app) {
     )
     const refreshToken = randomUUID()
     const tokenHash = createHash('sha256').update(refreshToken).digest('hex')
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     await app.db.query(
       'INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)',
       [user.id, tokenHash, expiresAt]
