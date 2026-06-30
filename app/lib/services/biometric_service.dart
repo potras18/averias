@@ -18,7 +18,7 @@ class BiometricService {
   Future<bool> authenticate() async {
     try {
       return await _auth.authenticate(
-        localizedReason: 'Accede a Averías',
+        localizedReason: 'Accede a Cocamatic',
         options: const AuthenticationOptions(biometricOnly: true),
       );
     } catch (_) {

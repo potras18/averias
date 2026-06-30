@@ -1,11 +1,11 @@
 {
-    "name": "averias_app",
-    "short_name": "averias_app",
+    "name": "Cocamatic — Sistema de revisiones",
+    "short_name": "Cocamatic",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Sistema de gestión de revisiones de máquinas recreativas.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

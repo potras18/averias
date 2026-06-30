@@ -113,7 +113,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('Averías', style: Theme.of(context).textTheme.headlineMedium),
+                  Text('Cocamatic', style: Theme.of(context).textTheme.headlineMedium),
+                  Text('Sistema de revisiones', style: Theme.of(context).textTheme.bodyMedium),
                   const SizedBox(height: 32),
                   TextFormField(
                     controller: _emailCtrl,

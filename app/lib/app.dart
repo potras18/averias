@@ -133,7 +133,7 @@ class AveApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Averías',
+      title: 'Cocamatic',
       theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
       routerConfig: _router,
       localizationsDelegates: const [
