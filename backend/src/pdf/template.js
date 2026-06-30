@@ -106,17 +106,6 @@ function buildReportHtml({ from, to, generatedAt, technicianName, summary, locat
   <h2>Inspecciones por Local</h2>
   ${locationHtml || '<p>Sin inspecciones en el período seleccionado.</p>'}
 
-  <h2>Estadísticas</h2>
-  <p><strong>MTTR (tiempo medio hasta reparación):</strong>
-    ${stats.mttrHours != null ? stats.mttrHours.toFixed(1) + ' horas' : 'Sin datos'}</p>
-
-  <h3>Top 5 máquinas con más averías</h3>
-  ${stats.topProblematic.length > 0 ? `
-    <table>
-      <thead><tr><th>Máquina</th><th>Nº averías</th></tr></thead>
-      <tbody>${topRows}</tbody>
-    </table>
-  ` : '<p>Sin datos.</p>'}
 </body>
 </html>`
 }
