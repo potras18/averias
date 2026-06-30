@@ -95,10 +95,8 @@ module.exports = async function statsRoutes(app) {
     preHandler: [app.authenticate],
     schema: {
       body: {
-        type: 'object',
-        required: ['emails'],
+        type: ['object', 'null'],
         properties: {
-          emails:      { type: 'array', items: { type: 'string' }, minItems: 1 },
           from:        { type: 'string' },
           to:          { type: 'string' },
           location_id: { type: 'string' },
@@ -107,8 +105,23 @@ module.exports = async function statsRoutes(app) {
       },
     },
   }, async (req, reply) => {
-    const { emails, from, to, location_id } = req.body
+    const { from, to, location_id } = req.body ?? {}
     const filters = { from, to, locationId: location_id }
+
+    const { rows: settingsRows } = await app.db.query('SELECT key, value FROM settings')
+    const cfg = Object.fromEntries(settingsRows.map(r => [r.key, r.value]))
+    const recipients = JSON.parse(cfg.email_recipients || '[]')
+    if (recipients.length === 0) {
+      return reply.code(422).send({ error: 'sin_destinatarios' })
+    }
+    const smtpConfig = {
+      host: cfg.smtp_host,
+      port: cfg.smtp_port,
+      user: cfg.smtp_user,
+      pass: cfg.smtp_pass,
+      from: cfg.smtp_from,
+    }
+
     const data = await buildStatsData(app.db, filters)
     const html = buildStatsHtml({
       from,
@@ -128,7 +141,7 @@ module.exports = async function statsRoutes(app) {
     const toLabel   = to ?? ''
     const filename  = `estadisticas_${fromLabel}_${toLabel}.pdf`
     const pdfBuffer = await generatePdf(html)
-    await sendReport({ to: emails, pdfBuffer, filename })
+    await sendReport({ to: recipients, pdfBuffer, filename, smtpConfig })
     return reply.send({ ok: true })
   })
 }

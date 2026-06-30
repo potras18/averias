@@ -10,7 +10,7 @@ jest.mock('../src/email/mailer', () => ({
 
 const supertest = require('supertest')
 const { buildApp } = require('../src/app')
-const { resetDb, seedUser, seedLocation, seedMachine } = require('./helpers/db')
+const { resetDb, seedUser, seedLocation, seedMachine, seedSettings } = require('./helpers/db')
 
 let app, st, token, machineId
 
@@ -54,27 +54,32 @@ describe('GET /reports/pdf', () => {
 })
 
 describe('POST /reports/email', () => {
-  it('returns 200 and calls sendReport', async () => {
+  // Nested beforeEach resets only settings, NOT inspection data.
+  // The handler short-circuits at sin_destinatarios before reading inspections,
+  // so the 422 test works without needing to reseed any inspection.
+  beforeEach(() => seedSettings())
+
+  it('returns 422 when no recipients configured', async () => {
+    const res = await st.post('/reports/email').set(auth())
+    expect(res.status).toBe(422)
+    expect(res.body).toEqual({ error: 'sin_destinatarios' })
+  })
+
+  it('returns 200 and calls sendReport with stored recipients', async () => {
+    await seedSettings({ email_recipients: JSON.stringify(['dest@test.com']) })
     const { sendReport } = require('../src/email/mailer')
     sendReport.mockClear()
-    const res = await st.post('/reports/email')
-      .set(auth())
-      .send({ emails: ['dest@example.com'] })
+    const res = await st.post('/reports/email').set(auth())
     expect(res.status).toBe(200)
     expect(res.body).toEqual({ ok: true })
     expect(sendReport).toHaveBeenCalledWith(expect.objectContaining({
-      to: ['dest@example.com'],
+      to: ['dest@test.com'],
       filename: expect.stringContaining('.pdf'),
     }))
   })
 
-  it('returns 400 when emails missing', async () => {
-    const res = await st.post('/reports/email').set(auth()).send({})
-    expect(res.status).toBe(400)
-  })
-
   it('returns 401 without token', async () => {
-    const res = await st.post('/reports/email').send({ emails: ['x@x.com'] })
+    const res = await st.post('/reports/email').send({})
     expect(res.status).toBe(401)
   })
 })
