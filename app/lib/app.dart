@@ -127,8 +127,21 @@ final _router = GoRouter(
   ],
 );
 
-class AveApp extends StatelessWidget {
+class AveApp extends StatefulWidget {
   const AveApp({super.key});
+
+  @override
+  State<AveApp> createState() => _AveAppState();
+}
+
+class _AveAppState extends State<AveApp> {
+  @override
+  void initState() {
+    super.initState();
+    _api.onUnauthorized = () {
+      _router.go('/login');
+    };
+  }
 
   @override
   Widget build(BuildContext context) {

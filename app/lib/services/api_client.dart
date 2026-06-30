@@ -15,6 +15,7 @@ class ApiClient {
 
   late final Dio _dio;
   final StorageService _storage;
+  void Function()? onUnauthorized;
 
   ApiClient(this._storage) {
     _dio = Dio(BaseOptions(
@@ -29,6 +30,13 @@ class ApiClient {
           options.headers['Authorization'] = 'Bearer $token';
         }
         handler.next(options);
+      },
+      onError: (error, handler) async {
+        if (error.response?.statusCode == 401) {
+          await _storage.clear();
+          onUnauthorized?.call();
+        }
+        handler.next(error);
       },
     ));
   }
