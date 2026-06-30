@@ -5,7 +5,7 @@ const { randomUUID, createHash } = require('node:crypto')
 
 module.exports = async function authRoutes(app) {
   app.post('/login', {
-    config: { rateLimit: { max: process.env.NODE_ENV === 'test' ? 1000 : 5, timeWindow: '15 minutes' } },
+    config: { rateLimit: { max: 5, timeWindow: '15 minutes' } },
     schema: {
       body: {
         type: 'object',

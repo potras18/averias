@@ -29,7 +29,8 @@ async function seedSettings(overrides = {}) {
   }
   await Promise.all(
     Object.entries(updates).map(([key, value]) =>
-      pool.query('UPDATE settings SET value = $1, updated_at = now() WHERE key = $2', [String(value), key])
+      pool.query('UPDATE settings SET value = $1, updated_at = now() WHERE key = $2',
+        [Array.isArray(value) ? JSON.stringify(value) : String(value), key])
     )
   )
 }
