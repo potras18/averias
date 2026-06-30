@@ -16,6 +16,7 @@ class ApiClient {
   late final Dio _dio;
   final StorageService _storage;
   void Function()? onUnauthorized;
+  bool _isRefreshing = false;
 
   ApiClient(this._storage) {
     _dio = Dio(BaseOptions(
@@ -32,7 +33,28 @@ class ApiClient {
         handler.next(options);
       },
       onError: (error, handler) async {
-        if (error.response?.statusCode == 401) {
+        final is401 = error.response?.statusCode == 401;
+        final isRefreshCall = error.requestOptions.path.contains('/auth/refresh');
+        if (is401 && !isRefreshCall && !_isRefreshing) {
+          _isRefreshing = true;
+          try {
+            final refreshToken = await _storage.getRefreshToken();
+            if (refreshToken != null) {
+              final res = await _dio.post('/auth/refresh',
+                  data: {'refreshToken': refreshToken});
+              final newToken = res.data['accessToken'] as String;
+              await _storage.setTokens(
+                  accessToken: newToken, refreshToken: refreshToken);
+              final opts = error.requestOptions;
+              opts.headers['Authorization'] = 'Bearer $newToken';
+              final retried = await _dio.fetch(opts);
+              return handler.resolve(retried);
+            }
+          } catch (_) {
+            // refresh failed — fall through to logout
+          } finally {
+            _isRefreshing = false;
+          }
           await _storage.clear();
           onUnauthorized?.call();
         }
