@@ -5,7 +5,7 @@ async function getInspectionRows(db, { from, to, locationId }) {
   const params = []
   let idx = 1
   if (from)       { conditions.push(`i.inspected_at >= $${idx++}`); params.push(from) }
-  if (to)         { conditions.push(`i.inspected_at <= $${idx++}`); params.push(to) }
+  if (to)         { conditions.push(`i.inspected_at::date <= $${idx++}`); params.push(to) }
   if (locationId) { conditions.push(`m.location_id = $${idx++}`);   params.push(locationId) }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
   const { rows } = await db.query(
@@ -32,7 +32,7 @@ async function getMttrHours(db, { from, to, locationId }) {
   const params = []
   let idx = 1
   if (from)       { conditions.push(`i.inspected_at >= $${idx++}`); params.push(from) }
-  if (to)         { conditions.push(`i.inspected_at <= $${idx++}`); params.push(to) }
+  if (to)         { conditions.push(`i.inspected_at::date <= $${idx++}`); params.push(to) }
   if (locationId) { conditions.push(`m.location_id = $${idx++}`);   params.push(locationId) }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
   const { rows } = await db.query(
@@ -58,7 +58,7 @@ async function getTopProblematic(db, { from, to, locationId }) {
   const params = []
   let idx = 1
   if (from)       { conditions.push(`i.inspected_at >= $${idx++}`); params.push(from) }
-  if (to)         { conditions.push(`i.inspected_at <= $${idx++}`); params.push(to) }
+  if (to)         { conditions.push(`i.inspected_at::date <= $${idx++}`); params.push(to) }
   if (locationId) { conditions.push(`m.location_id = $${idx++}`);   params.push(locationId) }
   const { rows } = await db.query(
     `SELECT m.name, COUNT(*) AS fault_count
@@ -100,7 +100,7 @@ async function getDailyBreakdown(db, { from, to, locationId }) {
   const params = []
   let idx = 1
   if (from)       { conditions.push(`i.inspected_at >= $${idx++}`); params.push(from) }
-  if (to)         { conditions.push(`i.inspected_at <= $${idx++}`); params.push(to) }
+  if (to)         { conditions.push(`i.inspected_at::date <= $${idx++}`); params.push(to) }
   if (locationId) { conditions.push(`m.location_id = $${idx++}`);   params.push(locationId) }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
   const { rows } = await db.query(
@@ -129,7 +129,7 @@ async function getCardReaderStats(db, { from, to, locationId }) {
   const params = []
   let idx = 1
   if (from)       { conditions.push(`i.inspected_at >= $${idx++}`); params.push(from) }
-  if (to)         { conditions.push(`i.inspected_at <= $${idx++}`); params.push(to) }
+  if (to)         { conditions.push(`i.inspected_at::date <= $${idx++}`); params.push(to) }
   if (locationId) { conditions.push(`m.location_id = $${idx++}`);   params.push(locationId) }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
 
@@ -177,7 +177,7 @@ async function getDispenserStats(db, { from, to, locationId }) {
   const params = []
   let idx = 1
   if (from)       { conditions.push(`i.inspected_at >= $${idx++}`); params.push(from) }
-  if (to)         { conditions.push(`i.inspected_at <= $${idx++}`); params.push(to) }
+  if (to)         { conditions.push(`i.inspected_at::date <= $${idx++}`); params.push(to) }
   if (locationId) { conditions.push(`m.location_id = $${idx++}`);   params.push(locationId) }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
 
@@ -217,7 +217,7 @@ async function getMachineStates(db, { from, to, locationId }) {
   const params = []
   let idx = 1
   if (from)       { conditions.push(`i.inspected_at >= $${idx++}`); params.push(from) }
-  if (to)         { conditions.push(`i.inspected_at <= $${idx++}`); params.push(to) }
+  if (to)         { conditions.push(`i.inspected_at::date <= $${idx++}`); params.push(to) }
   if (locationId) { conditions.push(`m.location_id = $${idx++}`);   params.push(locationId) }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
   const { rows } = await db.query(
