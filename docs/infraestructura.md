@@ -147,6 +147,10 @@ flutter build apk --dart-define=API_URL=https://tu-servidor.com
 # APK en: build/app/outputs/flutter-apk/app-release.apk
 ```
 
+> **Importante:** el `AndroidManifest.xml` incluye `INTERNET` y `usesCleartextTraffic`. Si el backend usa HTTPS (recomendado en producción) se puede eliminar `usesCleartextTraffic`. Para desarrollo local con HTTP es necesario.
+
+> **Prueba en red local:** usar la IP del servidor en la red WiFi, no `localhost`. Ejemplo: `--dart-define=API_URL=http://192.168.1.42:3000`.
+
 ### App iOS
 
 ```bash

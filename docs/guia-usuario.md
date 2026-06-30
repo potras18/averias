@@ -97,7 +97,7 @@ Genera informes PDF de inspecciones por periodo y localización.
 
 **Acciones:**
 - **Generar PDF:** descarga el informe como archivo PDF.
-- **Enviar por email:** introduce una o varias direcciones separadas por coma y envía el PDF.
+- **Enviar por email:** envía el PDF a los destinatarios configurados en Ajustes. Si no hay destinatarios configurados, muestra un aviso indicando que hay que añadirlos primero.
 
 **Contenido del informe:**
 - Resumen: total de máquinas inspeccionadas, porcentajes por estado.
@@ -153,7 +153,7 @@ Panel con métricas agregadas del periodo seleccionado.
 - Estadísticas del lector de tarjetas (% OK / fallo, tipo de fallo más frecuente).
 - Estadísticas del dispensador de tickets (% revisado, niveles lleno / bajo / vacío).
 
-También permite generar un PDF de estadísticas o enviarlo por email.
+También permite generar un PDF de estadísticas o enviarlo por email a los destinatarios configurados en Ajustes.
 
 ---
 
@@ -181,3 +181,19 @@ Tres pestañas:
 - **Desactivar cuenta:** la cuenta pasa a inactiva (no se elimina). Bloquea si es tu propia cuenta o el último admin activo.
 
 > **Regla de seguridad:** siempre debe existir al menos un usuario administrador activo. El sistema impide cualquier acción que lo viole.
+
+#### Ajustes *(solo admins)*
+
+Configuración del servidor de correo y destinatarios de informes.
+
+**Servidor SMTP:**
+- Host, puerto, usuario, contraseña y dirección de envío (from).
+- Si los campos están vacíos, el sistema usa la configuración del `.env` del servidor.
+- La contraseña guardada aparece como `***`; déjala en blanco al guardar para no modificarla.
+
+**Destinatarios:**
+- Lista de direcciones de email a las que se enviarán automáticamente los informes y estadísticas.
+- Añadir con el campo de texto + botón Añadir. Eliminar pulsando la × del chip.
+- Si la lista está vacía, el botón "Enviar por email" en Informes y Estadísticas mostrará un aviso.
+
+Pulsar **Guardar** aplica todos los cambios (SMTP + destinatarios) en un solo paso.

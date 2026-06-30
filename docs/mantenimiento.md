@@ -25,6 +25,7 @@ El script (`backend/migrations/run.js`) aplica solo las migraciones pendientes; 
 | `008_machines_active.sql` | Columna `active` en máquinas |
 | `009_users_active.sql` | Columna `active` en usuarios |
 | `010_spare_parts.sql` | Tabla de repuestos (solicitudes de compra) |
+| `011_settings.sql` | Tabla de configuración (SMTP + destinatarios email) |
 
 ### Añadir una nueva migración
 
@@ -93,6 +94,12 @@ spare_parts
   updated_by UUID → users    -- nullable
   created_at TIMESTAMPTZ
   updated_at TIMESTAMPTZ
+
+settings
+  key TEXT PK                -- 6 claves fijas: smtp_host, smtp_port, smtp_user,
+                             --   smtp_pass, smtp_from, email_recipients
+  value TEXT                 -- email_recipients almacena JSON array: ["a@b.com"]
+  updated_at TIMESTAMPTZ
 ```
 
 ---
@@ -117,9 +124,13 @@ UPDATE users SET active = true WHERE email = 'email@ejemplo.com';
 
 ---
 
-## Tokens de sesión expirados
+## Tokens de sesión
 
-Los refresh tokens expiran a las 24 horas. Los tokens caducados no se limpian automáticamente. Para limpiarlos:
+- **Access token:** válido 8 horas. Se renueva automáticamente usando el refresh token (la app lo gestiona en segundo plano, el usuario no nota nada).
+- **Refresh token:** válido 30 días. Almacenado en BD. Se genera al hacer login con usuario/contraseña o biométrico.
+- **Auto-logout:** si el refresh token también ha caducado (>30 días sin usar la app), se limpia la sesión y se redirige a login.
+
+Los tokens caducados no se limpian automáticamente de la BD. Para limpiarlos:
 
 ```sql
 DELETE FROM refresh_tokens WHERE expires_at < now();
@@ -192,12 +203,18 @@ Distribuir el APK por el canal habitual (MDM, instalación manual, Play Store in
 
 ## Configuración de email (SMTP)
 
-El envío de emails usa Nodemailer. Si el email falla revisar:
+La configuración SMTP se puede gestionar de dos formas (la BD tiene prioridad sobre el `.env`):
 
-1. Variables de entorno `SMTP_*` en `backend/.env`.
-2. Puerto: 587 usa STARTTLS, 465 usa SSL/TLS directo.
+1. **Desde la app** *(recomendado)*: Panel de administración → pestaña Ajustes. Los cambios son inmediatos y no requieren reiniciar el backend.
+2. **Variables de entorno** en `backend/.env`: actúan como fallback si los campos en BD están vacíos.
+
+**Diagnóstico si el email falla:**
+
+1. Verificar que haya destinatarios en Ajustes (si la lista está vacía, el botón de envío muestra aviso y no llega ningún email).
+2. Puerto: 587 usa STARTTLS, 465 usa SSL/TLS directo. Algunos ISPs bloquean el 587 — probar con 465.
 3. Si usas Gmail: activar verificación en dos pasos y generar una "contraseña de aplicación" específica.
-4. Logs del servidor: `pm2 logs averias-backend` o `journalctl -u averias-backend`.
+4. El timeout de conexión SMTP es 10 segundos. Si expira, el backend devuelve 500.
+5. Logs del servidor: `pm2 logs averias-backend` o `journalctl -u averias-backend`.
 
 Verificar configuración SMTP desde línea de comandos:
 
