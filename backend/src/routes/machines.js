@@ -30,7 +30,7 @@ async function getMachineWithInspections(db, id) {
      LEFT JOIN ticket_checks tc ON tc.inspection_id = i.id
      WHERE i.machine_id = $1
      ORDER BY i.inspected_at DESC
-     LIMIT 10`,
+     LIMIT 5`,
     [id]
   )
   return { ...machine, inspections }
