@@ -747,7 +747,6 @@ class _AdminSettingsTab extends StatefulWidget {
 }
 
 class _AdminSettingsTabState extends State<_AdminSettingsTab> {
-  final _formKey        = GlobalKey<FormState>();
   final _hostCtrl       = TextEditingController();
   final _portCtrl       = TextEditingController();
   final _userCtrl       = TextEditingController();
@@ -830,7 +829,8 @@ class _AdminSettingsTabState extends State<_AdminSettingsTab> {
 
   void _addRecipient() {
     final email = _newEmailCtrl.text.trim();
-    if (!email.contains('@') || _recipients.contains(email)) return;
+    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+    if (!emailRegex.hasMatch(email) || _recipients.contains(email)) return;
     setState(() {
       _recipients.add(email);
       _newEmailCtrl.clear();
