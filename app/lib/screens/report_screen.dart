@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import '../services/api_client.dart';
 import '../models/location.dart';
 import '../utils/download_file.dart';
@@ -15,9 +16,9 @@ class ReportScreen extends StatefulWidget {
 }
 
 class _ReportScreenState extends State<ReportScreen> {
-  _ReportMode _mode = _ReportMode.range;
+  _ReportMode _mode = _ReportMode.day;
 
-  DateTime?     _selectedDay;
+  DateTime?     _selectedDay = DateTime.now();
   int           _selectedMonth = DateTime.now().month;
   int           _selectedYear  = DateTime.now().year;
   DateTimeRange? _dateRange;
@@ -111,6 +112,12 @@ class _ReportScreenState extends State<ReportScreen> {
       await downloadFile(bytes, 'informe_averias.pdf');
     } on UnsupportedError {
       if (mounted) setState(() => _error = 'Descarga no disponible en esta plataforma');
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 422) {
+        if (mounted) setState(() => _error = 'No hay registros para el período seleccionado');
+      } else {
+        if (mounted) setState(() => _error = 'Error al generar PDF');
+      }
     } catch (e) {
       if (mounted) setState(() => _error = 'Error al generar PDF');
     } finally {
@@ -167,6 +174,12 @@ class _ReportScreenState extends State<ReportScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Informe enviado correctamente')),
         );
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 422) {
+        if (mounted) setState(() => _error = 'No hay registros para el período seleccionado');
+      } else {
+        if (mounted) setState(() => _error = 'Error al enviar el informe');
       }
     } catch (e) {
       if (mounted) setState(() => _error = 'Error al enviar el informe');

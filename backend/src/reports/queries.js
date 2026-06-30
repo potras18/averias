@@ -212,4 +212,28 @@ async function getDispenserStats(db, { from, to, locationId }) {
   }
 }
 
-module.exports = { getInspectionRows, getMttrHours, getTopProblematic, buildSummary, groupByLocation, getDailyBreakdown, getCardReaderStats, getDispenserStats }
+async function getMachineStates(db, { from, to, locationId }) {
+  const conditions = []
+  const params = []
+  let idx = 1
+  if (from)       { conditions.push(`i.inspected_at >= $${idx++}`); params.push(from) }
+  if (to)         { conditions.push(`i.inspected_at <= $${idx++}`); params.push(to) }
+  if (locationId) { conditions.push(`m.location_id = $${idx++}`);   params.push(locationId) }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+  const { rows } = await db.query(
+    `SELECT DISTINCT ON (m.id)
+            m.name AS machine_name,
+            l.name AS location_name,
+            i.status,
+            i.comment
+     FROM inspections i
+     JOIN machines m ON m.id = i.machine_id
+     LEFT JOIN locations l ON l.id = m.location_id
+     ${where}
+     ORDER BY m.id, i.inspected_at DESC`,
+    params
+  )
+  return rows
+}
+
+module.exports = { getInspectionRows, getMttrHours, getTopProblematic, buildSummary, groupByLocation, getDailyBreakdown, getCardReaderStats, getDispenserStats, getMachineStates }

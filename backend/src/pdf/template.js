@@ -25,7 +25,7 @@ function esc(s) {
     .replace(/"/g, '&quot;')
 }
 
-function buildReportHtml({ from, to, generatedAt, technicianName, summary, locationSections, stats }) {
+function buildReportHtml({ from, to, generatedAt, technicianName, summary, locationSections, machineStates = [], stats }) {
   const locationHtml = locationSections.map(loc => `
     <h3>${esc(loc.name)}</h3>
     <table>
@@ -83,6 +83,23 @@ function buildReportHtml({ from, to, generatedAt, technicianName, summary, locat
       <tr><td>Operativas</td><td>${fmtPct(summary.pctOperative)}</td></tr>
       <tr><td>Fuera de servicio</td><td>${fmtPct(summary.pctOutOfService)}</td></tr>
       <tr><td>En reparación</td><td>${fmtPct(summary.pctInRepair)}</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Estado de máquinas</h2>
+  <table>
+    <thead>
+      <tr><th>Máquina</th><th>Local</th><th>Estado</th><th>Comentario</th></tr>
+    </thead>
+    <tbody>
+      ${machineStates.map(m => `
+        <tr>
+          <td>${esc(m.machine_name)}</td>
+          <td>${esc(m.location_name)}</td>
+          <td>${statusLabel(m.status)}</td>
+          <td>${esc(m.comment)}</td>
+        </tr>
+      `).join('')}
     </tbody>
   </table>
 
