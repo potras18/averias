@@ -315,6 +315,11 @@ class ApiClient {
         .toList();
   }
 
+  Future<List<Inspection>> getInspections({required String machineId}) async {
+    final res = await _dio.get('/inspections', queryParameters: {'machine_id': machineId});
+    return (res.data as List).map((j) => Inspection.fromJson(j as Map<String, dynamic>)).toList();
+  }
+
   Future<SparePart> createSparePart({
     required String machineId,
     required String description,
