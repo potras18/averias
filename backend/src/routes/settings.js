@@ -1,5 +1,7 @@
 'use strict'
 
+const { encrypt } = require('../email/crypto')
+
 const ALLOWED_KEYS = ['smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from', 'email_recipients']
 
 async function loadSettings(db) {
@@ -49,6 +51,11 @@ module.exports = async function settingsRoutes(app) {
 
     // Skip placeholder — do not overwrite stored password
     if (updates.smtp_pass === '***') delete updates.smtp_pass
+
+    // Encrypt smtp_pass before storing
+    if (updates.smtp_pass !== undefined) {
+      updates.smtp_pass = encrypt(updates.smtp_pass)
+    }
 
     // Serialize recipients array to JSON string for storage
     if (updates.email_recipients !== undefined) {

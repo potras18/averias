@@ -47,7 +47,7 @@ module.exports = async function machinesRoutes(app) {
     return machine
   })
 
-  app.get('/:id/qr/pdf', { preHandler: [app.authenticate] }, async (req, reply) => {
+  app.get('/:id/qr/pdf', { preHandler: [app.authenticate], config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req, reply) => {
     const { rows } = await app.db.query(
       `SELECT m.id, m.name, m.qr_code, l.name AS location_name
        FROM machines m

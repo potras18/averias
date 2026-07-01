@@ -3,6 +3,7 @@
 const { generatePdf }    = require('../pdf/generator')
 const { buildStatsHtml } = require('../pdf/stats-template')
 const { sendReport }     = require('../email/mailer')
+const { decrypt }        = require('../email/crypto')
 const {
   getInspectionRows, getMttrHours, getTopProblematic, buildSummary,
   getDailyBreakdown, getCardReaderStats, getDispenserStats,
@@ -65,6 +66,7 @@ module.exports = async function statsRoutes(app) {
   app.get('/pdf', {
     preHandler: [app.authenticate],
     schema: { querystring: QUERY_SCHEMA },
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
   }, async (req, reply) => {
     const { from, to, location_id } = req.query
     const filters = { from, to, locationId: location_id }
@@ -104,6 +106,7 @@ module.exports = async function statsRoutes(app) {
         additionalProperties: false,
       },
     },
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
   }, async (req, reply) => {
     const { from, to, location_id } = req.body ?? {}
     const filters = { from, to, locationId: location_id }
@@ -118,7 +121,7 @@ module.exports = async function statsRoutes(app) {
       host: cfg.smtp_host,
       port: cfg.smtp_port,
       user: cfg.smtp_user,
-      pass: cfg.smtp_pass,
+      pass: decrypt(cfg.smtp_pass || ''),
       from: cfg.smtp_from,
     }
 
