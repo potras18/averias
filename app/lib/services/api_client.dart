@@ -43,8 +43,9 @@ class ApiClient {
               final res = await _dio.post('/auth/refresh',
                   data: {'refreshToken': refreshToken});
               final newToken = res.data['accessToken'] as String;
+              final newRefreshToken = res.data['refreshToken'] as String;
               await _storage.setTokens(
-                  accessToken: newToken, refreshToken: refreshToken);
+                  accessToken: newToken, refreshToken: newRefreshToken);
               final opts = error.requestOptions;
               opts.headers['Authorization'] = 'Bearer $newToken';
               final retried = await _dio.fetch(opts);

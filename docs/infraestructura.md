@@ -151,6 +151,8 @@ flutter build apk --dart-define=API_URL=https://tu-servidor.com
 
 > **Prueba en red local:** usar la IP del servidor en la red WiFi, no `localhost`. Ejemplo: `--dart-define=API_URL=http://192.168.1.42:3000`.
 
+> **Seguridad en producción:** `usesCleartextTraffic="true"` permite HTTP para desarrollo en red local. En producción, desplegar el backend detrás de un proxy inverso con TLS (nginx + Let's Encrypt) y compilar la app con la URL HTTPS: `--dart-define=API_URL=https://tu-dominio.com`. Una vez en HTTPS, cambiar a `usesCleartextTraffic="false"` en el AndroidManifest.
+
 ### App iOS
 
 ```bash
