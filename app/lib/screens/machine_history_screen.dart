@@ -87,9 +87,7 @@ class _MachineHistoryScreenState extends State<MachineHistoryScreen> {
   List<Machine> get _filtered {
     if (_searchQuery.isEmpty) return _machines;
     final q = _searchQuery.toLowerCase();
-    return _machines
-        .where((m) => m.name.toLowerCase().contains(q) || m.qrCode.toLowerCase().contains(q))
-        .toList();
+    return _machines.where((m) => m.name.toLowerCase().contains(q)).toList();
   }
 
   @override
@@ -148,7 +146,7 @@ class _MachineHistoryScreenState extends State<MachineHistoryScreen> {
           TextField(
             controller: _searchCtrl,
             decoration: const InputDecoration(
-              hintText: 'Buscar por nombre o QR...',
+              hintText: 'Buscar máquina...',
               prefixIcon: Icon(Icons.search),
               border: OutlineInputBorder(),
               isDense: true,

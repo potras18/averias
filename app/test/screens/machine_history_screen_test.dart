@@ -87,6 +87,33 @@ void main() {
     expect(find.text('Futbolín B'), findsOneWidget);
   });
 
+  testWidgets('desktop: search does not match against the QR code (a random UUID)', (tester) async {
+    // Real qr_code values are full UUIDs (e.g. 1ec37f1d-0f81-4764-a2b6-bd93f614e7cc),
+    // so matching against them makes any short digit/letter query match nearly every machine.
+    when(() => api.getMachines(locationId: any(named: 'locationId'), includeInactive: true))
+        .thenAnswer((_) async => [
+              Machine(
+                id: 'm-1', name: 'Mario Kart DX #1', qrCode: '1ec37f1d-0f81-4764-a2b6-bd93f614e7cc',
+                hasRedemptionTickets: false, active: true, locationName: 'Sala A',
+              ),
+              Machine(
+                id: 'm-2', name: 'Futbolín B', qrCode: '21defdd8-71f6-4bfd-ad3b-093aaca49c3d',
+                hasRedemptionTickets: false, active: true, locationName: 'Sala B',
+              ),
+            ]);
+
+    await tester.pumpWidget(_desktopWrap(MachineHistoryScreen(api: api)));
+    await tester.pumpAndSettle();
+
+    // 'Futbolín B' doesn't contain '1' in its name, but its QR code does — the
+    // filter must not match on the QR code, or this UUID-collision would show it anyway.
+    await tester.enterText(find.byType(TextField), '1');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mario Kart DX #1'), findsOneWidget);
+    expect(find.text('Futbolín B'), findsNothing);
+  });
+
   testWidgets('desktop: changing location filter re-fetches machines for that location', (tester) async {
     await tester.pumpWidget(_desktopWrap(MachineHistoryScreen(api: api)));
     await tester.pumpAndSettle();
