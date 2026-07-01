@@ -17,7 +17,10 @@ const settingsRoutes = require('./routes/settings')
 
 function buildApp(opts = {}) {
   const app = Fastify({ logger: opts.logger ?? false })
-  app.register(cors, { origin: true })
+  const corsOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
+    : false
+  app.register(cors, { origin: corsOrigins })
   app.register(rateLimit, { global: false })
   app.register(dbPlugin)
   app.register(authPlugin)
@@ -30,6 +33,14 @@ function buildApp(opts = {}) {
   app.register(usersRoutes, { prefix: '/users' })
   app.register(repuestosRoutes, { prefix: '/repuestos' })
   app.register(settingsRoutes, { prefix: '/settings' })
+  app.setErrorHandler((error, request, reply) => {
+    request.log.error(error)
+    const status = error.statusCode ?? 500
+    if (status >= 500) {
+      return reply.status(500).send({ error: 'internal_error' })
+    }
+    return reply.status(status).send({ error: error.message })
+  })
   return app
 }
 
