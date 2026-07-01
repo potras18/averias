@@ -5,7 +5,7 @@ const { buildStatsHtml } = require('../pdf/stats-template')
 const { sendReport }     = require('../email/mailer')
 const { decrypt }        = require('../email/crypto')
 const {
-  getInspectionRows, getMttrHours, getTopProblematic, buildSummary,
+  getInspectionRows, getMttrHours, getMttrTopMachines, getTopProblematic, buildSummary,
   getDailyBreakdown, getCardReaderStats, getDispenserStats,
 } = require('../reports/queries')
 
@@ -21,10 +21,11 @@ module.exports = async function statsRoutes(app) {
   }
 
   async function buildStatsData(db, filters) {
-    const [rows, mttrHours, topProblematic, dailyBreakdown, cardReaderStats, dispenserStats] =
+    const [rows, mttrStats, mttrTopMachines, topProblematic, dailyBreakdown, cardReaderStats, dispenserStats] =
       await Promise.all([
         getInspectionRows(db, filters),
         getMttrHours(db, filters),
+        getMttrTopMachines(db, filters),
         getTopProblematic(db, filters),
         getDailyBreakdown(db, filters),
         getCardReaderStats(db, filters),
@@ -32,7 +33,9 @@ module.exports = async function statsRoutes(app) {
       ])
     const summary = buildSummary(rows)
     return {
-      mttrHours,
+      mttrHours: mttrStats.mean,
+      mttrMedianHours: mttrStats.median,
+      mttrTopMachines,
       pctOperative:    summary.pctOperative,
       pctOutOfService: summary.pctOutOfService,
       pctInRepair:     summary.pctInRepair,
@@ -52,6 +55,8 @@ module.exports = async function statsRoutes(app) {
     const data = await buildStatsData(app.db, { from, to, locationId: location_id })
     return reply.send({
       mttr_hours:          data.mttrHours,
+      mttr_median_hours:   data.mttrMedianHours,
+      mttr_top_machines:   data.mttrTopMachines,
       pct_operative:       data.pctOperative,
       pct_out_of_service:  data.pctOutOfService,
       pct_in_repair:       data.pctInRepair,

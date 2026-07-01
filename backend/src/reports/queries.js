@@ -44,13 +44,48 @@ async function getMttrHours(db, { from, to, locationId }) {
        JOIN machines m ON m.id = i.machine_id
        ${where}
      )
-     SELECT AVG(EXTRACT(EPOCH FROM (next_at - inspected_at)) / 3600) AS mttr_hours
+     SELECT
+       AVG(EXTRACT(EPOCH FROM (next_at - inspected_at)) / 3600) AS mean_hours,
+       PERCENTILE_CONT(0.5) WITHIN GROUP (
+         ORDER BY EXTRACT(EPOCH FROM (next_at - inspected_at)) / 3600
+       ) AS median_hours
      FROM ranked
      WHERE status = 'out_of_service' AND next_status = 'operative'`,
     params
   )
-  const raw = rows[0].mttr_hours
-  return raw != null ? parseFloat(raw) : null
+  const { mean_hours, median_hours } = rows[0]
+  return {
+    mean:   mean_hours   != null ? parseFloat(mean_hours)   : null,
+    median: median_hours != null ? parseFloat(median_hours) : null,
+  }
+}
+
+async function getMttrTopMachines(db, { from, to, locationId }) {
+  const conditions = []
+  const params = []
+  let idx = 1
+  if (from)       { conditions.push(`i.inspected_at >= $${idx++}`); params.push(from) }
+  if (to)         { conditions.push(`i.inspected_at::date <= $${idx++}`); params.push(to) }
+  if (locationId) { conditions.push(`m.location_id = $${idx++}`);   params.push(locationId) }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+  const { rows } = await db.query(
+    `WITH ranked AS (
+       SELECT i.machine_id, m.name, i.status, i.inspected_at,
+              LEAD(i.status) OVER (PARTITION BY i.machine_id ORDER BY i.inspected_at) AS next_status,
+              LEAD(i.inspected_at) OVER (PARTITION BY i.machine_id ORDER BY i.inspected_at) AS next_at
+       FROM inspections i
+       JOIN machines m ON m.id = i.machine_id
+       ${where}
+     )
+     SELECT name, AVG(EXTRACT(EPOCH FROM (next_at - inspected_at)) / 3600) AS avg_hours
+     FROM ranked
+     WHERE status = 'out_of_service' AND next_status = 'operative'
+     GROUP BY machine_id, name
+     ORDER BY avg_hours DESC
+     LIMIT 5`,
+    params
+  )
+  return rows.map(r => ({ name: r.name, avg_hours: parseFloat(r.avg_hours) }))
 }
 
 async function getTopProblematic(db, { from, to, locationId }) {
@@ -236,4 +271,4 @@ async function getMachineStates(db, { from, to, locationId }) {
   return rows
 }
 
-module.exports = { getInspectionRows, getMttrHours, getTopProblematic, buildSummary, groupByLocation, getDailyBreakdown, getCardReaderStats, getDispenserStats, getMachineStates }
+module.exports = { getInspectionRows, getMttrHours, getMttrTopMachines, getTopProblematic, buildSummary, groupByLocation, getDailyBreakdown, getCardReaderStats, getDispenserStats, getMachineStates }

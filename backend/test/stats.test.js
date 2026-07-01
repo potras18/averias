@@ -11,7 +11,7 @@ jest.mock('../src/email/mailer', () => ({
 
 const supertest = require('supertest')
 const { buildApp } = require('../src/app')
-const { resetDb, seedUser, seedLocation, seedMachine, seedSettings } = require('./helpers/db')
+const { resetDb, seedUser, seedLocation, seedMachine, seedInspection, seedSettings } = require('./helpers/db')
 
 let app, st, token
 
@@ -52,6 +52,58 @@ describe('GET /stats', () => {
     expect(res.status).toBe(200)
     const { mttr_hours } = res.body
     expect(mttr_hours === null || typeof mttr_hours === 'number').toBe(true)
+  })
+
+  it('mttr_median_hours is null or number', async () => {
+    const res = await st.get('/stats').set(auth())
+    expect(res.status).toBe(200)
+    const { mttr_median_hours } = res.body
+    expect(mttr_median_hours === null || typeof mttr_median_hours === 'number').toBe(true)
+  })
+
+  it('computes both mean and median MTTR from out_of_service -> operative transitions', async () => {
+    const loc = await seedLocation({ name: 'MTTR Loc' })
+    const tech = await seedUser({ email: 'mttr-tech@example.com' })
+    const machine = await seedMachine({ locationId: loc.id, qrCode: 'MTTR-1' })
+
+    // Three transitions: 1h, 2h, 9h -> mean = 4, median = 2
+    await seedInspection({ machineId: machine.id, technicianId: tech.id, status: 'out_of_service', inspectedAt: '2026-01-01T00:00:00Z' })
+    await seedInspection({ machineId: machine.id, technicianId: tech.id, status: 'operative',       inspectedAt: '2026-01-01T01:00:00Z' })
+    await seedInspection({ machineId: machine.id, technicianId: tech.id, status: 'out_of_service', inspectedAt: '2026-01-02T00:00:00Z' })
+    await seedInspection({ machineId: machine.id, technicianId: tech.id, status: 'operative',       inspectedAt: '2026-01-02T02:00:00Z' })
+    await seedInspection({ machineId: machine.id, technicianId: tech.id, status: 'out_of_service', inspectedAt: '2026-01-03T00:00:00Z' })
+    await seedInspection({ machineId: machine.id, technicianId: tech.id, status: 'operative',       inspectedAt: '2026-01-03T09:00:00Z' })
+
+    const res = await st.get(`/stats?location_id=${loc.id}`).set(auth())
+    expect(res.status).toBe(200)
+    expect(res.body.mttr_hours).toBeCloseTo(4, 5)
+    expect(res.body.mttr_median_hours).toBeCloseTo(2, 5)
+  })
+
+  it('mttr_top_machines lists slowest machines first, sin superar 5', async () => {
+    const loc = await seedLocation({ name: 'MTTR Top Loc' })
+    const tech = await seedUser({ email: 'mttr-top-tech@example.com' })
+    const slow = await seedMachine({ locationId: loc.id, name: 'Lenta', qrCode: 'MTTR-SLOW' })
+    const fast = await seedMachine({ locationId: loc.id, name: 'Rapida', qrCode: 'MTTR-FAST' })
+
+    await seedInspection({ machineId: slow.id, technicianId: tech.id, status: 'out_of_service', inspectedAt: '2026-02-01T00:00:00Z' })
+    await seedInspection({ machineId: slow.id, technicianId: tech.id, status: 'operative',       inspectedAt: '2026-02-01T10:00:00Z' })
+    await seedInspection({ machineId: fast.id, technicianId: tech.id, status: 'out_of_service', inspectedAt: '2026-02-01T00:00:00Z' })
+    await seedInspection({ machineId: fast.id, technicianId: tech.id, status: 'operative',       inspectedAt: '2026-02-01T01:00:00Z' })
+
+    const res = await st.get(`/stats?location_id=${loc.id}`).set(auth())
+    expect(res.status).toBe(200)
+    expect(res.body.mttr_top_machines).toHaveLength(2)
+    expect(res.body.mttr_top_machines[0].name).toBe('Lenta')
+    expect(res.body.mttr_top_machines[0].avg_hours).toBeGreaterThan(res.body.mttr_top_machines[1].avg_hours)
+  })
+
+  it('mttr_top_machines is an empty array when no location has a full transition', async () => {
+    const loc = await seedLocation({ name: 'MTTR Empty Loc' })
+    await seedMachine({ locationId: loc.id, qrCode: 'MTTR-EMPTY' })
+    const res = await st.get(`/stats?location_id=${loc.id}`).set(auth())
+    expect(res.status).toBe(200)
+    expect(res.body.mttr_top_machines).toEqual([])
   })
 
   it('returns 401 without token', async () => {
