@@ -61,7 +61,10 @@ class _MachineHistoryScreenState extends State<MachineHistoryScreen> {
   Future<void> _loadMachines() async {
     setState(() => _loadingList = true);
     try {
-      final machines = await widget.api.getMachines(locationId: _selectedLocationId);
+      final machines = await widget.api.getMachines(
+        locationId: _selectedLocationId,
+        includeInactive: true,
+      );
       if (!mounted) return;
       setState(() {
         _machines = machines;

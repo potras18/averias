@@ -44,8 +44,10 @@ void main() {
   setUp(() {
     api = MockApiClient();
     when(() => api.getLocations()).thenAnswer((_) async => [_locationA, _locationB]);
-    when(() => api.getMachines(locationId: any(named: 'locationId')))
-        .thenAnswer((_) async => [_machine1, _machine2]);
+    when(() => api.getMachines(
+          locationId: any(named: 'locationId'),
+          includeInactive: any(named: 'includeInactive'),
+        )).thenAnswer((_) async => [_machine1, _machine2]);
     when(() => api.getMachineById('m-1')).thenAnswer((_) async => _machine1);
     when(() => api.getMachineById('m-2')).thenAnswer((_) async => _machine2);
     when(() => api.getInspections(machineId: any(named: 'machineId')))
@@ -94,7 +96,7 @@ void main() {
     await tester.tap(find.text('Sala B').last);
     await tester.pumpAndSettle();
 
-    verify(() => api.getMachines(locationId: 'loc-b')).called(1);
+    verify(() => api.getMachines(locationId: 'loc-b', includeInactive: true)).called(1);
   });
 
   testWidgets('mobile: tapping a machine pushes to /history/:id', (tester) async {
@@ -113,5 +115,22 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('detail-m-1'), findsOneWidget);
+  });
+
+  testWidgets('desktop: preselectedId renders the detail panel for that machine', (tester) async {
+    await tester.pumpWidget(_desktopWrap(MachineHistoryScreen(api: api, preselectedId: 'm-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Historial de inspecciones (0)'), findsOneWidget);
+  });
+
+  testWidgets('loads machines including inactive/decommissioned ones', (tester) async {
+    await tester.pumpWidget(_desktopWrap(MachineHistoryScreen(api: api)));
+    await tester.pumpAndSettle();
+
+    verify(() => api.getMachines(
+          locationId: any(named: 'locationId'),
+          includeInactive: true,
+        )).called(1);
   });
 }
