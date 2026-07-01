@@ -486,6 +486,10 @@ class _InspectionTile extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: StatusBadge(status: inspection.status),
+            ),
             Text(inspection.comment ?? ''),
             if (inspection.cardReaderFailureType != null)
               Text('Lector: ${inspection.cardReaderFailureType}',

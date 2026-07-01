@@ -246,6 +246,10 @@ class _InspectionTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(dateStr, style: Theme.of(context).textTheme.bodySmall),
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: StatusBadge(status: inspection.status),
+            ),
             if (inspection.comment != null && inspection.comment!.isNotEmpty)
               Text(inspection.comment!),
             if (inspection.cardReaderFailureType != null)
