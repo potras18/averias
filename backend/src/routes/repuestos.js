@@ -83,6 +83,14 @@ module.exports = async function repuestosRoutes(app) {
     },
   }, async (req, reply) => {
     const { id } = req.params
+    const { rows: [existing] } = await app.db.query(
+      'SELECT created_by FROM spare_parts WHERE id = $1',
+      [id]
+    )
+    if (!existing) return reply.code(404).send({ error: 'not_found' })
+    if (req.user.role !== 'admin' && existing.created_by !== req.user.sub) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
     const { description, quantity, status } = req.body
     const sets = ['updated_by = $1', 'updated_at = now()']
     const params = [req.user.sub]

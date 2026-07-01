@@ -119,11 +119,10 @@ test('POST /repuestos returns 400 for quantity < 1', async () => {
 })
 
 // PATCH /repuestos/:id
-test('PATCH /repuestos/:id updates status for technician', async () => {
+test('PATCH /repuestos/:id updates status for technician (own part)', async () => {
   const loc  = await seedLocation()
   const m    = await seedMachine({ locationId: loc.id, qrCode: 'QR-PA1' })
-  const u    = await seedUser({ email: 'pa@x.com', password: 'pass123' })
-  const part = await seedSparePart({ machineId: m.id, createdBy: u.id })
+  const part = await seedSparePart({ machineId: m.id, createdBy: techId })
   const res  = await st.patch(`/repuestos/${part.id}`).set(auth(techToken))
     .send({ status: 'pedido' })
   expect(res.status).toBe(200)
@@ -153,6 +152,24 @@ test('PATCH /repuestos/:id returns 401 without token', async () => {
   const res = await st.patch('/repuestos/00000000-0000-0000-0000-000000000000')
     .send({ status: 'pedido' })
   expect(res.status).toBe(401)
+})
+
+test('PATCH /repuestos/:id returns 403 when technician edits another user\'s part', async () => {
+  const loc   = await seedLocation()
+  const m     = await seedMachine({ locationId: loc.id, qrCode: 'QR-PA5' })
+  const techB = await seedUser({ email: 'techb@x.com', password: 'pass123', name: 'Tech B' })
+  const part  = await seedSparePart({ machineId: m.id, createdBy: techB.id })
+  const tBRes = await st.post('/auth/login').send({ email: techB.email, password: techB.password })
+  const techBToken = tBRes.body.accessToken
+  // techToken belongs to techId (Tech User), part belongs to techB — should be forbidden
+  const res = await st.patch(`/repuestos/${part.id}`).set(auth(techToken))
+    .send({ status: 'pedido' })
+  expect(res.status).toBe(403)
+  // admin can still edit another user's part
+  const adminRes = await st.patch(`/repuestos/${part.id}`).set(auth(adminToken))
+    .send({ status: 'pedido' })
+  expect(adminRes.status).toBe(200)
+  void techBToken // suppress unused variable warning
 })
 
 // DELETE /repuestos/:id
