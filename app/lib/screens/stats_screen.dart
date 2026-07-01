@@ -167,11 +167,22 @@ class _StatsScreenState extends State<StatsScreen> {
         Expanded(
           child: _MetricCard(
             title: 'MTTR',
-            child: Text(
-              _stats!.mttrHours != null
-                  ? '${_stats!.mttrHours!.toStringAsFixed(1)} h'
-                  : '—',
-              style: Theme.of(context).textTheme.headlineMedium,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _stats!.mttrHours != null
+                      ? '${_stats!.mttrHours!.toStringAsFixed(1)} h'
+                      : '—',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                if (_stats!.mttrMedianHours != null)
+                  Text(
+                    'Mediana: ${_stats!.mttrMedianHours!.toStringAsFixed(1)} h',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+              ],
             ),
           ),
         ),
@@ -449,9 +460,9 @@ class _StatsScreenState extends State<StatsScreen> {
   Widget _buildTopProblematic() {
     final machines = _stats!.topProblematic;
     if (machines.isEmpty) {
-      return _MetricCard(
+      return const _MetricCard(
         title: 'Top 5 problemáticas',
-        child: const Text('Sin averías en el período'),
+        child: Text('Sin averías en el período'),
       );
     }
     final maxCount = machines.first.faultCount;
@@ -494,6 +505,54 @@ class _StatsScreenState extends State<StatsScreen> {
     );
   }
 
+  Widget _buildMttrTopMachines() {
+    final machines = _stats!.mttrTopMachines;
+    if (machines.isEmpty) {
+      return const _MetricCard(
+        title: 'Top 5 reparaciones más lentas',
+        child: Text('Sin datos suficientes'),
+      );
+    }
+    final maxHours = machines.first.avgHours;
+    return _MetricCard(
+      title: 'Top 5 reparaciones más lentas',
+      child: Column(
+        children: machines.map((m) {
+          final name = m.name.length > 15 ? '${m.name.substring(0, 15)}…' : m.name;
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 90,
+                  child: Text(name,
+                      style: const TextStyle(fontSize: 12),
+                      overflow: TextOverflow.ellipsis),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: maxHours > 0 ? m.avgHours / maxHours : 0,
+                      color: Colors.orange[400],
+                      backgroundColor: Colors.orange[50],
+                      minHeight: 18,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text('${m.avgHours.toStringAsFixed(1)} h',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 12)),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   Widget _buildCharts(bool isDesktop) {
     if (isDesktop) {
       return Column(
@@ -507,6 +566,8 @@ class _StatsScreenState extends State<StatsScreen> {
               Expanded(child: _buildTopProblematic()),
             ],
           ),
+          const SizedBox(height: 12),
+          _buildMttrTopMachines(),
           const SizedBox(height: 12),
           _buildTrendChart(),
           const SizedBox(height: 12),
@@ -526,6 +587,8 @@ class _StatsScreenState extends State<StatsScreen> {
         _buildAvailabilityChart(),
         const SizedBox(height: 12),
         _buildTopProblematic(),
+        const SizedBox(height: 12),
+        _buildMttrTopMachines(),
         const SizedBox(height: 12),
         _buildTrendChart(),
         const SizedBox(height: 12),

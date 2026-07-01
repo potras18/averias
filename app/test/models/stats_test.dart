@@ -3,12 +3,16 @@ import 'package:averias_app/models/stats.dart';
 
 Map<String, dynamic> _fullStatsJson() => {
   'mttr_hours': 4.5,
+  'mttr_median_hours': 3.2,
   'pct_operative': 75.0,
   'pct_out_of_service': 15.0,
   'pct_in_repair': 10.0,
   'total_machines': 12,
   'top_problematic': [
     {'name': 'Máquina A', 'fault_count': 5},
+  ],
+  'mttr_top_machines': [
+    {'name': 'Máquina C', 'avg_hours': 12.4},
   ],
   'daily_breakdown': [
     {'date': '2026-06-01', 'operative': 3, 'out_of_service': 1, 'in_repair': 0},
@@ -93,10 +97,14 @@ void main() {
     test('handles null mttr_hours', () {
       final json = _fullStatsJson();
       json['mttr_hours'] = null;
+      json['mttr_median_hours'] = null;
       json['top_problematic'] = [];
+      json['mttr_top_machines'] = [];
       final result = StatsResult.fromJson(json);
       expect(result.mttrHours, isNull);
+      expect(result.mttrMedianHours, isNull);
       expect(result.topProblematic, isEmpty);
+      expect(result.mttrTopMachines, isEmpty);
     });
   });
 }

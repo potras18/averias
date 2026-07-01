@@ -10,6 +10,18 @@ class TopMachine {
   );
 }
 
+class MttrTopMachine {
+  final String name;
+  final double avgHours;
+
+  const MttrTopMachine({required this.name, required this.avgHours});
+
+  factory MttrTopMachine.fromJson(Map<String, dynamic> json) => MttrTopMachine(
+    name: json['name'] as String,
+    avgHours: (json['avg_hours'] as num).toDouble(),
+  );
+}
+
 class DailyBreakdown {
   final DateTime date;
   final int operative;
@@ -75,22 +87,26 @@ class DispenserStats {
 
 class StatsResult {
   final double? mttrHours;
+  final double? mttrMedianHours;
   final double pctOperative;
   final double pctOutOfService;
   final double pctInRepair;
   final int totalMachines;
   final List<TopMachine> topProblematic;
+  final List<MttrTopMachine> mttrTopMachines;
   final List<DailyBreakdown> dailyBreakdown;
   final CardReaderStats cardReaderStats;
   final DispenserStats dispenserStats;
 
   const StatsResult({
     required this.mttrHours,
+    required this.mttrMedianHours,
     required this.pctOperative,
     required this.pctOutOfService,
     required this.pctInRepair,
     required this.totalMachines,
     required this.topProblematic,
+    required this.mttrTopMachines,
     required this.dailyBreakdown,
     required this.cardReaderStats,
     required this.dispenserStats,
@@ -98,12 +114,16 @@ class StatsResult {
 
   factory StatsResult.fromJson(Map<String, dynamic> json) => StatsResult(
     mttrHours:       (json['mttr_hours'] as num?)?.toDouble(),
+    mttrMedianHours: (json['mttr_median_hours'] as num?)?.toDouble(),
     pctOperative:    (json['pct_operative'] as num).toDouble(),
     pctOutOfService: (json['pct_out_of_service'] as num).toDouble(),
     pctInRepair:     (json['pct_in_repair'] as num).toDouble(),
     totalMachines:   json['total_machines'] as int,
     topProblematic:  (json['top_problematic'] as List)
         .map((e) => TopMachine.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    mttrTopMachines: (json['mttr_top_machines'] as List)
+        .map((e) => MttrTopMachine.fromJson(e as Map<String, dynamic>))
         .toList(),
     dailyBreakdown:  (json['daily_breakdown'] as List)
         .map((e) => DailyBreakdown.fromJson(e as Map<String, dynamic>))

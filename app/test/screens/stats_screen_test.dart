@@ -26,6 +26,7 @@ const fakeDispenserStats = DispenserStats(
 
 const fakeStats = StatsResult(
   mttrHours: 4.5,
+  mttrMedianHours: 3.2,
   pctOperative: 75.0,
   pctOutOfService: 15.0,
   pctInRepair: 10.0,
@@ -33,6 +34,10 @@ const fakeStats = StatsResult(
   topProblematic: [
     TopMachine(name: 'Máquina A', faultCount: 5),
     TopMachine(name: 'Máquina B', faultCount: 2),
+  ],
+  mttrTopMachines: [
+    MttrTopMachine(name: 'Mario Kart DX #3', avgHours: 12.4),
+    MttrTopMachine(name: 'Pinball A', avgHours: 3.1),
   ],
   dailyBreakdown: [],
   cardReaderStats: fakeCardReaderStats,
@@ -168,11 +173,13 @@ void main() {
       locationId: any(named: 'locationId'),
     )).thenAnswer((_) async => StatsResult(
       mttrHours: null,
+      mttrMedianHours: null,
       pctOperative: 0,
       pctOutOfService: 0,
       pctInRepair: 0,
       totalMachines: 0,
       topProblematic: const [],
+      mttrTopMachines: const [],
       dailyBreakdown: const [],
       cardReaderStats: const CardReaderStats(pctOk: 0, pctFail: 0),
       dispenserStats: const DispenserStats(
@@ -185,6 +192,50 @@ void main() {
 
     await tester.scrollUntilVisible(find.text('Sin averías en el período'), 200);
     expect(find.text('Sin averías en el período'), findsOneWidget);
+  });
+
+  testWidgets('shows MTTR median under the average', (tester) async {
+    await tester.pumpWidget(_wrap(StatsScreen(api: api)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('4.5 h'), findsOneWidget);
+    expect(find.text('Mediana: 3.2 h'), findsOneWidget);
+  });
+
+  testWidgets('shows machine name from mttrTopMachines after load', (tester) async {
+    await tester.pumpWidget(_wrap(StatsScreen(api: api)));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Top 5 reparaciones más lentas'), 200);
+    expect(find.text('Mario Kart DX #…'), findsOneWidget);
+  });
+
+  testWidgets('shows Sin datos suficientes when mttrTopMachines is empty', (tester) async {
+    when(() => api.getStats(
+      from: any(named: 'from'),
+      to: any(named: 'to'),
+      locationId: any(named: 'locationId'),
+    )).thenAnswer((_) async => const StatsResult(
+      mttrHours: null,
+      mttrMedianHours: null,
+      pctOperative: 0,
+      pctOutOfService: 0,
+      pctInRepair: 0,
+      totalMachines: 0,
+      topProblematic: [],
+      mttrTopMachines: [],
+      dailyBreakdown: [],
+      cardReaderStats: CardReaderStats(pctOk: 0, pctFail: 0),
+      dispenserStats: DispenserStats(
+        pctOk: 0, pctNoCheck: 100, pctFull: 0, pctLow: 0, pctEmpty: 0,
+      ),
+    ));
+
+    await tester.pumpWidget(_wrap(StatsScreen(api: api)));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Sin datos suficientes'), 200);
+    expect(find.text('Sin datos suficientes'), findsOneWidget);
   });
 
   testWidgets('desktop: shows two-column layout with Row', (tester) async {
@@ -203,11 +254,13 @@ void main() {
       locationId: any(named: 'locationId'),
     )).thenAnswer((_) async => StatsResult(
       mttrHours: null,
+      mttrMedianHours: null,
       pctOperative: 0,
       pctOutOfService: 0,
       pctInRepair: 0,
       totalMachines: 1,
       topProblematic: const [],
+      mttrTopMachines: const [],
       dailyBreakdown: [
         DailyBreakdown(date: DateTime(2026, 6, 1), operative: 2, outOfService: 1, inRepair: 0),
       ],
