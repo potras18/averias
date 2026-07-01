@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'screens/login_screen.dart';
 import 'screens/machine_list_screen.dart';
 import 'screens/machine_detail_screen.dart';
+import 'screens/machine_history_screen.dart';
+import 'screens/machine_history_detail_screen.dart';
 import 'screens/inspection_form_screen.dart';
 import 'screens/qr_scanner_screen.dart';
 import 'screens/report_screen.dart';
@@ -55,6 +57,26 @@ final _router = GoRouter(
         child: MachineDetailScreen(
           api: _api,
           storage: _storage,
+          machineId: state.pathParameters['id']!,
+        ),
+      ),
+    ),
+    GoRoute(
+      path: '/history',
+      builder: (_, state) => _shell(
+        route: '/history',
+        child: MachineHistoryScreen(
+          api: _api,
+          preselectedId: state.uri.queryParameters['selected'],
+        ),
+      ),
+    ),
+    GoRoute(
+      path: '/history/:id',
+      builder: (_, state) => _shell(
+        route: '/history',
+        child: MachineHistoryDetailScreen(
+          api: _api,
           machineId: state.pathParameters['id']!,
         ),
       ),
