@@ -119,6 +119,7 @@ module.exports = async function usersRoutes(app) {
       [role, id]
     )
     if (!rows.length) return reply.code(404).send({ error: 'User not found' })
+    await app.db.query('DELETE FROM refresh_tokens WHERE user_id = $1', [id])
     return rows[0]
   })
 
@@ -147,6 +148,7 @@ module.exports = async function usersRoutes(app) {
     const { rows } = await app.db.query(
       'UPDATE users SET active = false WHERE id = $1 RETURNING id, name, email, role, active', [id]
     )
+    await app.db.query('DELETE FROM refresh_tokens WHERE user_id = $1', [id])
     return rows[0]
   })
 }
