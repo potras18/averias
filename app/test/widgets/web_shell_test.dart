@@ -70,6 +70,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
     expect(find.text('Máquinas'), findsOneWidget);
+    expect(find.text('Histórico'), findsOneWidget);
     expect(find.text('Reportes'), findsOneWidget);
     expect(find.text('Estadísticas'), findsOneWidget);
     expect(find.text('Admin'), findsNothing);  // no admin for technician

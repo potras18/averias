@@ -124,6 +124,12 @@ class _Sidebar extends StatelessWidget {
                     onTap: () => onNavigate('/machines'),
                   ),
                   _NavItem(
+                    icon: Icons.history,
+                    label: 'Histórico',
+                    selected: currentRoute == '/history',
+                    onTap: () => onNavigate('/history'),
+                  ),
+                  _NavItem(
                     icon: Icons.assessment,
                     label: 'Reportes',
                     selected: currentRoute == '/reports',
