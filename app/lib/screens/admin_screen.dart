@@ -8,6 +8,7 @@ import '../services/api_client.dart';
 import '../services/storage_service.dart';
 import '../utils/download_file.dart';
 import '../widgets/desktop_shell_scope.dart';
+import '../widgets/section_card.dart';
 
 class AdminScreen extends StatefulWidget {
   final ApiClient api;
@@ -880,33 +881,11 @@ class _AdminSettingsTabState extends State<_AdminSettingsTab> {
     String? subtitle,
     required List<Widget> children,
   }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(width: 8),
-                Text(title, style: Theme.of(context).textTheme.titleMedium),
-              ],
-            ),
-            if (subtitle != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: const TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-            ],
-            const Divider(height: 24),
-            ...children,
-          ],
-        ),
-      ),
+    return SectionCard(
+      icon: icon,
+      title: title,
+      subtitle: subtitle,
+      children: children,
     );
   }
 

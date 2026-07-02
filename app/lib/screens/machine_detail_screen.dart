@@ -8,6 +8,7 @@ import '../services/api_client.dart';
 import '../services/storage_service.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/desktop_shell_scope.dart';
+import '../widgets/section_card.dart';
 
 class MachineDetailScreen extends StatefulWidget {
   final ApiClient api;
@@ -143,18 +144,21 @@ class _MachineDetailScreenState extends State<MachineDetailScreen>
                             })),
                   ),
                   const SizedBox(height: 24),
-                  Text('Últimas inspecciones',
-                      style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  if (machine.inspections.isEmpty)
-                    const Text('Sin inspecciones previas')
-                  else
-                    ...machine.inspections.map((i) => _InspectionTile(
-                          inspection: i,
-                          role: _role,
-                          currentUserId: _userId,
-                          onEdit: () => _openEdit(machine, i),
-                        )),
+                  SectionCard(
+                    icon: Icons.checklist,
+                    title: 'Últimas inspecciones',
+                    children: [
+                      if (machine.inspections.isEmpty)
+                        const Text('Sin inspecciones previas')
+                      else
+                        ...machine.inspections.map((i) => _InspectionTile(
+                              inspection: i,
+                              role: _role,
+                              currentUserId: _userId,
+                              onEdit: () => _openEdit(machine, i),
+                            )),
+                    ],
+                  ),
                 ],
               ),
               // Tab 1: Repuestos

@@ -7,6 +7,7 @@ import '../services/api_client.dart';
 import '../services/storage_service.dart';
 import '../widgets/desktop_shell_scope.dart';
 import '../widgets/machine_card.dart';
+import '../widgets/section_card.dart';
 import '../widgets/status_badge.dart';
 
 // Inspection form options (same as InspectionFormScreen)
@@ -347,82 +348,88 @@ class _MachineListScreenState extends State<MachineListScreen> {
                 onPressed: () => setState(() => _showForm = true),
               ),
               const SizedBox(height: 24),
-              Text('Últimas inspecciones',
-                  style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              if (machine.inspections.isEmpty)
-                const Text('Sin inspecciones previas')
-              else
-                ...machine.inspections.map((i) => _InspectionTile(
-                      inspection: i,
-                      role: _role,
-                      currentUserId: _userId,
-                      onEdit: () => context.push(
-                        '/machines/${machine.id}/inspect',
-                        extra: {
-                          'hasRedemptionTickets': machine.hasRedemptionTickets,
-                          'inspection': i,
-                        },
-                      ).then((_) => setState(() {
-                            _detailFuture = widget.api.getMachineById(_selectedMachineId!);
-                            _partsFuture = widget.api.getSpareParts(machineId: _selectedMachineId!);
-                          })),
-                    )),
-              const SizedBox(height: 32),
-              Text('Repuestos', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              FutureBuilder<List<SparePart>>(
-                future: _partsFuture,
-                builder: (context, partsSnap) {
-                  if (_partsFuture == null || partsSnap.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (partsSnap.hasError) return Text('Error: ${partsSnap.error}');
-                  final parts = partsSnap.data ?? [];
-                  if (parts.isEmpty) return const Text('Sin repuestos');
-                  return Column(
-                    children: [
-                      ...parts.map((p) => _SparePartTile(
-                            part: p,
-                            role: _role,
-                            onEdit: () => context.push(
-                              '/repuestos/${p.id}/edit',
-                              extra: {'sparePart': p},
-                            ).then((_) => setState(() {
-                                  _partsFuture = widget.api.getSpareParts(machineId: _selectedMachineId!);
-                                })),
-                            onDelete: () async {
-                              final ok = await showDialog<bool>(
-                                context: context,
-                                builder: (ctx) => AlertDialog(
-                                  title: const Text('Eliminar repuesto'),
-                                  content: Text('¿Eliminar "${p.description}"?'),
-                                  actions: [
-                                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-                                    FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Eliminar')),
-                                  ],
-                                ),
-                              );
-                              if (ok == true && mounted) {
-                                await widget.api.deleteSparePart(p.id);
-                                if (mounted) setState(() { _partsFuture = widget.api.getSpareParts(machineId: _selectedMachineId!); });
-                              }
+              SectionCard(
+                icon: Icons.checklist,
+                title: 'Últimas inspecciones',
+                children: [
+                  if (machine.inspections.isEmpty)
+                    const Text('Sin inspecciones previas')
+                  else
+                    ...machine.inspections.map((i) => _InspectionTile(
+                          inspection: i,
+                          role: _role,
+                          currentUserId: _userId,
+                          onEdit: () => context.push(
+                            '/machines/${machine.id}/inspect',
+                            extra: {
+                              'hasRedemptionTickets': machine.hasRedemptionTickets,
+                              'inspection': i,
                             },
-                          )),
-                    ],
-                  );
-                },
+                          ).then((_) => setState(() {
+                                _detailFuture = widget.api.getMachineById(_selectedMachineId!);
+                                _partsFuture = widget.api.getSpareParts(machineId: _selectedMachineId!);
+                              })),
+                        )),
+                ],
               ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.add),
-                label: const Text('Añadir repuesto'),
-                onPressed: () => context.push(
-                  '/repuestos/new',
-                  extra: {'machineId': machine.id},
-                ).then((_) => setState(() {
-                      _partsFuture = widget.api.getSpareParts(machineId: _selectedMachineId!);
-                    })),
+              SectionCard(
+                icon: Icons.build,
+                title: 'Repuestos',
+                children: [
+                  FutureBuilder<List<SparePart>>(
+                    future: _partsFuture,
+                    builder: (context, partsSnap) {
+                      if (_partsFuture == null || partsSnap.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (partsSnap.hasError) return Text('Error: ${partsSnap.error}');
+                      final parts = partsSnap.data ?? [];
+                      if (parts.isEmpty) return const Text('Sin repuestos');
+                      return Column(
+                        children: [
+                          ...parts.map((p) => _SparePartTile(
+                                part: p,
+                                role: _role,
+                                onEdit: () => context.push(
+                                  '/repuestos/${p.id}/edit',
+                                  extra: {'sparePart': p},
+                                ).then((_) => setState(() {
+                                      _partsFuture = widget.api.getSpareParts(machineId: _selectedMachineId!);
+                                    })),
+                                onDelete: () async {
+                                  final ok = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: const Text('Eliminar repuesto'),
+                                      content: Text('¿Eliminar "${p.description}"?'),
+                                      actions: [
+                                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                                        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Eliminar')),
+                                      ],
+                                    ),
+                                  );
+                                  if (ok == true && mounted) {
+                                    await widget.api.deleteSparePart(p.id);
+                                    if (mounted) setState(() { _partsFuture = widget.api.getSpareParts(machineId: _selectedMachineId!); });
+                                  }
+                                },
+                              )),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.add),
+                    label: const Text('Añadir repuesto'),
+                    onPressed: () => context.push(
+                      '/repuestos/new',
+                      extra: {'machineId': machine.id},
+                    ).then((_) => setState(() {
+                          _partsFuture = widget.api.getSpareParts(machineId: _selectedMachineId!);
+                        })),
+                  ),
+                ],
               ),
             ],
           ),
