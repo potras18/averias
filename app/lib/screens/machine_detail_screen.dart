@@ -276,15 +276,17 @@ class _SparePartTile extends StatelessWidget {
   const _SparePartTile({required this.part, required this.onEdit});
 
   Color _statusColor() => switch (part.status) {
-        'pedido'   => Colors.blue,
-        'recibido' => Colors.green,
-        _          => Colors.orange,
+        'pedido'    => Colors.blue,
+        'recibido'  => Colors.green,
+        'instalado' => Colors.teal,
+        _           => Colors.orange,
       };
 
   String _statusLabel() => switch (part.status) {
-        'pedido'   => 'Pedido',
-        'recibido' => 'Recibido',
-        _          => 'Pendiente',
+        'pedido'    => 'Pedido',
+        'recibido'  => 'Recibido',
+        'instalado' => 'Instalado',
+        _           => 'Pendiente',
       };
 
   @override

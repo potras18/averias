@@ -136,6 +136,7 @@ class _SparePartFormScreenState extends State<SparePartFormScreen> {
                         DropdownMenuItem(value: 'pendiente', child: Text('Pendiente')),
                         DropdownMenuItem(value: 'pedido',    child: Text('Pedido')),
                         DropdownMenuItem(value: 'recibido',  child: Text('Recibido')),
+                        DropdownMenuItem(value: 'instalado', child: Text('Instalado')),
                       ],
                       onChanged: (v) => setState(() => _status = v!),
                     ),

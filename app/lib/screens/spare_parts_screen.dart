@@ -68,6 +68,7 @@ class _SparePartsScreenState extends State<SparePartsScreen> {
                     ('Pendiente', 'pendiente'),
                     ('Pedido', 'pedido'),
                     ('Recibido', 'recibido'),
+                    ('Instalado', 'instalado'),
                   ])
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
@@ -130,15 +131,17 @@ class _SparePartTile extends StatelessWidget {
   });
 
   Color _statusColor() => switch (part.status) {
-        'pedido'   => Colors.blue,
-        'recibido' => Colors.green,
-        _          => Colors.orange,
+        'pedido'    => Colors.blue,
+        'recibido'  => Colors.green,
+        'instalado' => Colors.teal,
+        _           => Colors.orange,
       };
 
   String _statusLabel() => switch (part.status) {
-        'pedido'   => 'Pedido',
-        'recibido' => 'Recibido',
-        _          => 'Pendiente',
+        'pedido'    => 'Pedido',
+        'recibido'  => 'Recibido',
+        'instalado' => 'Instalado',
+        _           => 'Pendiente',
       };
 
   @override

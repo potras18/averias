@@ -7,7 +7,7 @@ module.exports = async function repuestosRoutes(app) {
         type: 'object',
         properties: {
           machine_id: { type: 'string' },
-          status: { type: 'string', enum: ['pendiente', 'pedido', 'recibido'] },
+          status: { type: 'string', enum: ['pendiente', 'pedido', 'recibido', 'instalado'] },
         },
         additionalProperties: false,
       },
@@ -75,7 +75,7 @@ module.exports = async function repuestosRoutes(app) {
         properties: {
           description: { type: 'string', minLength: 1 },
           quantity:    { type: 'integer', minimum: 1 },
-          status:      { type: 'string', enum: ['pendiente', 'pedido', 'recibido'] },
+          status:      { type: 'string', enum: ['pendiente', 'pedido', 'recibido', 'instalado'] },
         },
         additionalProperties: false,
         minProperties: 1,
