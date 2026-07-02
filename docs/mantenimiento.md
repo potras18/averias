@@ -9,7 +9,7 @@ cd backend
 npm run migrate
 ```
 
-El script (`backend/migrations/run.js`) aplica solo las migraciones pendientes; es idempotente y seguro de ejecutar varias veces.
+El script (`backend/migrations/run.js`) ejecuta **todos** los archivos `.sql` en orden numérico cada vez (no lleva registro de las ya aplicadas). Por eso cada migración debe ser idempotente (`IF NOT EXISTS`, `IF EXISTS`, `ON CONFLICT DO NOTHING`); así es seguro ejecutarlo varias veces.
 
 ### Migraciones existentes
 
@@ -26,6 +26,8 @@ El script (`backend/migrations/run.js`) aplica solo las migraciones pendientes; 
 | `009_users_active.sql` | Columna `active` en usuarios |
 | `010_spare_parts.sql` | Tabla de repuestos (solicitudes de compra) |
 | `011_settings.sql` | Tabla de configuración (SMTP + destinatarios email) |
+| `012_email_templates.sql` | Claves de plantillas de email (asunto/cuerpo de informes y estadísticas) |
+| `013_spare_parts_instalado.sql` | Añade el estado `instalado` al CHECK de `spare_parts.status` |
 
 ### Añadir una nueva migración
 
@@ -89,16 +91,20 @@ spare_parts
   machine_id UUID → machines
   description TEXT           -- qué repuesto hay que comprar
   quantity INTEGER           -- mínimo 1
-  status TEXT                -- 'pendiente' | 'pedido' | 'recibido'
+  status TEXT                -- 'pendiente' | 'pedido' | 'recibido' | 'instalado'
   created_by UUID → users
   updated_by UUID → users    -- nullable
   created_at TIMESTAMPTZ
   updated_at TIMESTAMPTZ
 
 settings
-  key TEXT PK                -- 6 claves fijas: smtp_host, smtp_port, smtp_user,
-                             --   smtp_pass, smtp_from, email_recipients
-  value TEXT                 -- email_recipients almacena JSON array: ["a@b.com"]
+  key TEXT PK                -- 10 claves fijas:
+                             --   smtp_host, smtp_port, smtp_user, smtp_pass, smtp_from,
+                             --   email_recipients,
+                             --   email_subject_reports, email_body_reports,
+                             --   email_subject_stats, email_body_stats
+  value TEXT                 -- email_recipients: JSON array ["a@b.com"]
+                             -- smtp_pass: cifrado AES-256-GCM (prefijo "enc:")
   updated_at TIMESTAMPTZ
 ```
 
@@ -205,8 +211,10 @@ Distribuir el APK por el canal habitual (MDM, instalación manual, Play Store in
 
 La configuración SMTP se puede gestionar de dos formas (la BD tiene prioridad sobre el `.env`):
 
-1. **Desde la app** *(recomendado)*: Panel de administración → pestaña Ajustes. Los cambios son inmediatos y no requieren reiniciar el backend.
+1. **Desde la app** *(recomendado)*: Panel de administración → pestaña Ajustes. Los cambios son inmediatos y no requieren reiniciar el backend. Además de SMTP y destinatarios, permite editar las plantillas (asunto/cuerpo) de los emails de informes y estadísticas, con variables `{fecha}`, `{rango}`, `{tecnico}`, `{archivo}`.
 2. **Variables de entorno** en `backend/.env`: actúan como fallback si los campos en BD están vacíos.
+
+> **Cifrado de la contraseña SMTP:** `smtp_pass` se guarda cifrada (AES-256-GCM) con una clave derivada de `JWT_SECRET`. Si cambias `JWT_SECRET`, la contraseña almacenada dejará de poder descifrarse y hay que volver a introducirla en Ajustes.
 
 **Diagnóstico si el email falla:**
 
@@ -279,6 +287,6 @@ SELECT name, email, role, created_at FROM users WHERE active = true ORDER BY nam
 
 - **JWT_SECRET:** cambiar a una cadena aleatoria de al menos 32 caracteres en producción. Nunca usar el valor de ejemplo.
 - **HTTPS:** desplegar el backend detrás de un proxy inverso (nginx, caddy) con TLS en producción.
-- **CORS:** actualmente permite todos los orígenes. Restringir en producción editando `backend/src/app.js` con la URL de la app.
+- **CORS:** controlado por la variable `CORS_ORIGINS` (lista separada por comas). Si está vacía, se **deniegan** las peticiones cross-origin. En producción, ponerla con la(s) URL(s) de la app web: `CORS_ORIGINS=https://app.tudominio.com`.
 - **Rate limiting:** el endpoint de login limita a 5 intentos por IP en 15 minutos. Ajustable en `backend/src/routes/auth.js`.
 - **Contraseñas:** almacenadas con bcrypt (coste 10). No se almacenan en claro en ningún punto.

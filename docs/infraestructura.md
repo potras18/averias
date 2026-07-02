@@ -49,9 +49,13 @@ SMTP_PORT=587
 SMTP_USER=correo@ejemplo.com
 SMTP_PASS=contraseña_aplicacion
 SMTP_FROM=correo@ejemplo.com
+
+# Orígenes permitidos para CORS (separados por comas). Vacío = deniega cross-origin.
+# Ejemplo: https://app.tudominio.com,https://admin.tudominio.com
+CORS_ORIGINS=
 ```
 
-> **Seguridad:** `JWT_SECRET` debe ser una cadena aleatoria larga. Nunca usar el valor por defecto en producción.
+> **Seguridad:** `JWT_SECRET` debe ser una cadena aleatoria larga. Nunca usar el valor por defecto en producción. Además de firmar los tokens, se usa para derivar la clave con la que se cifra la contraseña SMTP en la BD: si lo cambias, habrá que reintroducir la contraseña SMTP en Ajustes.
 
 > **SMTP:** Los valores SMTP del `.env` son un fallback. Si se configuran desde la app (Ajustes → pestaña Ajustes como administrador), tienen prioridad sobre el `.env`.
 

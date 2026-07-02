@@ -18,6 +18,8 @@ Introduce tu email y contraseña en la pantalla de inicio. El sistema bloquea us
 - Límite: 5 intentos fallidos por 15 minutos (protección anti-fuerza bruta).
 - La sesión dura 8 horas. Al expirar, la app renueva el token automáticamente; si falla, redirige al login.
 
+**Inicio de sesión biométrico *(solo móvil)*:** tras un primer login con email y contraseña, la app ofrece activar el desbloqueo por huella o reconocimiento facial. En los siguientes accesos basta con la biometría; las credenciales quedan guardadas de forma segura en el dispositivo.
+
 ---
 
 ## Pantallas
@@ -53,6 +55,21 @@ Muestra la información completa de una máquina en dos pestañas:
 **Pestaña Repuestos:**
 - Lista de solicitudes de repuestos para esta máquina.
 - Botón "+" para crear una nueva solicitud con la máquina preseleccionada.
+
+---
+
+### Histórico
+
+Vista de consulta del histórico completo de cualquier máquina (activa o inactiva). Accesible desde el menú "Histórico".
+
+**Filtros:**
+- **Buscar máquina:** campo de texto para filtrar por nombre.
+- **Por ubicación:** desplegable con todas las localizaciones.
+
+**Detalle de máquina seleccionada:**
+- En escritorio, se muestra a la derecha al seleccionar una máquina de la lista; en móvil, al pulsar sobre ella.
+- Historial de inspecciones (paginado) con técnico, fecha, estado y datos del lector/tickets.
+- Historial de repuestos solicitados para esa máquina, con su estado.
 
 ---
 
@@ -113,7 +130,7 @@ Sección para gestionar solicitudes de compra de piezas o repuestos para las má
 
 **Vista de lista:**
 - Muestra todas las solicitudes con máquina, descripción, cantidad, estado y creador.
-- Filtro por estado en la parte superior: **Todos / Pendiente / Pedido / Recibido**.
+- Filtro por estado en la parte superior: **Todos / Pendiente / Pedido / Recibido / Instalado**.
 - Botón "+" para crear una nueva solicitud.
 - Botón de edición en cada ítem para modificar descripción, cantidad o avanzar el estado.
 - Solo los administradores ven el botón de eliminación.
@@ -133,6 +150,7 @@ Sección para gestionar solicitudes de compra de piezas o repuestos para las má
 | **Pendiente** | Solicitado, aún no pedido al proveedor |
 | **Pedido** | Encargado al proveedor |
 | **Recibido** | Ya en el local, listo para instalar |
+| **Instalado** | Montado en la máquina; solicitud completada |
 
 Cualquier usuario (técnico o admin) puede crear solicitudes y cambiar el estado. Solo los administradores pueden eliminarlas.
 
@@ -159,7 +177,7 @@ También permite generar un PDF de estadísticas o enviarlo por email a los dest
 
 ### Panel de administración *(solo admins)*
 
-Tres pestañas:
+Cuatro pestañas: Localizaciones, Máquinas, Usuarios y Ajustes.
 
 #### Localizaciones
 - Crear nueva localización (nombre + dirección).
@@ -170,7 +188,8 @@ Tres pestañas:
 - Listar todas las máquinas (activas e inactivas con el interruptor).
 - Crear máquina: nombre, localización, si tiene dispensador de tickets.
 - Editar datos de una máquina.
-- Descargar etiqueta QR en PDF para imprimir.
+- Descargar etiqueta QR en PDF para imprimir (por máquina, desde su ficha).
+- **Descargar PDF con los QR de todas las máquinas activas** (botón PDF en la cabecera): genera un único documento A4 con 12 códigos QR por página, cada uno con el nombre de la máquina debajo. Ignora el filtro "Inactivas" — solo incluye máquinas activas.
 - Dar de baja una máquina (pasa a inactiva; no se elimina).
 
 #### Usuarios
@@ -184,16 +203,21 @@ Tres pestañas:
 
 #### Ajustes *(solo admins)*
 
-Configuración del servidor de correo y destinatarios de informes.
+Configuración del correo: servidor SMTP, destinatarios y plantillas de los emails. La pantalla se divide en secciones visualmente separadas (tarjetas con título e icono).
 
 **Servidor SMTP:**
 - Host, puerto, usuario, contraseña y dirección de envío (from).
 - Si los campos están vacíos, el sistema usa la configuración del `.env` del servidor.
-- La contraseña guardada aparece como `***`; déjala en blanco al guardar para no modificarla.
+- La contraseña guardada aparece como `***`; déjala en blanco al guardar para no modificarla. Se almacena cifrada en la base de datos.
 
 **Destinatarios:**
 - Lista de direcciones de email a las que se enviarán automáticamente los informes y estadísticas.
 - Añadir con el campo de texto + botón Añadir. Eliminar pulsando la × del chip.
 - Si la lista está vacía, el botón "Enviar por email" en Informes y Estadísticas mostrará un aviso.
 
-Pulsar **Guardar** aplica todos los cambios (SMTP + destinatarios) en un solo paso.
+**Plantilla de email — Informes** y **Plantilla de email — Estadísticas:**
+- Asunto y cuerpo editables para cada tipo de envío (informes y estadísticas por separado).
+- Admiten variables que se sustituyen al enviar: `{fecha}`, `{rango}`, `{tecnico}`, `{archivo}`.
+- Si se dejan en blanco, se usan los textos por defecto.
+
+Pulsar **Guardar** aplica todos los cambios (SMTP + destinatarios + plantillas) en un solo paso.
