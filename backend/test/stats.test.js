@@ -197,6 +197,21 @@ describe('POST /stats/email', () => {
     }))
   })
 
+  it('renders the stored subject/body template with variables before sending', async () => {
+    await seedSettings({
+      email_recipients: JSON.stringify(['dest@test.com']),
+      email_subject_stats: 'Estadísticas {archivo} — {tecnico}',
+      email_body_stats: 'Cuerpo generado el {fecha}, rango: {rango}.',
+    })
+    const { sendReport } = require('../src/email/mailer')
+    sendReport.mockClear()
+    const res = await st.post('/stats/email').set(auth()).send({ from: '2026-01-01', to: '2026-01-31' })
+    expect(res.status).toBe(200)
+    const call = sendReport.mock.calls[0][0]
+    expect(call.subject).toBe(`Estadísticas ${call.filename} — Tech User`) // 'Tech User' is seedUser()'s default name (backend/test/helpers/db.js)
+    expect(call.text).toMatch(/^Cuerpo generado el \d{2}\/\d{2}\/\d{4}, rango: 2026-01-01 a 2026-01-31\.$/)
+  })
+
   it('returns 401 without token', async () => {
     const res = await st.post('/stats/email').send({})
     expect(res.status).toBe(401)

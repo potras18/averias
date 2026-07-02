@@ -111,6 +111,24 @@ describe('POST /reports/email', () => {
     }))
   })
 
+  it('renders the stored subject/body template with variables before sending', async () => {
+    // Seed an inspection inside the requested range so the handler doesn't
+    // short-circuit with 422 sin_registros before reaching the email step.
+    await seedInspection({ machineId, technicianId: (await seedUser()).id, inspectedAt: '2026-01-15T00:00:00Z' })
+    await seedSettings({
+      email_recipients: JSON.stringify(['dest@test.com']),
+      email_subject_reports: 'Asunto {archivo} — {tecnico}',
+      email_body_reports: 'Cuerpo generado el {fecha}, rango: {rango}.',
+    })
+    const { sendReport } = require('../src/email/mailer')
+    sendReport.mockClear()
+    const res = await st.post('/reports/email').set(auth()).send({ from: '2026-01-01', to: '2026-01-31' })
+    expect(res.status).toBe(200)
+    const call = sendReport.mock.calls[0][0]
+    expect(call.subject).toBe(`Asunto ${call.filename} — Tech User`) // 'Tech User' is seedUser()'s default name (backend/test/helpers/db.js)
+    expect(call.text).toMatch(/^Cuerpo generado el \d{2}\/\d{2}\/\d{4}, rango: 2026-01-01 a 2026-01-31\.$/)
+  })
+
   it('returns 401 without token', async () => {
     const res = await st.post('/reports/email').send({})
     expect(res.status).toBe(401)

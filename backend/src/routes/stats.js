@@ -4,6 +4,7 @@ const { generatePdf }    = require('../pdf/generator')
 const { buildStatsHtml } = require('../pdf/stats-template')
 const { sendReport }     = require('../email/mailer')
 const { decrypt }        = require('../email/crypto')
+const { renderEmailTemplate } = require('../email/template')
 const {
   getInspectionRows, getMttrHours, getMttrTopMachines, getTopProblematic, buildSummary,
   getDailyBreakdown, getCardReaderStats, getDispenserStats,
@@ -149,7 +150,20 @@ module.exports = async function statsRoutes(app) {
     const toLabel   = to ?? ''
     const filename  = `estadisticas_${fromLabel}_${toLabel}.pdf`
     const pdfBuffer = await generatePdf(html)
-    await sendReport({ to: recipients, pdfBuffer, filename, smtpConfig })
+
+    const fmtDateEs = (iso) => {
+      const d = new Date(iso)
+      return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+    }
+    const emailVars = {
+      fecha: fmtDateEs(new Date().toISOString()),
+      rango: from && to ? `${from} a ${to}` : 'todo el período',
+      tecnico: req.user.name,
+      archivo: filename,
+    }
+    const subject = renderEmailTemplate(cfg.email_subject_stats || '', emailVars)
+    const text    = renderEmailTemplate(cfg.email_body_stats    || '', emailVars)
+    await sendReport({ to: recipients, pdfBuffer, filename, smtpConfig, subject, text })
     return reply.send({ ok: true })
   })
 }

@@ -11,14 +11,21 @@ describe('sendReport', () => {
     nodemailer.createTransport.mockReturnValue({ sendMail: sendMailMock })
   })
 
-  it('calls sendMail with PDF attachment', async () => {
+  it('calls sendMail with the given subject, text, and PDF attachment', async () => {
     const buf = Buffer.from('fake-pdf-content')
-    await sendReport({ to: ['tech@example.com'], pdfBuffer: buf, filename: 'informe.pdf' })
+    await sendReport({
+      to: ['tech@example.com'],
+      pdfBuffer: buf,
+      filename: 'informe.pdf',
+      subject: 'Asunto de prueba',
+      text: 'Cuerpo de prueba',
+    })
 
     expect(nodemailer.createTransport).toHaveBeenCalledTimes(1)
     expect(sendMailMock).toHaveBeenCalledWith(expect.objectContaining({
       to: 'tech@example.com',
-      subject: expect.stringContaining('Informe de Averías'),
+      subject: 'Asunto de prueba',
+      text: 'Cuerpo de prueba',
       attachments: expect.arrayContaining([
         expect.objectContaining({
           filename: 'informe.pdf',
@@ -35,6 +42,8 @@ describe('sendReport', () => {
       to: ['a@test.com', 'b@test.com'],
       pdfBuffer: Buffer.from('x'),
       filename: 'test.pdf',
+      subject: 'Asunto',
+      text: 'Cuerpo',
     })
     expect(sendMailMock).toHaveBeenCalledWith(expect.objectContaining({
       to: 'a@test.com,b@test.com',

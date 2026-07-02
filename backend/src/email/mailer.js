@@ -1,7 +1,7 @@
 'use strict'
 const nodemailer = require('nodemailer')
 
-async function sendReport({ to, pdfBuffer, filename, smtpConfig = {} }) {
+async function sendReport({ to, pdfBuffer, filename, smtpConfig = {}, subject, text }) {
   const host = smtpConfig.host || process.env.SMTP_HOST
   const port = Number(smtpConfig.port || process.env.SMTP_PORT) || 587
   const user = smtpConfig.user || process.env.SMTP_USER
@@ -20,8 +20,8 @@ async function sendReport({ to, pdfBuffer, filename, smtpConfig = {} }) {
   await transporter.sendMail({
     from,
     to: Array.isArray(to) ? to.join(',') : to,
-    subject: `Informe de Averías — ${filename}`,
-    text: 'Adjunto encontrará el informe de averías solicitado.',
+    subject,
+    text,
     attachments: [{ filename, content: pdfBuffer, contentType: 'application/pdf' }],
   })
 }
