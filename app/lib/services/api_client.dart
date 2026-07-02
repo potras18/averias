@@ -144,6 +144,14 @@ class ApiClient {
     return Uint8List.fromList(res.data as List<int>);
   }
 
+  Future<Uint8List> getAllMachinesQrPdf() async {
+    final res = await _dio.get(
+      '/machines/qr/all/pdf',
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return Uint8List.fromList(res.data as List<int>);
+  }
+
   // Inspections
   Future<Inspection> createInspection(Map<String, dynamic> data) async {
     final res = await _dio.post('/inspections', data: data);

@@ -3,7 +3,7 @@
 const { randomUUID } = require('node:crypto')
 const QRCode = require('qrcode')
 const { generatePdf } = require('../pdf/generator')
-const { buildQrHtml } = require('../pdf/qr-template')
+const { buildQrHtml, buildQrGridHtml } = require('../pdf/qr-template')
 
 const MACHINE_FIELDS = `
   m.id, m.name, m.qr_code, m.has_redemption_tickets, m.created_at, m.active,
@@ -45,6 +45,22 @@ module.exports = async function machinesRoutes(app) {
     if (!rows.length) return reply.code(404).send({ error: 'Machine not found' })
     const machine = await getMachineWithInspections(app.db, rows[0].id)
     return machine
+  })
+
+  // GET /machines/qr/all/pdf — 12 QR per A4 page, all active machines. Register BEFORE /:id
+  app.get('/qr/all/pdf', { preHandler: [app.authenticate], config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (req, reply) => {
+    const { rows } = await app.db.query(
+      `SELECT name, qr_code FROM machines WHERE active = true ORDER BY name`
+    )
+    if (!rows.length) return reply.code(404).send({ error: 'No active machines' })
+    const machines = await Promise.all(rows.map(async m => ({
+      name: m.name,
+      qrDataUri: await QRCode.toDataURL(m.qr_code, { width: 300, margin: 2 }),
+    })))
+    const pdfBuffer = await generatePdf(buildQrGridHtml(machines))
+    reply.header('Content-Type', 'application/pdf')
+    reply.header('Content-Disposition', 'attachment; filename="qr-maquinas.pdf"')
+    return reply.send(pdfBuffer)
   })
 
   app.get('/:id/qr/pdf', { preHandler: [app.authenticate], config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req, reply) => {

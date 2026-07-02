@@ -3,7 +3,6 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'dart:ui' as ui;
 import '../models/location.dart';
 import '../models/machine.dart';
-import '../models/settings.dart';
 import '../models/user.dart';
 import '../services/api_client.dart';
 import '../services/storage_service.dart';
@@ -165,7 +164,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                         v == null || v.trim().isEmpty ? 'Requerido' : null,
                   ),
                   DropdownButtonFormField<String?>(
-                    value: selectedLocationId,
+                    initialValue: selectedLocationId,
                     decoration: const InputDecoration(labelText: 'Ubicación'),
                     items: [
                       const DropdownMenuItem<String?>(
@@ -329,6 +328,19 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     );
   }
 
+  Future<void> _downloadAllQrPdf() async {
+    try {
+      final bytes = await widget.api.getAllMachinesQrPdf();
+      await downloadFile(bytes, 'qr-maquinas.pdf', 'application/pdf');
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error al generar el PDF')),
+        );
+      }
+    }
+  }
+
   Future<void> _toggleRole(User user) async {
     final newRole = user.role == 'admin' ? 'technician' : 'admin';
     await widget.api.updateUserRole(user.id, newRole);
@@ -383,7 +395,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                             : null,
                   ),
                   DropdownButtonFormField<String>(
-                    value: selectedRole,
+                    initialValue: selectedRole,
                     decoration: const InputDecoration(labelText: 'Rol'),
                     items: const [
                       DropdownMenuItem(
@@ -534,6 +546,11 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                   setState(() { _showInactive = v; });
                   _load();
                 },
+              ),
+              IconButton(
+                icon: const Icon(Icons.picture_as_pdf),
+                tooltip: 'PDF con QR de máquinas activas',
+                onPressed: _downloadAllQrPdf,
               ),
               IconButton(
                 icon: const Icon(Icons.add),
@@ -857,6 +874,42 @@ class _AdminSettingsTabState extends State<_AdminSettingsTab> {
     setState(() => _recipients.remove(email));
   }
 
+  Widget _section({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required List<Widget> children,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(title, style: Theme.of(context).textTheme.titleMedium),
+              ],
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+            ],
+            const Divider(height: 24),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
@@ -867,112 +920,116 @@ class _AdminSettingsTabState extends State<_AdminSettingsTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Servidor SMTP', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _hostCtrl,
-            decoration: const InputDecoration(labelText: 'Host SMTP'),
-          ),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _portCtrl,
-            decoration: const InputDecoration(labelText: 'Puerto'),
-            keyboardType: TextInputType.number,
-          ),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _userCtrl,
-            decoration: const InputDecoration(labelText: 'Usuario'),
-            keyboardType: TextInputType.emailAddress,
-          ),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _passCtrl,
-            obscureText: true,
-            decoration: InputDecoration(
-              labelText: 'Contraseña',
-              hintText: _passWasSet ? 'Contraseña guardada' : null,
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _fromCtrl,
-            decoration: const InputDecoration(labelText: 'Remitente (From)'),
-            keyboardType: TextInputType.emailAddress,
-          ),
-          const SizedBox(height: 24),
-          Text('Destinatarios', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 12),
-          if (_recipients.isEmpty)
-            const Padding(
-              padding: EdgeInsets.only(bottom: 8),
-              child: Text('Sin destinatarios', style: TextStyle(color: Colors.grey)),
-            )
-          else
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: _recipients.map((email) => Chip(
-                label: Text(email),
-                onDeleted: () => _removeRecipient(email),
-              )).toList(),
-            ),
-          const SizedBox(height: 8),
-          Row(
+          _section(
+            icon: Icons.dns,
+            title: 'Servidor SMTP',
             children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _newEmailCtrl,
-                  decoration: const InputDecoration(labelText: 'Añadir email'),
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) => _addRecipient(),
+              TextFormField(
+                controller: _hostCtrl,
+                decoration: const InputDecoration(labelText: 'Host SMTP'),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _portCtrl,
+                decoration: const InputDecoration(labelText: 'Puerto'),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _userCtrl,
+                decoration: const InputDecoration(labelText: 'Usuario'),
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _passCtrl,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'Contraseña',
+                  hintText: _passWasSet ? 'Contraseña guardada' : null,
                 ),
               ),
-              const SizedBox(width: 8),
-              TextButton(
-                onPressed: _addRecipient,
-                child: const Text('Añadir'),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _fromCtrl,
+                decoration: const InputDecoration(labelText: 'Remitente (From)'),
+                keyboardType: TextInputType.emailAddress,
               ),
             ],
           ),
-          const SizedBox(height: 24),
-          Text('Plantilla de email — Informes', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 4),
-          const Text(
-            'Variables disponibles: {fecha}, {rango}, {tecnico}, {archivo}',
-            style: TextStyle(color: Colors.grey, fontSize: 12),
+          _section(
+            icon: Icons.people,
+            title: 'Destinatarios',
+            children: [
+              if (_recipients.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 8),
+                  child: Text('Sin destinatarios', style: TextStyle(color: Colors.grey)),
+                )
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: _recipients.map((email) => Chip(
+                    label: Text(email),
+                    onDeleted: () => _removeRecipient(email),
+                  )).toList(),
+                ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _newEmailCtrl,
+                      decoration: const InputDecoration(labelText: 'Añadir email'),
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _addRecipient(),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: _addRecipient,
+                    child: const Text('Añadir'),
+                  ),
+                ],
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _emailSubjectReportsCtrl,
-            decoration: const InputDecoration(labelText: 'Asunto'),
+          _section(
+            icon: Icons.description,
+            title: 'Plantilla de email — Informes',
+            subtitle: 'Variables disponibles: {fecha}, {rango}, {tecnico}, {archivo}',
+            children: [
+              TextFormField(
+                controller: _emailSubjectReportsCtrl,
+                decoration: const InputDecoration(labelText: 'Asunto'),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _emailBodyReportsCtrl,
+                decoration: const InputDecoration(labelText: 'Cuerpo'),
+                maxLines: 4,
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _emailBodyReportsCtrl,
-            decoration: const InputDecoration(labelText: 'Cuerpo'),
-            maxLines: 4,
+          _section(
+            icon: Icons.insert_chart,
+            title: 'Plantilla de email — Estadísticas',
+            subtitle: 'Variables disponibles: {fecha}, {rango}, {tecnico}, {archivo}',
+            children: [
+              TextFormField(
+                controller: _emailSubjectStatsCtrl,
+                decoration: const InputDecoration(labelText: 'Asunto'),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _emailBodyStatsCtrl,
+                decoration: const InputDecoration(labelText: 'Cuerpo'),
+                maxLines: 4,
+              ),
+            ],
           ),
-          const SizedBox(height: 24),
-          Text('Plantilla de email — Estadísticas', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 4),
-          const Text(
-            'Variables disponibles: {fecha}, {rango}, {tecnico}, {archivo}',
-            style: TextStyle(color: Colors.grey, fontSize: 12),
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _emailSubjectStatsCtrl,
-            decoration: const InputDecoration(labelText: 'Asunto'),
-          ),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _emailBodyStatsCtrl,
-            decoration: const InputDecoration(labelText: 'Cuerpo'),
-            maxLines: 4,
-          ),
-          const SizedBox(height: 24),
           FilledButton(
             onPressed: _saving ? null : _save,
             child: _saving
