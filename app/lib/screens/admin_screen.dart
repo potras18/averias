@@ -9,6 +9,7 @@ import '../services/storage_service.dart';
 import '../utils/download_file.dart';
 import '../widgets/desktop_shell_scope.dart';
 import '../widgets/section_card.dart';
+import '../widgets/confirm_dialog.dart';
 
 class AdminScreen extends StatefulWidget {
   final ApiClient api;
@@ -119,24 +120,13 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   }
 
   Future<void> _deleteLocation(Location location) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Eliminar ubicación'),
-        content: Text('¿Eliminar "${location.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Eliminar ubicación',
+      message: '¿Eliminar "${location.name}"?',
+      confirmLabel: 'Eliminar',
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
     await widget.api.deleteLocation(location.id);
     await _load();
   }
@@ -228,25 +218,13 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   }
 
   Future<void> _decommissionMachine(Machine machine) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Dar de baja'),
-        content: Text(
-            '¿Dar de baja "${machine.name}"? Permanecerá en el histórico.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Dar de baja'),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Dar de baja',
+      message: '¿Dar de baja "${machine.name}"? Permanecerá en el histórico.',
+      confirmLabel: 'Dar de baja',
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
     await widget.api.decommissionMachine(machine.id);
     await _load();
   }
@@ -469,25 +447,13 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   }
 
   Future<void> _deactivateUser(User user) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Desactivar usuario'),
-        content:
-            Text('¿Desactivar "${user.name}"? Permanecerá en el histórico.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Desactivar'),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Desactivar usuario',
+      message: '¿Desactivar "${user.name}"? Permanecerá en el histórico.',
+      confirmLabel: 'Desactivar',
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
     await widget.api.deactivateUser(user.id);
     await _load();
   }

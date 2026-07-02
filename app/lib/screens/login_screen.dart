@@ -6,6 +6,7 @@ import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../services/biometric_service.dart';
 import '../services/storage_service.dart';
+import '../widgets/confirm_dialog.dart';
 
 class LoginScreen extends StatefulWidget {
   final ApiClient api;
@@ -79,24 +80,14 @@ class _LoginScreenState extends State<LoginScreen> {
     if (alreadyEnabled) return;
     final available = await _biometric.isAvailable();
     if (!available || !mounted) return;
-    final accept = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Acceso con huella'),
-        content: const Text('¿Activar el acceso con huella dactilar la próxima vez?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Ahora no'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Activar'),
-          ),
-        ],
-      ),
+    final accept = await showConfirmDialog(
+      context,
+      title: 'Acceso con huella',
+      message: '¿Activar el acceso con huella dactilar la próxima vez?',
+      confirmLabel: 'Activar',
+      cancelLabel: 'Ahora no',
     );
-    if (accept == true) await widget.storage.setBiometricEnabled(true);
+    if (accept) await widget.storage.setBiometricEnabled(true);
   }
 
   @override

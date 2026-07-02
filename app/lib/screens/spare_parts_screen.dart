@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../models/spare_part.dart';
 import '../services/api_client.dart';
 import '../services/storage_service.dart';
+import '../widgets/confirm_dialog.dart';
 
 class SparePartsScreen extends StatefulWidget {
   final ApiClient api;
@@ -30,18 +31,13 @@ class _SparePartsScreenState extends State<SparePartsScreen> {
       });
 
   Future<void> _confirmDelete(SparePart part) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar repuesto'),
-        content: Text('¿Eliminar "${part.description}"?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Eliminar')),
-        ],
-      ),
+    final ok = await showConfirmDialog(
+      context,
+      title: 'Eliminar repuesto',
+      message: '¿Eliminar "${part.description}"?',
+      confirmLabel: 'Eliminar',
     );
-    if (ok == true && mounted) {
+    if (ok && mounted) {
       await widget.api.deleteSparePart(part.id);
       _reload();
     }

@@ -7,6 +7,7 @@ import '../services/api_client.dart';
 import '../services/storage_service.dart';
 import '../widgets/desktop_shell_scope.dart';
 import '../widgets/machine_card.dart';
+import '../widgets/confirm_dialog.dart';
 import '../widgets/section_card.dart';
 import '../widgets/status_badge.dart';
 
@@ -397,18 +398,13 @@ class _MachineListScreenState extends State<MachineListScreen> {
                                       _partsFuture = widget.api.getSpareParts(machineId: _selectedMachineId!);
                                     })),
                                 onDelete: () async {
-                                  final ok = await showDialog<bool>(
-                                    context: context,
-                                    builder: (ctx) => AlertDialog(
-                                      title: const Text('Eliminar repuesto'),
-                                      content: Text('¿Eliminar "${p.description}"?'),
-                                      actions: [
-                                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-                                        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Eliminar')),
-                                      ],
-                                    ),
+                                  final ok = await showConfirmDialog(
+                                    context,
+                                    title: 'Eliminar repuesto',
+                                    message: '¿Eliminar "${p.description}"?',
+                                    confirmLabel: 'Eliminar',
                                   );
-                                  if (ok == true && mounted) {
+                                  if (ok && mounted) {
                                     await widget.api.deleteSparePart(p.id);
                                     if (mounted) setState(() { _partsFuture = widget.api.getSpareParts(machineId: _selectedMachineId!); });
                                   }
