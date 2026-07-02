@@ -179,39 +179,45 @@ class _MachineListScreenState extends State<MachineListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Máquinas'),
-        actions: [
-          if (_role == 'admin')
-            IconButton(
-              icon: const Icon(Icons.settings),
-              tooltip: 'Administración',
-              onPressed: () => context.push('/admin'),
-            ),
-          IconButton(
-            icon: const Icon(Icons.history),
-            tooltip: 'Histórico',
-            onPressed: () => context.push('/history'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              if (_role == 'admin')
+                IconButton(
+                  icon: const Icon(Icons.settings),
+                  tooltip: 'Administración',
+                  onPressed: () => context.push('/admin'),
+                ),
+              IconButton(
+                icon: const Icon(Icons.history),
+                tooltip: 'Histórico',
+                onPressed: () => context.push('/history'),
+              ),
+              IconButton(
+                icon: const Icon(Icons.build),
+                tooltip: 'Repuestos',
+                onPressed: () => context.push('/repuestos'),
+              ),
+              IconButton(
+                icon: const Icon(Icons.bar_chart),
+                tooltip: 'Estadísticas',
+                onPressed: () => context.push('/stats'),
+              ),
+              IconButton(
+                icon: const Icon(Icons.assessment),
+                tooltip: 'Informes',
+                onPressed: () => context.push('/reports'),
+              ),
+              IconButton(
+                icon: const Icon(Icons.qr_code_scanner),
+                tooltip: 'Escanear QR',
+                onPressed: () => context.push('/scan'),
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.build),
-            tooltip: 'Repuestos',
-            onPressed: () => context.push('/repuestos'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.bar_chart),
-            tooltip: 'Estadísticas',
-            onPressed: () => context.push('/stats'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.assessment),
-            tooltip: 'Informes',
-            onPressed: () => context.push('/reports'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.qr_code_scanner),
-            tooltip: 'Escanear QR',
-            onPressed: () => context.push('/scan'),
-          ),
-        ],
+        ),
       ),
       body: Column(
         children: [
