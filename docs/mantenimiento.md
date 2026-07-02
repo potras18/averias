@@ -290,3 +290,23 @@ SELECT name, email, role, created_at FROM users WHERE active = true ORDER BY nam
 - **CORS:** controlado por la variable `CORS_ORIGINS` (lista separada por comas). Si está vacía, se **deniegan** las peticiones cross-origin. En producción, ponerla con la(s) URL(s) de la app web: `CORS_ORIGINS=https://app.tudominio.com`.
 - **Rate limiting:** el endpoint de login limita a 5 intentos por IP en 15 minutos. Ajustable en `backend/src/routes/auth.js`.
 - **Contraseñas:** almacenadas con bcrypt (coste 10). No se almacenan en claro en ningún punto.
+
+---
+
+## Identidad corporativa (tema y tipografía)
+
+La app sigue el manual de identidad de Grupo Cocamatic (`MANUAL IDENTIDAD CORPORATIVA - GRUPO COCAMATIC.pdf` en la raíz del repo).
+
+**Colores corporativos:**
+
+| Color | Pantone | HEX | Uso en la app |
+|-------|---------|-----|---------------|
+| Naranja | 1235 C | `#F6B734` | `primary` (botones, AppBar, sidebar, acentos) |
+| Gris | Cool Gray 8 C | `#808080` | `secondary` |
+| Casi negro | — | `#1A1A1A` | `onPrimary` (texto/iconos sobre naranja) |
+
+> El texto sobre el naranja va en oscuro (`#1A1A1A`), no en blanco: el blanco sobre `#F6B734` no cumple contraste accesible.
+
+**Tipografía:** el manual usa **Calibri** (propietaria de Microsoft). Se sustituye por **Carlito**, fuente libre métricamente compatible, empaquetada como asset en `app/fonts/Carlito-*.ttf` (4 pesos) y declarada en `pubspec.yaml`. Se aplica globalmente vía `fontFamily: 'Carlito'`. La fuente *Days* del manual solo aplica al logotipo (imagen), no a la interfaz.
+
+**Dónde se define:** todo el tema vive en `app/lib/theme.dart` (`cocamaticTheme()`), usado en `app/lib/app.dart`. Para ajustar colores o fuente, editar solo ese fichero. Las constantes `kBrandOrange`, `kBrandGray`, `kOnBrandOrange` están exportadas para reutilizarlas en widgets.

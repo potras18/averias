@@ -660,7 +660,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                       label: Text(
                           user.role == 'admin' ? 'Admin' : 'Técnico'),
                       backgroundColor: user.role == 'admin'
-                          ? Colors.indigo[100]
+                          ? Colors.orange[100]
                           : Colors.grey[200],
                     ),
                     if (user.active)

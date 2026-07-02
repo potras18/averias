@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
+import 'theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/machine_list_screen.dart';
 import 'screens/machine_detail_screen.dart';
@@ -169,7 +170,7 @@ class _AveAppState extends State<AveApp> {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'Cocamatic',
-      theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
+      theme: cocamaticTheme(),
       routerConfig: _router,
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,

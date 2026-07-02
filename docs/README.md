@@ -8,7 +8,7 @@ Sistema de gestión de averías e inspecciones para máquinas de entretenimiento
 |-----------|-----------|
 | [Guía de usuario](guia-usuario.md) | Pantallas, flujos de trabajo, roles de usuario |
 | [Infraestructura y recursos](infraestructura.md) | Requisitos, instalación, configuración |
-| [Mantenimiento](mantenimiento.md) | Migraciones, backups, gestión de usuarios, actualización |
+| [Mantenimiento](mantenimiento.md) | Migraciones, backups, gestión de usuarios, actualización, identidad corporativa |
 
 ## Resumen del sistema
 

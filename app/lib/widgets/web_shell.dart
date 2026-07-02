@@ -83,6 +83,7 @@ class _Sidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bg = Theme.of(context).colorScheme.primary;
+    final fg = Theme.of(context).colorScheme.onPrimary;
     return Material(
       color: bg,
       child: Column(
@@ -99,14 +100,14 @@ class _Sidebar extends StatelessWidget {
                   style: Theme.of(context)
                       .textTheme
                       .titleLarge
-                      ?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                      ?.copyWith(color: fg, fontWeight: FontWeight.bold),
                 ),
                 Text(
                   'Sistema de revisiones',
                   style: Theme.of(context)
                       .textTheme
                       .bodySmall
-                      ?.copyWith(color: Colors.white70),
+                      ?.copyWith(color: fg.withValues(alpha: 0.7)),
                 ),
               ],
             ),
@@ -186,13 +187,14 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fg = Theme.of(context).colorScheme.onPrimary;
     return ListTile(
       selected: selected,
-      selectedTileColor: Colors.white.withValues(alpha: 0.15),
-      leading: Icon(icon, color: selected ? Colors.white : Colors.white70),
+      selectedTileColor: fg.withValues(alpha: 0.12),
+      leading: Icon(icon, color: selected ? fg : fg.withValues(alpha: 0.7)),
       title: Text(
         label,
-        style: TextStyle(color: selected ? Colors.white : Colors.white70),
+        style: TextStyle(color: selected ? fg : fg.withValues(alpha: 0.7)),
       ),
       onTap: onTap,
     );

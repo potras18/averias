@@ -30,3 +30,15 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  fonts:
+    - family: Carlito
+      fonts:
+        - asset: fonts/Carlito-Regular.ttf
+        - asset: fonts/Carlito-Italic.ttf
+          style: italic
+        - asset: fonts/Carlito-Bold.ttf
+          weight: 700
+        - asset: fonts/Carlito-BoldItalic.ttf
+          weight: 700
+          style: italic
