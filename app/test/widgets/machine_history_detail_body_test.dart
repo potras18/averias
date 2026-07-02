@@ -132,6 +132,7 @@ void main() {
 
     // First page shows insp-gen-0..9, not insp-gen-10/11
     expect(find.byKey(const ValueKey('insp-gen-0')), findsOneWidget);
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('insp-gen-9')), 200);
     expect(find.byKey(const ValueKey('insp-gen-9')), findsOneWidget);
     expect(find.byKey(const ValueKey('insp-gen-10')), findsNothing);
     expect(find.text('Página 1 de 2'), findsOneWidget);
@@ -151,6 +152,16 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(find.widgetWithIcon(IconButton, Icons.chevron_right), 200);
+    // scrollUntilVisible stops as soon as the button exists in the tree, which can
+    // still leave it hanging just past the bottom edge of the viewport (it's the
+    // last-but-one item before the short repuestos section). Nudge it fully into
+    // view (bottom-aligned) so tap() can hit-test it.
+    await Scrollable.ensureVisible(
+      tester.element(find.widgetWithIcon(IconButton, Icons.chevron_right)),
+      alignment: 1.0,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.widgetWithIcon(IconButton, Icons.chevron_right));
     await tester.pumpAndSettle();
 

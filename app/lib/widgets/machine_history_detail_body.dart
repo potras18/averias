@@ -59,11 +59,9 @@ class _MachineHistoryDetailBodyState extends State<MachineHistoryDetailBody> {
         final totalInspectionPages = (inspections.length / _inspectionsPerPage).ceil();
         final inspectionPageStart = _inspectionPage * _inspectionsPerPage;
         final inspectionPageItems = inspections.skip(inspectionPageStart).take(_inspectionsPerPage).toList();
-        return SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
+        return ListView(
+          padding: const EdgeInsets.all(24),
+          children: [
             Text(machine.name, style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 4),
             Text(machine.locationName ?? '-', style: Theme.of(context).textTheme.bodyMedium),
@@ -112,9 +110,7 @@ class _MachineHistoryDetailBodyState extends State<MachineHistoryDetailBody> {
               const Text('Sin repuestos registrados')
             else
               ...parts.map((p) => _HistorySparePartTile(part: p)),
-              ],
-            ),
-          ),
+          ],
         );
       },
     );
