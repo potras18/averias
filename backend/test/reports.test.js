@@ -7,10 +7,15 @@ jest.mock('../src/pdf/generator', () => ({
 jest.mock('../src/email/mailer', () => ({
   sendReport: jest.fn().mockResolvedValue(undefined),
 }))
+jest.mock('../src/pdf/template', () => {
+  const actual = jest.requireActual('../src/pdf/template')
+  return { buildReportHtml: jest.fn(actual.buildReportHtml) }
+})
 
 const supertest = require('supertest')
 const { buildApp } = require('../src/app')
-const { resetDb, seedUser, seedLocation, seedMachine, seedSettings } = require('./helpers/db')
+const { buildReportHtml } = require('../src/pdf/template')
+const { resetDb, seedUser, seedLocation, seedMachine, seedInspection, seedSettings } = require('./helpers/db')
 
 let app, st, token, machineId
 
@@ -50,6 +55,34 @@ describe('GET /reports/pdf', () => {
   it('accepts from/to/location_id query params', async () => {
     const res = await st.get('/reports/pdf?from=2026-01-01&to=2026-12-31').set(auth())
     expect(res.status).toBe(200)
+  })
+
+  // Regression test: getMttrHours(app.db, filters) returns { mean, median } (not a plain
+  // number). The route handler must destructure it and pass mttrStats.mean into
+  // stats.mttrHours. If the handler regresses to passing the raw { mean, median }
+  // object straight through as stats.mttrHours, buildReportHtml (and therefore the PDF
+  // template) would silently receive the wrong shape -- the endpoint still returns 200
+  // because the template doesn't currently read stats.mttrHours, so only inspecting the
+  // exact object passed into buildReportHtml catches the regression. Seed a real
+  // out_of_service -> operative transition so getMttrHours returns a non-null
+  // { mean, median } object, exercising that code path.
+  it('passes stats.mttrHours as a plain number (not the {mean, median} object) to the PDF template', async () => {
+    const loc = await seedLocation({ name: 'MTTR Report Loc' })
+    const tech = await seedUser({ email: 'mttr-report-tech@example.com' })
+    const machine = await seedMachine({ locationId: loc.id, qrCode: 'RPT-MTTR-1' })
+
+    await seedInspection({ machineId: machine.id, technicianId: tech.id, status: 'out_of_service', inspectedAt: '2026-03-01T00:00:00Z' })
+    await seedInspection({ machineId: machine.id, technicianId: tech.id, status: 'operative',       inspectedAt: '2026-03-01T03:00:00Z' })
+
+    buildReportHtml.mockClear()
+    const res = await st.get(`/reports/pdf?from=2026-03-01&to=2026-03-31&location_id=${loc.id}`).set(auth())
+    expect(res.status).toBe(200)
+    expect(res.headers['content-type']).toContain('application/pdf')
+
+    expect(buildReportHtml).toHaveBeenCalledTimes(1)
+    const { stats } = buildReportHtml.mock.calls[0][0]
+    expect(stats.mttrHours).toBe(3)
+    expect(typeof stats.mttrHours).toBe('number')
   })
 })
 

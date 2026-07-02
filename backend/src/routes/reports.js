@@ -26,7 +26,7 @@ module.exports = async function reportsRoutes(app) {
     const { from, to, location_id } = req.query
     const filters = { from, to, locationId: location_id }
 
-    const [rows, mttrHours, topProblematic, machineStates] = await Promise.all([
+    const [rows, mttrStats, topProblematic, machineStates] = await Promise.all([
       getInspectionRows(app.db, filters),
       getMttrHours(app.db, filters),
       getTopProblematic(app.db, filters),
@@ -45,7 +45,7 @@ module.exports = async function reportsRoutes(app) {
       summary: buildSummary(rows),
       locationSections: groupByLocation(rows),
       machineStates,
-      stats: { mttrHours, topProblematic },
+      stats: { mttrHours: mttrStats.mean, topProblematic },
     })
 
     const pdfBuffer = await generatePdf(html)
@@ -86,7 +86,7 @@ module.exports = async function reportsRoutes(app) {
       from: cfg.smtp_from,
     }
 
-    const [rows, mttrHours, topProblematic, machineStates] = await Promise.all([
+    const [rows, mttrStats, topProblematic, machineStates] = await Promise.all([
       getInspectionRows(app.db, filters),
       getMttrHours(app.db, filters),
       getTopProblematic(app.db, filters),
@@ -105,7 +105,7 @@ module.exports = async function reportsRoutes(app) {
       summary: buildSummary(rows),
       locationSections: groupByLocation(rows),
       machineStates,
-      stats: { mttrHours, topProblematic },
+      stats: { mttrHours: mttrStats.mean, topProblematic },
     })
 
     const fromLabel = from ?? 'todo'
