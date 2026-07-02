@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:go_router/go_router.dart';
 import 'package:averias_app/screens/machine_list_screen.dart';
 import 'package:averias_app/services/api_client.dart';
 import 'package:averias_app/services/storage_service.dart';
@@ -130,5 +131,27 @@ void main() {
 
     expect(find.text('Pinball A'), findsOneWidget);
     expect(find.byType(TextField), findsNothing);  // no search field in mobile
+  });
+
+  testWidgets('mobile: Histórico icon pushes to /history', (tester) async {
+    when(() => storage.getUserId()).thenAnswer((_) async => 'user-1');
+    final router = GoRouter(routes: [
+      GoRoute(
+        path: '/',
+        builder: (_, __) => MachineListScreen(api: api, storage: storage),
+      ),
+      GoRoute(path: '/history', builder: (_, __) => const Text('historico')),
+    ]);
+
+    await tester.pumpWidget(DesktopShellScope(
+      isDesktop: false,
+      child: MaterialApp.router(routerConfig: router),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Histórico'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('historico'), findsOneWidget);
   });
 }

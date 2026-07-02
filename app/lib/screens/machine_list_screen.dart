@@ -187,6 +187,11 @@ class _MachineListScreenState extends State<MachineListScreen> {
               onPressed: () => context.push('/admin'),
             ),
           IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: 'Histórico',
+            onPressed: () => context.push('/history'),
+          ),
+          IconButton(
             icon: const Icon(Icons.build),
             tooltip: 'Repuestos',
             onPressed: () => context.push('/repuestos'),
