@@ -58,6 +58,17 @@ describe('GET /settings', () => {
     expect(res.body.smtp_pass).toBe('')
   })
 
+  it('GET /settings includes the email template fields', async () => {
+    const res = await st.get('/settings').set(auth(adminTok))
+    expect(res.status).toBe(200)
+    expect(res.body).toMatchObject({
+      email_subject_reports: expect.any(String),
+      email_body_reports: expect.any(String),
+      email_subject_stats: expect.any(String),
+      email_body_stats: expect.any(String),
+    })
+  })
+
   it('returns 403 for technician', async () => {
     const res = await st.get('/settings').set(auth(techTok))
     expect(res.status).toBe(403)
@@ -96,6 +107,16 @@ describe('PUT /settings', () => {
   it('returns 400 for empty body', async () => {
     const res = await st.put('/settings').set(auth(adminTok)).send({})
     expect(res.status).toBe(400)
+  })
+
+  it('PUT /settings updates the email template fields', async () => {
+    const res = await st.put('/settings').set(auth(adminTok)).send({
+      email_subject_reports: 'Asunto custom {archivo}',
+      email_body_reports: 'Cuerpo custom',
+    })
+    expect(res.status).toBe(200)
+    expect(res.body.email_subject_reports).toBe('Asunto custom {archivo}')
+    expect(res.body.email_body_reports).toBe('Cuerpo custom')
   })
 
   it('returns 400 for unknown key', async () => {

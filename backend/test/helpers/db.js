@@ -12,6 +12,10 @@ async function resetDb() {
     UPDATE settings SET value = CASE
       WHEN key = 'smtp_port' THEN '587'
       WHEN key = 'email_recipients' THEN '[]'
+      WHEN key = 'email_subject_reports' THEN 'Informe de Averías — {archivo}'
+      WHEN key = 'email_body_reports' THEN 'Adjunto encontrará el informe de averías solicitado.'
+      WHEN key = 'email_subject_stats' THEN 'Estadísticas — {archivo}'
+      WHEN key = 'email_body_stats' THEN 'Adjunto encontrará el reporte de estadísticas solicitado.'
       ELSE ''
     END, updated_at = now()
   `)
@@ -25,6 +29,10 @@ async function seedSettings(overrides = {}) {
     smtp_pass: '',
     smtp_from: '',
     email_recipients: '[]',
+    email_subject_reports: 'Informe de Averías — {archivo}',
+    email_body_reports: 'Adjunto encontrará el informe de averías solicitado.',
+    email_subject_stats: 'Estadísticas — {archivo}',
+    email_body_stats: 'Adjunto encontrará el reporte de estadísticas solicitado.',
     ...overrides,
   }
   await Promise.all(
