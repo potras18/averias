@@ -101,8 +101,15 @@ class _SparePartFormScreenState extends State<SparePartFormScreen> {
                   DropdownButtonFormField<String>(
                     value: _machineId,
                     decoration: const InputDecoration(labelText: 'Máquina'),
+                    isExpanded: true,
                     items: machines
-                        .map((m) => DropdownMenuItem(value: m.id, child: Text(m.name)))
+                        .map((m) => DropdownMenuItem(
+                              value: m.id,
+                              child: Text(
+                                '${m.name} — ${m.locationName ?? 'Sin ubicación'}',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ))
                         .toList(),
                     onChanged: _isEdit ? null : (v) => setState(() => _machineId = v),
                     validator: (v) => v == null ? 'Obligatorio' : null,
