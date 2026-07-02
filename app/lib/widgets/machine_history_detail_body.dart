@@ -4,6 +4,7 @@ import '../models/inspection.dart';
 import '../models/spare_part.dart';
 import '../services/api_client.dart';
 import 'status_badge.dart';
+import 'section_card.dart';
 
 const _inspectionsPerPage = 10;
 
@@ -71,45 +72,50 @@ class _MachineHistoryDetailBodyState extends State<MachineHistoryDetailBody> {
               StatusBadge(status: machine.lastStatus),
             ]),
             const SizedBox(height: 24),
-            Text('Historial de inspecciones (${inspections.length})',
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            if (inspections.isEmpty)
-              const Text('Sin inspecciones registradas')
-            else
-              ...inspectionPageItems.map((i) => _HistoryInspectionTile(key: ValueKey(i.id), inspection: i)),
-            if (totalInspectionPages > 1)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.chevron_left),
-                      tooltip: 'Anterior',
-                      onPressed: _inspectionPage > 0
-                          ? () => setState(() => _inspectionPage--)
-                          : null,
+            SectionCard(
+              icon: Icons.checklist,
+              title: 'Historial de inspecciones (${inspections.length})',
+              children: [
+                if (inspections.isEmpty)
+                  const Text('Sin inspecciones registradas')
+                else
+                  ...inspectionPageItems.map((i) => _HistoryInspectionTile(key: ValueKey(i.id), inspection: i)),
+                if (totalInspectionPages > 1)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.chevron_left),
+                          tooltip: 'Anterior',
+                          onPressed: _inspectionPage > 0
+                              ? () => setState(() => _inspectionPage--)
+                              : null,
+                        ),
+                        Text('Página ${_inspectionPage + 1} de $totalInspectionPages'),
+                        IconButton(
+                          icon: const Icon(Icons.chevron_right),
+                          tooltip: 'Siguiente',
+                          onPressed: _inspectionPage < totalInspectionPages - 1
+                              ? () => setState(() => _inspectionPage++)
+                              : null,
+                        ),
+                      ],
                     ),
-                    Text('Página ${_inspectionPage + 1} de $totalInspectionPages'),
-                    IconButton(
-                      icon: const Icon(Icons.chevron_right),
-                      tooltip: 'Siguiente',
-                      onPressed: _inspectionPage < totalInspectionPages - 1
-                          ? () => setState(() => _inspectionPage++)
-                          : null,
-                    ),
-                  ],
-                ),
-              ),
-            const SizedBox(height: 32),
-            Text('Historial de repuestos (${parts.length})',
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            if (parts.isEmpty)
-              const Text('Sin repuestos registrados')
-            else
-              ...parts.map((p) => _HistorySparePartTile(part: p)),
+                  ),
+              ],
+            ),
+            SectionCard(
+              icon: Icons.build,
+              title: 'Historial de repuestos (${parts.length})',
+              children: [
+                if (parts.isEmpty)
+                  const Text('Sin repuestos registrados')
+                else
+                  ...parts.map((p) => _HistorySparePartTile(part: p)),
+              ],
+            ),
           ],
         );
       },
