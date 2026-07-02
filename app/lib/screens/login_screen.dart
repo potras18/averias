@@ -113,8 +113,24 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('Cocamatic', style: Theme.of(context).textTheme.headlineMedium),
-                  Text('Sistema de revisiones', style: Theme.of(context).textTheme.bodyMedium),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Image.asset(
+                      'assets/images/cocamatic-logo.png',
+                      height: 56,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Sistema de revisiones',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
                   const SizedBox(height: 32),
                   TextFormField(
                     controller: _emailCtrl,

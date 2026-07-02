@@ -83,7 +83,7 @@ class _Sidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bg = Theme.of(context).colorScheme.primary;
-    final fg = Theme.of(context).colorScheme.onPrimary;
+    const fg = Colors.black;
     return Material(
       color: bg,
       child: Column(
@@ -95,13 +95,13 @@ class _Sidebar extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Cocamatic',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(color: fg, fontWeight: FontWeight.bold),
+                Image.asset(
+                  'assets/images/cocamatic-logo.png',
+                  height: 44,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.centerLeft,
                 ),
+                const SizedBox(height: 4),
                 Text(
                   'Sistema de revisiones',
                   style: Theme.of(context)
@@ -187,7 +187,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = Theme.of(context).colorScheme.onPrimary;
+    const fg = Colors.black;
     return ListTile(
       selected: selected,
       selectedTileColor: fg.withValues(alpha: 0.12),

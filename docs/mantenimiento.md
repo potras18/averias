@@ -307,6 +307,10 @@ La app sigue el manual de identidad de Grupo Cocamatic (`MANUAL IDENTIDAD CORPOR
 
 > El texto sobre el naranja va en oscuro (`#1A1A1A`), no en blanco: el blanco sobre `#F6B734` no cumple contraste accesible.
 
+**Superficies:** fondos y superficies en **blanco** (`surface` y contenedores forzados a blanco / gris muy claro). No se usa el tinte crema que Material 3 derivaría del color semilla naranja. Solo naranja (principal) y gris (secundario) como colores de marca.
+
 **Tipografía:** el manual usa **Calibri** (propietaria de Microsoft). Se sustituye por **Carlito**, fuente libre métricamente compatible, empaquetada como asset en `app/fonts/Carlito-*.ttf` (4 pesos) y declarada en `pubspec.yaml`. Se aplica globalmente vía `fontFamily: 'Carlito'`. La fuente *Days* del manual solo aplica al logotipo (imagen), no a la interfaz.
+
+**Logotipo:** `app/assets/images/cocamatic-logo.png` (versión negativa: texto blanco + símbolo naranja). Se usa en el sidebar de escritorio (`web_shell.dart`, sobre fondo naranja) y en el login (`login_screen.dart`, sobre una banda naranja). Al ser la versión negativa, debe colocarse siempre sobre fondo naranja u oscuro, nunca sobre blanco (quedaría invisible).
 
 **Dónde se define:** todo el tema vive en `app/lib/theme.dart` (`cocamaticTheme()`), usado en `app/lib/app.dart`. Para ajustar colores o fuente, editar solo ese fichero. Las constantes `kBrandOrange`, `kBrandGray`, `kOnBrandOrange` están exportadas para reutilizarlas en widgets.
