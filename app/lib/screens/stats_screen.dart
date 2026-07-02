@@ -166,7 +166,7 @@ class _StatsScreenState extends State<StatsScreen> {
       children: [
         Expanded(
           child: _MetricCard(
-            title: 'MTTR',
+            title: 'MTTR (Tiempo Medio de Reparación)',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -179,7 +179,7 @@ class _StatsScreenState extends State<StatsScreen> {
                 ),
                 if (_stats!.mttrMedianHours != null)
                   Text(
-                    'Mediana: ${_stats!.mttrMedianHours!.toStringAsFixed(1)} h',
+                    'Media: ${_stats!.mttrMedianHours!.toStringAsFixed(1)} h',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
               ],
@@ -518,14 +518,13 @@ class _StatsScreenState extends State<StatsScreen> {
       title: 'Top 5 reparaciones más lentas',
       child: Column(
         children: machines.map((m) {
-          final name = m.name.length > 15 ? '${m.name.substring(0, 15)}…' : m.name;
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 5),
             child: Row(
               children: [
                 SizedBox(
-                  width: 90,
-                  child: Text(name,
+                  width: 160,
+                  child: Text(m.name,
                       style: const TextStyle(fontSize: 12),
                       overflow: TextOverflow.ellipsis),
                 ),
