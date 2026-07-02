@@ -7,6 +7,7 @@ import 'package:averias_app/services/storage_service.dart';
 import 'package:averias_app/models/location.dart';
 import 'package:averias_app/models/machine.dart';
 import 'package:averias_app/models/user.dart';
+import 'package:averias_app/models/settings.dart';
 
 class MockApiClient extends Mock implements ApiClient {}
 class MockStorageService extends Mock implements StorageService {}
@@ -214,5 +215,71 @@ void main() {
     expect(find.text('Nuevo usuario'), findsWidgets);
     expect(find.text('Cancelar'), findsOneWidget);
     expect(find.text('Guardar'), findsOneWidget);
+  });
+
+  testWidgets('Ajustes tab shows email template fields with current values', (tester) async {
+    when(() => api.getSettings()).thenAnswer((_) async => const Settings(
+      smtpHost: 'smtp.example.com',
+      smtpPort: '587',
+      smtpUser: 'user@example.com',
+      smtpPass: '',
+      smtpFrom: 'from@example.com',
+      emailRecipients: [],
+      emailSubjectReports: 'Informe de Averías — {archivo}',
+      emailBodyReports: 'Adjunto encontrará el informe de averías solicitado.',
+      emailSubjectStats: 'Estadísticas — {archivo}',
+      emailBodyStats: 'Adjunto encontrará el reporte de estadísticas solicitado.',
+    ));
+
+    await tester.pumpWidget(MaterialApp(home: AdminScreen(api: api, storage: storage)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Ajustes'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Plantilla de email — Informes'), findsOneWidget);
+    expect(find.text('Plantilla de email — Estadísticas'), findsOneWidget);
+    expect(find.text('Informe de Averías — {archivo}'), findsOneWidget);
+    expect(find.text('Estadísticas — {archivo}'), findsOneWidget);
+  });
+
+  testWidgets('Guardar sends the edited email template fields', (tester) async {
+    when(() => api.getSettings()).thenAnswer((_) async => const Settings(
+      smtpHost: '', smtpPort: '587', smtpUser: '', smtpPass: '', smtpFrom: '',
+      emailRecipients: [],
+      emailSubjectReports: 'Asunto viejo',
+      emailBodyReports: 'Cuerpo viejo',
+      emailSubjectStats: 'Asunto stats viejo',
+      emailBodyStats: 'Cuerpo stats viejo',
+    ));
+    when(() => api.updateSettings(any())).thenAnswer((_) async => const Settings(
+      smtpHost: '', smtpPort: '587', smtpUser: '', smtpPass: '', smtpFrom: '',
+      emailRecipients: [],
+      emailSubjectReports: 'Asunto nuevo',
+      emailBodyReports: 'Cuerpo viejo',
+      emailSubjectStats: 'Asunto stats viejo',
+      emailBodyStats: 'Cuerpo stats viejo',
+    ));
+
+    await tester.pumpWidget(MaterialApp(home: AdminScreen(api: api, storage: storage)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Ajustes'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.text('Asunto viejo'), 'Asunto nuevo');
+    await tester.scrollUntilVisible(
+      find.text('Guardar'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+
+    final captured = verify(() => api.updateSettings(captureAny())).captured.single as Map<String, dynamic>;
+    expect(captured['email_subject_reports'], 'Asunto nuevo');
+    expect(captured['email_body_reports'], 'Cuerpo viejo');
+    expect(captured['email_subject_stats'], 'Asunto stats viejo');
+    expect(captured['email_body_stats'], 'Cuerpo stats viejo');
   });
 }

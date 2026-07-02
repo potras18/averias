@@ -753,6 +753,10 @@ class _AdminSettingsTabState extends State<_AdminSettingsTab> {
   final _passCtrl       = TextEditingController();
   final _fromCtrl       = TextEditingController();
   final _newEmailCtrl   = TextEditingController();
+  final _emailSubjectReportsCtrl = TextEditingController();
+  final _emailBodyReportsCtrl    = TextEditingController();
+  final _emailSubjectStatsCtrl   = TextEditingController();
+  final _emailBodyStatsCtrl      = TextEditingController();
 
   List<String> _recipients = [];
   bool _passWasSet = false;
@@ -774,6 +778,10 @@ class _AdminSettingsTabState extends State<_AdminSettingsTab> {
     _passCtrl.dispose();
     _fromCtrl.dispose();
     _newEmailCtrl.dispose();
+    _emailSubjectReportsCtrl.dispose();
+    _emailBodyReportsCtrl.dispose();
+    _emailSubjectStatsCtrl.dispose();
+    _emailBodyStatsCtrl.dispose();
     super.dispose();
   }
 
@@ -789,6 +797,10 @@ class _AdminSettingsTabState extends State<_AdminSettingsTab> {
         _passWasSet     = s.smtpPass == '***';
         _passCtrl.text  = '';
         _recipients     = List<String>.from(s.emailRecipients);
+        _emailSubjectReportsCtrl.text = s.emailSubjectReports;
+        _emailBodyReportsCtrl.text    = s.emailBodyReports;
+        _emailSubjectStatsCtrl.text   = s.emailSubjectStats;
+        _emailBodyStatsCtrl.text      = s.emailBodyStats;
         _loading        = false;
       });
     } catch (_) {
@@ -806,6 +818,10 @@ class _AdminSettingsTabState extends State<_AdminSettingsTab> {
         'smtp_user':        _userCtrl.text.trim(),
         'smtp_from':        _fromCtrl.text.trim(),
         'email_recipients': _recipients,
+        'email_subject_reports': _emailSubjectReportsCtrl.text,
+        'email_body_reports':    _emailBodyReportsCtrl.text,
+        'email_subject_stats':   _emailSubjectStatsCtrl.text,
+        'email_body_stats':      _emailBodyStatsCtrl.text,
       };
       final newPass = _passCtrl.text;
       if (newPass.isNotEmpty) body['smtp_pass'] = newPass;
@@ -919,6 +935,42 @@ class _AdminSettingsTabState extends State<_AdminSettingsTab> {
                 child: const Text('Añadir'),
               ),
             ],
+          ),
+          const SizedBox(height: 24),
+          Text('Plantilla de email — Informes', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          const Text(
+            'Variables disponibles: {fecha}, {rango}, {tecnico}, {archivo}',
+            style: TextStyle(color: Colors.grey, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _emailSubjectReportsCtrl,
+            decoration: const InputDecoration(labelText: 'Asunto'),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _emailBodyReportsCtrl,
+            decoration: const InputDecoration(labelText: 'Cuerpo'),
+            maxLines: 4,
+          ),
+          const SizedBox(height: 24),
+          Text('Plantilla de email — Estadísticas', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          const Text(
+            'Variables disponibles: {fecha}, {rango}, {tecnico}, {archivo}',
+            style: TextStyle(color: Colors.grey, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _emailSubjectStatsCtrl,
+            decoration: const InputDecoration(labelText: 'Asunto'),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _emailBodyStatsCtrl,
+            decoration: const InputDecoration(labelText: 'Cuerpo'),
+            maxLines: 4,
           ),
           const SizedBox(height: 24),
           FilledButton(
