@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:convert';
 import 'dart:ui' as ui;
 import '../models/location.dart';
 import '../models/machine.dart';
@@ -320,6 +322,71 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     }
   }
 
+  Future<void> _importMachinesCsv() async {
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['csv'],
+      withData: true,
+    );
+    if (picked == null || picked.files.isEmpty) return;
+    final bytes = picked.files.first.bytes;
+    if (bytes == null) return;
+
+    String csv;
+    try {
+      csv = utf8.decode(bytes);
+    } catch (_) {
+      csv = latin1.decode(bytes);
+    }
+
+    try {
+      final summary = await widget.api.importMachinesCsv(csv);
+      await _load();
+      if (!mounted) return;
+      final created = summary['created'] ?? 0;
+      final errors = (summary['errors'] as List?) ?? const [];
+      final locs = (summary['locationsCreated'] as List?) ?? const [];
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Importación completada', textAlign: TextAlign.center),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Máquinas creadas: $created'),
+                if (locs.isNotEmpty) Text('Ubicaciones nuevas: ${locs.length}'),
+                if (errors.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text('Filas con error: ${errors.length}',
+                      style: const TextStyle(color: Colors.red)),
+                  ...errors.take(10).map((e) => Text(
+                        'Línea ${e['line']}: ${e['message']}',
+                        style: const TextStyle(fontSize: 12),
+                      )),
+                ],
+              ],
+            ),
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Aceptar'),
+            ),
+          ],
+        ),
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error al importar el CSV')),
+        );
+      }
+    }
+  }
+
   Future<void> _toggleRole(User user) async {
     final newRole = user.role == 'admin' ? 'technician' : 'admin';
     await widget.api.updateUserRole(user.id, newRole);
@@ -513,6 +580,11 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                   setState(() { _showInactive = v; });
                   _load();
                 },
+              ),
+              IconButton(
+                icon: const Icon(Icons.upload_file),
+                tooltip: 'Importar máquinas desde CSV',
+                onPressed: _importMachinesCsv,
               ),
               IconButton(
                 icon: const Icon(Icons.picture_as_pdf),

@@ -4,6 +4,13 @@ const { randomUUID } = require('node:crypto')
 const QRCode = require('qrcode')
 const { generatePdf } = require('../pdf/generator')
 const { buildQrHtml, buildQrGridHtml } = require('../pdf/qr-template')
+const { parseCsv, norm } = require('../csv')
+
+const CSV_NAME_KEYS = ['nombre', 'name', 'maquina']
+const CSV_LOC_KEYS = ['ubicacion', 'local', 'localizacion', 'location']
+const CSV_TICK_KEYS = ['tickets_redencion', 'tickets', 'redencion', 'ticket']
+const CSV_TRUTHY = new Set(['si', 's', 'true', '1', 'x', 'yes', 'y', 'verdadero'])
+const csvPick = (rec, keys) => { for (const k of keys) if (k in rec) return rec[k]; return undefined }
 
 const MACHINE_FIELDS = `
   m.id, m.name, m.qr_code, m.has_redemption_tickets, m.created_at, m.active,
@@ -154,6 +161,64 @@ module.exports = async function machinesRoutes(app) {
     )
     const machine = await getMachineWithInspections(app.db, rows[0].id)
     return reply.code(201).send(machine)
+  })
+
+  // POST /machines/import — carga masiva desde CSV (crea ubicaciones que no existan)
+  app.post('/import', {
+    preHandler: [app.authenticate, app.requireAdmin],
+    schema: {
+      body: {
+        type: 'object',
+        required: ['csv'],
+        properties: { csv: { type: 'string', minLength: 1 } },
+        additionalProperties: false,
+      },
+    },
+  }, async (req, reply) => {
+    const { headers, records } = parseCsv(req.body.csv)
+    if (!headers.some((h) => CSV_NAME_KEYS.includes(h))) {
+      return reply.code(400).send({ error: 'Falta la columna "nombre" en el CSV' })
+    }
+
+    const { rows: locRows } = await app.db.query('SELECT id, name FROM locations')
+    const locByName = new Map(locRows.map((l) => [norm(l.name), l.id]))
+
+    let created = 0
+    const errors = []
+    const locationsCreated = []
+
+    for (const rec of records) {
+      const name = (csvPick(rec, CSV_NAME_KEYS) ?? '').trim()
+      if (!name) { errors.push({ line: rec._line, message: 'Nombre vacío' }); continue }
+
+      const locName = (csvPick(rec, CSV_LOC_KEYS) ?? '').trim()
+      const hasTickets = CSV_TRUTHY.has(norm(csvPick(rec, CSV_TICK_KEYS) ?? ''))
+
+      let locationId = null
+      if (locName) {
+        const key = norm(locName)
+        if (locByName.has(key)) {
+          locationId = locByName.get(key)
+        } else {
+          const ins = await app.db.query('INSERT INTO locations (name) VALUES ($1) RETURNING id', [locName])
+          locationId = ins.rows[0].id
+          locByName.set(key, locationId)
+          locationsCreated.push(locName)
+        }
+      }
+
+      try {
+        await app.db.query(
+          'INSERT INTO machines (name, qr_code, location_id, has_redemption_tickets) VALUES ($1,$2,$3,$4)',
+          [name, randomUUID(), locationId, hasTickets]
+        )
+        created++
+      } catch (_) {
+        errors.push({ line: rec._line, message: 'Error al crear la máquina' })
+      }
+    }
+
+    return { total: records.length, created, errors, locationsCreated }
   })
 
   app.put('/:id', {

@@ -157,3 +157,52 @@ test('GET /machines/:id/qr/pdf returns 404 for unknown id', async () => {
   const res = await st.get('/machines/00000000-0000-0000-0000-000000000000/qr/pdf').set(auth())
   expect(res.status).toBe(404)
 })
+
+test('POST /machines/import creates machines and auto-creates locations (admin)', async () => {
+  const csv = [
+    'nombre;ubicacion;tickets_redencion',
+    'Import A;Bar Importado;si',
+    'Import B;Bar Importado;no',
+    'Import C;;x',
+  ].join('\n')
+  const res = await st.post('/machines/import').set(authAdmin()).send({ csv })
+  expect(res.status).toBe(200)
+  expect(res.body.created).toBe(3)
+  expect(res.body.errors).toHaveLength(0)
+  expect(res.body.locationsCreated).toContain('Bar Importado')
+
+  const list = await st.get('/machines').set(auth())
+  const byName = Object.fromEntries(list.body.map((m) => [m.name, m]))
+  expect(byName['Import A'].location_name).toBe('Bar Importado')
+  expect(byName['Import A'].has_redemption_tickets).toBe(true)
+  expect(byName['Import B'].has_redemption_tickets).toBe(false)
+  expect(byName['Import C'].location_id).toBeNull()
+  expect(byName['Import C'].has_redemption_tickets).toBe(true)
+})
+
+test('POST /machines/import reuses an existing location (case-insensitive)', async () => {
+  const csv = 'nombre,ubicacion,tickets_redencion\nReuse M,' + location.name.toUpperCase() + ',no'
+  const res = await st.post('/machines/import').set(authAdmin()).send({ csv })
+  expect(res.status).toBe(200)
+  expect(res.body.created).toBe(1)
+  expect(res.body.locationsCreated).toHaveLength(0)
+})
+
+test('POST /machines/import reports rows with empty name', async () => {
+  const csv = 'nombre;ubicacion\n;Sin Nombre Loc\nOK Machine;Otra Loc'
+  const res = await st.post('/machines/import').set(authAdmin()).send({ csv })
+  expect(res.status).toBe(200)
+  expect(res.body.created).toBe(1)
+  expect(res.body.errors).toHaveLength(1)
+  expect(res.body.errors[0].line).toBe(2)
+})
+
+test('POST /machines/import returns 400 without a nombre column', async () => {
+  const res = await st.post('/machines/import').set(authAdmin()).send({ csv: 'foo;bar\n1;2' })
+  expect(res.status).toBe(400)
+})
+
+test('POST /machines/import requires admin', async () => {
+  const res = await st.post('/machines/import').set(auth()).send({ csv: 'nombre\nX' })
+  expect(res.status).toBe(403)
+})

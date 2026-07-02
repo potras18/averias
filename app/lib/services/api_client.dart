@@ -152,6 +152,11 @@ class ApiClient {
     return Uint8List.fromList(res.data as List<int>);
   }
 
+  Future<Map<String, dynamic>> importMachinesCsv(String csv) async {
+    final res = await _dio.post('/machines/import', data: {'csv': csv});
+    return res.data as Map<String, dynamic>;
+  }
+
   // Inspections
   Future<Inspection> createInspection(Map<String, dynamic> data) async {
     final res = await _dio.post('/inspections', data: data);
