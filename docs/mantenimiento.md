@@ -314,3 +314,8 @@ La app sigue el manual de identidad de Grupo Cocamatic (`MANUAL IDENTIDAD CORPOR
 **Logotipo:** `app/assets/images/cocamatic-logo.png` (versión positiva: texto y símbolo en negro, fondo transparente, recortado a los límites del logo). Se usa en el sidebar de escritorio (`web_shell.dart`, negro sobre naranja) y en el login (`login_screen.dart`, negro sobre blanco). El negro contrasta bien sobre ambos fondos.
 
 **Dónde se define:** todo el tema vive en `app/lib/theme.dart` (`cocamaticTheme()`), usado en `app/lib/app.dart`. Para ajustar colores o fuente, editar solo ese fichero. Las constantes `kBrandOrange`, `kBrandGray`, `kOnBrandOrange` están exportadas para reutilizarlas en widgets.
+
+**Patrones de UI reutilizables:**
+
+- `app/lib/widgets/section_card.dart` (`SectionCard`): tarjeta con cabecera (icono + título), divisor y contenido. Separa visualmente secciones en vistas con scroll. Se usa en Ajustes, detalle de máquina (escritorio y móvil) e Histórico. Al cambiarlo, cambian todas a la vez.
+- `app/lib/widgets/confirm_dialog.dart` (`showConfirmDialog`): diálogo de confirmación estándar con título, mensaje y botones centrados. Todos los popups de confirmación (eliminar, dar de baja, desactivar, activar huella) pasan por aquí.

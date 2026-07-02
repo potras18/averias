@@ -190,7 +190,19 @@ Cuatro pestañas: Localizaciones, Máquinas, Usuarios y Ajustes.
 - Editar datos de una máquina.
 - Descargar etiqueta QR en PDF para imprimir (por máquina, desde su ficha).
 - **Descargar PDF con los QR de todas las máquinas activas** (botón PDF en la cabecera): genera un único documento A4 con 12 códigos QR por página, cada uno con el nombre de la máquina debajo. Ignora el filtro "Inactivas" — solo incluye máquinas activas.
+- **Importar máquinas desde CSV** (botón de subida en la cabecera): carga masiva a partir de un fichero CSV. Ver "Importación masiva de máquinas" más abajo.
 - Dar de baja una máquina (pasa a inactiva; no se elimina).
+
+**Importación masiva de máquinas (CSV):**
+
+Para no dar de alta las máquinas una a una, se puede subir un CSV. Hay una plantilla lista en `docs/plantilla-maquinas.csv`.
+
+- Columnas (la cabecera es obligatoria): `nombre`, `ubicacion`, `tickets_redencion`.
+  - **nombre** — obligatorio. Filas sin nombre se ignoran y se informan.
+  - **ubicacion** — opcional. Si el nombre de la ubicación no existe, se crea automáticamente. Si se deja vacía, la máquina queda sin ubicación.
+  - **tickets_redencion** — `si`/`no` (también valen `x`, `1`, `true`). Vacío = no.
+- Delimitador `,` o `;` (se detecta solo; Excel en español suele usar `;`).
+- Al terminar, la app muestra un resumen: máquinas creadas, ubicaciones nuevas y filas con error (con el número de línea).
 
 #### Usuarios
 - Listar usuarios activos e inactivos.

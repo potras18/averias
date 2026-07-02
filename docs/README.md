@@ -10,6 +10,8 @@ Sistema de gestión de averías e inspecciones para máquinas de entretenimiento
 | [Infraestructura y recursos](infraestructura.md) | Requisitos, instalación, configuración |
 | [Mantenimiento](mantenimiento.md) | Migraciones, backups, gestión de usuarios, actualización, identidad corporativa |
 
+**Recursos:** [`plantilla-maquinas.csv`](plantilla-maquinas.csv) — plantilla para importar máquinas en lote (admin → Máquinas → Importar CSV).
+
 ## Resumen del sistema
 
 - **Frontend:** Flutter 3.19+ (móvil y escritorio/web)
