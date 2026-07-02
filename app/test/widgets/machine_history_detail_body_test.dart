@@ -54,6 +54,18 @@ final _parts = [
   ),
 ];
 
+List<Inspection> _generateInspections(int count) => List.generate(
+      count,
+      (i) => Inspection(
+        id: 'insp-gen-$i',
+        machineId: 'm-1',
+        technicianName: 'Mario',
+        status: 'operative',
+        cardReaderOk: true,
+        inspectedAt: DateTime(2026, 1, 1).add(Duration(days: i)),
+      ),
+    );
+
 void main() {
   late MockApiClient api;
 
@@ -107,5 +119,58 @@ void main() {
 
     expect(find.text('Sin inspecciones registradas'), findsOneWidget);
     expect(find.text('Sin repuestos registrados'), findsOneWidget);
+  });
+
+  testWidgets('paginates inspections 10 per page with Anterior/Siguiente controls', (tester) async {
+    when(() => api.getInspections(machineId: 'm-1'))
+        .thenAnswer((_) async => _generateInspections(12));
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(body: MachineHistoryDetailBody(api: api, machineId: 'm-1')),
+    ));
+    await tester.pumpAndSettle();
+
+    // First page shows insp-gen-0..9, not insp-gen-10/11
+    expect(find.byKey(const ValueKey('insp-gen-0')), findsOneWidget);
+    expect(find.byKey(const ValueKey('insp-gen-9')), findsOneWidget);
+    expect(find.byKey(const ValueKey('insp-gen-10')), findsNothing);
+    expect(find.text('Página 1 de 2'), findsOneWidget);
+
+    final anterior = tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.chevron_left));
+    expect(anterior.onPressed, isNull);
+    final siguiente = tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.chevron_right));
+    expect(siguiente.onPressed, isNotNull);
+  });
+
+  testWidgets('Siguiente shows the next page of inspections', (tester) async {
+    when(() => api.getInspections(machineId: 'm-1'))
+        .thenAnswer((_) async => _generateInspections(12));
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(body: MachineHistoryDetailBody(api: api, machineId: 'm-1')),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithIcon(IconButton, Icons.chevron_right));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('insp-gen-0')), findsNothing);
+    expect(find.byKey(const ValueKey('insp-gen-10')), findsOneWidget);
+    expect(find.byKey(const ValueKey('insp-gen-11')), findsOneWidget);
+    expect(find.text('Página 2 de 2'), findsOneWidget);
+
+    final siguiente = tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.chevron_right));
+    expect(siguiente.onPressed, isNull);
+    final anterior = tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.chevron_left));
+    expect(anterior.onPressed, isNotNull);
+  });
+
+  testWidgets('no pagination controls when 10 or fewer inspections', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(body: MachineHistoryDetailBody(api: api, machineId: 'm-1')),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Página'), findsNothing);
   });
 }

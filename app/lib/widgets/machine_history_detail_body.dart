@@ -5,6 +5,8 @@ import '../models/spare_part.dart';
 import '../services/api_client.dart';
 import 'status_badge.dart';
 
+const _inspectionsPerPage = 10;
+
 class MachineHistoryDetailBody extends StatefulWidget {
   final ApiClient api;
   final String machineId;
@@ -21,6 +23,7 @@ class MachineHistoryDetailBody extends StatefulWidget {
 
 class _MachineHistoryDetailBodyState extends State<MachineHistoryDetailBody> {
   late Future<(Machine, List<Inspection>, List<SparePart>)> _future;
+  int _inspectionPage = 0;
 
   @override
   void initState() {
@@ -53,9 +56,14 @@ class _MachineHistoryDetailBodyState extends State<MachineHistoryDetailBody> {
           return Center(child: Text('Error: ${snap.error}'));
         }
         final (machine, inspections, parts) = snap.data!;
-        return ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
+        final totalInspectionPages = (inspections.length / _inspectionsPerPage).ceil();
+        final inspectionPageStart = _inspectionPage * _inspectionsPerPage;
+        final inspectionPageItems = inspections.skip(inspectionPageStart).take(_inspectionsPerPage).toList();
+        return SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
             Text(machine.name, style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 4),
             Text(machine.locationName ?? '-', style: Theme.of(context).textTheme.bodyMedium),
@@ -71,7 +79,31 @@ class _MachineHistoryDetailBodyState extends State<MachineHistoryDetailBody> {
             if (inspections.isEmpty)
               const Text('Sin inspecciones registradas')
             else
-              ...inspections.map((i) => _HistoryInspectionTile(inspection: i)),
+              ...inspectionPageItems.map((i) => _HistoryInspectionTile(key: ValueKey(i.id), inspection: i)),
+            if (totalInspectionPages > 1)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.chevron_left),
+                      tooltip: 'Anterior',
+                      onPressed: _inspectionPage > 0
+                          ? () => setState(() => _inspectionPage--)
+                          : null,
+                    ),
+                    Text('Página ${_inspectionPage + 1} de $totalInspectionPages'),
+                    IconButton(
+                      icon: const Icon(Icons.chevron_right),
+                      tooltip: 'Siguiente',
+                      onPressed: _inspectionPage < totalInspectionPages - 1
+                          ? () => setState(() => _inspectionPage++)
+                          : null,
+                    ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 32),
             Text('Historial de repuestos (${parts.length})',
                 style: Theme.of(context).textTheme.titleMedium),
@@ -80,7 +112,9 @@ class _MachineHistoryDetailBodyState extends State<MachineHistoryDetailBody> {
               const Text('Sin repuestos registrados')
             else
               ...parts.map((p) => _HistorySparePartTile(part: p)),
-          ],
+              ],
+            ),
+          ),
         );
       },
     );
@@ -89,7 +123,7 @@ class _MachineHistoryDetailBodyState extends State<MachineHistoryDetailBody> {
 
 class _HistoryInspectionTile extends StatelessWidget {
   final Inspection inspection;
-  const _HistoryInspectionTile({required this.inspection});
+  const _HistoryInspectionTile({super.key, required this.inspection});
 
   @override
   Widget build(BuildContext context) {
