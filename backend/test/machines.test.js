@@ -206,3 +206,10 @@ test('POST /machines/import requires admin', async () => {
   const res = await st.post('/machines/import').set(auth()).send({ csv: 'nombre\nX' })
   expect(res.status).toBe(403)
 })
+
+test('GET /machines/:id includes has_image false when no photo', async () => {
+  const m = await seedMachine({ locationId: location.id, name: 'NoPhoto', qrCode: 'QR-NP' })
+  const res = await st.get(`/machines/${m.id}`).set(auth())
+  expect(res.status).toBe(200)
+  expect(res.body.has_image).toBe(false)
+})

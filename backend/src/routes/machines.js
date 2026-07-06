@@ -15,6 +15,7 @@ const csvPick = (rec, keys) => { for (const k of keys) if (k in rec) return rec[
 const MACHINE_FIELDS = `
   m.id, m.name, m.qr_code, m.has_redemption_tickets, m.created_at, m.active,
   m.location_id, l.name AS location_name,
+  (m.image IS NOT NULL) AS has_image,
   (SELECT status FROM inspections WHERE machine_id = m.id ORDER BY inspected_at DESC LIMIT 1) AS last_status,
   (SELECT inspected_at FROM inspections WHERE machine_id = m.id ORDER BY inspected_at DESC LIMIT 1) AS last_inspected_at
 `
