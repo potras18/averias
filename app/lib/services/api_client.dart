@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import '../models/machine.dart';
@@ -155,6 +156,25 @@ class ApiClient {
   Future<Map<String, dynamic>> importMachinesCsv(String csv) async {
     final res = await _dio.post('/machines/import', data: {'csv': csv});
     return res.data as Map<String, dynamic>;
+  }
+
+  Future<void> setMachineImage(String id, Uint8List bytes, String mime) async {
+    await _dio.put('/machines/$id/image', data: {
+      'image': base64Encode(bytes),
+      'mime': mime,
+    });
+  }
+
+  Future<void> deleteMachineImage(String id) async {
+    await _dio.delete('/machines/$id/image');
+  }
+
+  Future<Uint8List> getMachineImage(String id) async {
+    final res = await _dio.get(
+      '/machines/$id/image',
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return Uint8List.fromList(res.data as List<int>);
   }
 
   // Inspections
