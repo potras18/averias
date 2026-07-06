@@ -66,13 +66,28 @@ class _LoginScreenState extends State<LoginScreen> {
       await _offerBiometric();
       if (mounted) context.go('/machines');
     } catch (e) {
-      final msg = (e is DioException && e.type != DioExceptionType.badResponse)
-          ? 'No se puede conectar al servidor (${e.message})'
-          : 'Credenciales incorrectas';
-      setState(() { _error = msg; });
+      setState(() { _error = _loginErrorMessage(e); });
     } finally {
       if (mounted) setState(() { _loading = false; });
     }
+  }
+
+  String _loginErrorMessage(Object e) {
+    if (e is DioException) {
+      if (e.type == DioExceptionType.badResponse) {
+        final code = e.response?.statusCode;
+        switch (code) {
+          case 401:
+            return 'Credenciales incorrectas';
+          case 429:
+            return 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.';
+          default:
+            return 'Error del servidor (código $code). Inténtalo más tarde.';
+        }
+      }
+      return 'No se puede conectar al servidor. Revisa tu conexión (${e.message}).';
+    }
+    return 'Error inesperado al iniciar sesión: $e';
   }
 
   Future<void> _offerBiometric() async {
