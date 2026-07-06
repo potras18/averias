@@ -28,6 +28,7 @@ class MachinePhoto extends StatefulWidget {
 
 class _MachinePhotoState extends State<MachinePhoto> {
   static final Map<String, Uint8List> _cache = {};
+  static const int _maxCacheEntries = 20;
   late final ImagePickService _picker = widget.picker ?? ImagePickService();
   bool _busy = false;
 
@@ -37,6 +38,9 @@ class _MachinePhotoState extends State<MachinePhoto> {
     final cached = _cache[widget.machineId];
     if (cached != null) return cached;
     final bytes = await widget.api.getMachineImage(widget.machineId);
+    if (_cache.length >= _maxCacheEntries) {
+      _cache.remove(_cache.keys.first);
+    }
     _cache[widget.machineId] = bytes;
     return bytes;
   }
