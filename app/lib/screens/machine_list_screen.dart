@@ -10,6 +10,7 @@ import '../widgets/machine_card.dart';
 import '../widgets/confirm_dialog.dart';
 import '../widgets/section_card.dart';
 import '../widgets/status_badge.dart';
+import '../widgets/machine_photo.dart';
 
 // Inspection form options (same as InspectionFormScreen)
 const _statusOptions = [
@@ -336,6 +337,15 @@ class _MachineListScreenState extends State<MachineListScreen> {
             children: [
               Text(machine.name, style: Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height: 12),
+              MachinePhoto(
+                api: widget.api,
+                machineId: machine.id,
+                hasImage: machine.hasImage,
+                role: _role,
+                onChanged: () => setState(() {
+                  _detailFuture = widget.api.getMachineById(_selectedMachineId!);
+                }),
+              ),
               _InfoRow('Local', machine.locationName ?? '-'),
               _InfoRow('Tickets redemption', machine.hasRedemptionTickets ? 'Sí' : 'No'),
               Row(children: [

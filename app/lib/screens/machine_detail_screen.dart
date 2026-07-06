@@ -9,6 +9,7 @@ import '../services/storage_service.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/desktop_shell_scope.dart';
 import '../widgets/section_card.dart';
+import '../widgets/machine_photo.dart';
 
 class MachineDetailScreen extends StatefulWidget {
   final ApiClient api;
@@ -121,6 +122,15 @@ class _MachineDetailScreenState extends State<MachineDetailScreen>
               ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  MachinePhoto(
+                    api: widget.api,
+                    machineId: machine.id,
+                    hasImage: machine.hasImage,
+                    role: _role,
+                    onChanged: () => setState(() {
+                      _machineFuture = widget.api.getMachineById(widget.machineId);
+                    }),
+                  ),
                   _InfoRow('Local', machine.locationName ?? '-'),
                   _InfoRow('Tickets redemption', machine.hasRedemptionTickets ? 'Sí' : 'No'),
                   const SizedBox(height: 16),
