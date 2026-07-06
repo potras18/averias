@@ -213,3 +213,53 @@ test('GET /machines/:id includes has_image false when no photo', async () => {
   expect(res.status).toBe(200)
   expect(res.body.has_image).toBe(false)
 })
+
+const PNG_1x1_B64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+
+test('PUT image as admin then GET returns bytes with content-type', async () => {
+  const m = await seedMachine({ locationId: location.id, name: 'Photo', qrCode: 'QR-PH' })
+  const put = await st.put(`/machines/${m.id}/image`).set(authAdmin())
+    .send({ image: PNG_1x1_B64, mime: 'image/png' })
+  expect(put.status).toBe(200)
+  expect(put.body).toEqual({ ok: true })
+
+  const get = await st.get(`/machines/${m.id}/image`).set(auth())
+  expect(get.status).toBe(200)
+  expect(get.headers['content-type']).toContain('image/png')
+  expect(Buffer.isBuffer(get.body)).toBe(true)
+  expect(get.body.length).toBeGreaterThan(0)
+
+  const detail = await st.get(`/machines/${m.id}`).set(auth())
+  expect(detail.body.has_image).toBe(true)
+})
+
+test('GET image 404 when machine has no photo', async () => {
+  const m = await seedMachine({ locationId: location.id, name: 'NoPic', qrCode: 'QR-NOPIC' })
+  const res = await st.get(`/machines/${m.id}/image`).set(auth())
+  expect(res.status).toBe(404)
+})
+
+test('DELETE image as admin clears it', async () => {
+  const m = await seedMachine({ locationId: location.id, name: 'Del', qrCode: 'QR-DEL' })
+  await st.put(`/machines/${m.id}/image`).set(authAdmin())
+    .send({ image: PNG_1x1_B64, mime: 'image/png' })
+  const del = await st.delete(`/machines/${m.id}/image`).set(authAdmin())
+  expect(del.status).toBe(200)
+  const get = await st.get(`/machines/${m.id}/image`).set(auth())
+  expect(get.status).toBe(404)
+})
+
+test('PUT image as technician is forbidden', async () => {
+  const m = await seedMachine({ locationId: location.id, name: 'Forbid', qrCode: 'QR-FB' })
+  const res = await st.put(`/machines/${m.id}/image`).set(auth())
+    .send({ image: PNG_1x1_B64, mime: 'image/png' })
+  expect(res.status).toBe(403)
+})
+
+test('PUT image rejects unsupported mime', async () => {
+  const m = await seedMachine({ locationId: location.id, name: 'BadMime', qrCode: 'QR-BM' })
+  const res = await st.put(`/machines/${m.id}/image`).set(authAdmin())
+    .send({ image: PNG_1x1_B64, mime: 'image/gif' })
+  expect(res.status).toBe(400)
+})

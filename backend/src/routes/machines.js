@@ -10,6 +10,7 @@ const CSV_NAME_KEYS = ['nombre', 'name', 'maquina']
 const CSV_LOC_KEYS = ['ubicacion', 'local', 'localizacion', 'location']
 const CSV_TICK_KEYS = ['tickets_redencion', 'tickets', 'redencion', 'ticket']
 const CSV_TRUTHY = new Set(['si', 's', 'true', '1', 'x', 'yes', 'y', 'verdadero'])
+const ALLOWED_IMAGE_MIME = new Set(['image/jpeg', 'image/png', 'image/webp'])
 const csvPick = (rec, keys) => { for (const k of keys) if (k in rec) return rec[k]; return undefined }
 
 const MACHINE_FIELDS = `
@@ -259,6 +260,58 @@ module.exports = async function machinesRoutes(app) {
       [req.params.id]
     )
     if (rowCount === 0) return reply.code(404).send({ error: 'Machine not found' })
+    return { ok: true }
+  })
+
+  // GET /machines/:id/image — any authenticated user
+  app.get('/:id/image', { preHandler: [app.authenticate] }, async (req, reply) => {
+    const { rows } = await app.db.query(
+      'SELECT image, image_mime FROM machines WHERE id = $1', [req.params.id]
+    )
+    if (!rows.length || !rows[0].image) return reply.code(404).send({ error: 'No image' })
+    reply.header('Content-Type', rows[0].image_mime)
+    reply.header('Cache-Control', 'no-cache')
+    return reply.send(rows[0].image)
+  })
+
+  // PUT /machines/:id/image — admin only
+  app.put('/:id/image', {
+    bodyLimit: 6291456,
+    preHandler: [app.authenticate, app.requireAdmin],
+    schema: {
+      body: {
+        type: 'object',
+        required: ['image', 'mime'],
+        properties: {
+          image: { type: 'string', minLength: 1 },
+          mime:  { type: 'string', minLength: 1 },
+        },
+        additionalProperties: false,
+      },
+    },
+  }, async (req, reply) => {
+    const { image, mime } = req.body
+    if (!ALLOWED_IMAGE_MIME.has(mime)) {
+      return reply.code(400).send({ error: 'Unsupported image type' })
+    }
+    const buf = Buffer.from(image, 'base64')
+    const { rowCount } = await app.db.query(
+      'UPDATE machines SET image = $1, image_mime = $2 WHERE id = $3',
+      [buf, mime, req.params.id]
+    )
+    if (!rowCount) return reply.code(404).send({ error: 'Machine not found' })
+    return { ok: true }
+  })
+
+  // DELETE /machines/:id/image — admin only
+  app.delete('/:id/image', {
+    preHandler: [app.authenticate, app.requireAdmin],
+  }, async (req, reply) => {
+    const { rowCount } = await app.db.query(
+      'UPDATE machines SET image = NULL, image_mime = NULL WHERE id = $1',
+      [req.params.id]
+    )
+    if (!rowCount) return reply.code(404).send({ error: 'Machine not found' })
     return { ok: true }
   })
 }
