@@ -86,6 +86,7 @@ class _MachinePhotoState extends State<MachinePhoto> {
       ),
     );
     if (choice == null) return;
+    if (!mounted) return;
     await _upload(fromCamera: choice);
   }
 
@@ -98,6 +99,7 @@ class _MachinePhotoState extends State<MachinePhoto> {
       cancelLabel: 'Cancelar',
     );
     if (!ok) return;
+    if (!mounted) return;
     setState(() => _busy = true);
     try {
       await widget.api.deleteMachineImage(widget.machineId);
