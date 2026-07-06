@@ -6,7 +6,8 @@ const fs = require('fs')
 const path = require('path')
 
 async function run() {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+  const dbUrl = process.env.NODE_ENV === 'test' ? process.env.TEST_DATABASE_URL : process.env.DATABASE_URL
+  const pool = new Pool({ connectionString: dbUrl })
   const dir = __dirname
   const files = fs.readdirSync(dir)
     .filter(f => f.endsWith('.sql'))
