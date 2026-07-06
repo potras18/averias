@@ -250,6 +250,19 @@ test('DELETE image as admin clears it', async () => {
   expect(get.status).toBe(404)
 })
 
+test('PUT image on unknown machine returns 404', async () => {
+  const res = await st.put('/machines/00000000-0000-0000-0000-000000000000/image')
+    .set(authAdmin())
+    .send({ image: PNG_1x1_B64, mime: 'image/png' })
+  expect(res.status).toBe(404)
+})
+
+test('DELETE image on unknown machine returns 404', async () => {
+  const res = await st.delete('/machines/00000000-0000-0000-0000-000000000000/image')
+    .set(authAdmin())
+  expect(res.status).toBe(404)
+})
+
 test('PUT image as technician is forbidden', async () => {
   const m = await seedMachine({ locationId: location.id, name: 'Forbid', qrCode: 'QR-FB' })
   const res = await st.put(`/machines/${m.id}/image`).set(auth())
