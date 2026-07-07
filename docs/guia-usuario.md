@@ -17,6 +17,7 @@ Introduce tu email y contraseña en la pantalla de inicio. El sistema bloquea us
 
 - Límite: 5 intentos fallidos por 15 minutos (protección anti-fuerza bruta).
 - La sesión dura 8 horas. Al expirar, la app renueva el token automáticamente; si falla, redirige al login.
+- El icono de ojo en el campo de contraseña permite mostrar u ocultar lo tecleado.
 
 **Inicio de sesión biométrico *(solo móvil)*:** tras un primer login con email y contraseña, la app ofrece activar el desbloqueo por huella o reconocimiento facial. En los siguientes accesos basta con la biometría; las credenciales quedan guardadas de forma segura en el dispositivo.
 
@@ -47,6 +48,7 @@ Vista principal. Muestra todas las máquinas activas con su estado y fecha de ú
 Muestra la información completa de una máquina en dos pestañas:
 
 **Pestaña Inspecciones:**
+- **Foto de la máquina:** en la parte superior se muestra la foto (formato retrato) si la tiene, o un marcador si no. Al pulsarla se abre a tamaño grande. Es opcional. Los administradores pueden añadir, cambiar o quitar la foto; en móvil pueden hacerla con la cámara o elegirla de la galería. También aparece en el panel de detalle de escritorio.
 - Nombre, localización, estado actual.
 - Código QR de la máquina (para imprimir etiquetas).
 - Historial de las últimas 5 inspecciones con técnico y fecha.
