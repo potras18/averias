@@ -716,10 +716,16 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                   children: [
                     Chip(
                       label: Text(
-                          user.role == 'admin' ? 'Admin' : 'Técnico'),
+                          user.role == 'admin'
+                              ? 'Admin'
+                              : user.role == 'reportes'
+                                  ? 'Cliente'
+                                  : 'Técnico'),
                       backgroundColor: user.role == 'admin'
                           ? Colors.orange[100]
-                          : Colors.grey[200],
+                          : user.role == 'reportes'
+                              ? Colors.blue[100]
+                              : Colors.grey[200],
                     ),
                     if (user.active)
                       PopupMenuButton<String>(
@@ -749,18 +755,19 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                               contentPadding: EdgeInsets.zero,
                             ),
                           ),
-                          PopupMenuItem(
-                            key: Key('role-toggle-${user.id}'),
-                            value: 'role',
-                            enabled: !isOwn,
-                            child: ListTile(
-                              leading: const Icon(Icons.admin_panel_settings),
-                              title: Text(user.role == 'admin'
-                                  ? 'Revocar admin'
-                                  : 'Hacer admin'),
-                              contentPadding: EdgeInsets.zero,
+                          if (user.role != 'reportes')
+                            PopupMenuItem(
+                              key: Key('role-toggle-${user.id}'),
+                              value: 'role',
+                              enabled: !isOwn,
+                              child: ListTile(
+                                leading: const Icon(Icons.admin_panel_settings),
+                                title: Text(user.role == 'admin'
+                                    ? 'Revocar admin'
+                                    : 'Hacer admin'),
+                                contentPadding: EdgeInsets.zero,
+                              ),
                             ),
-                          ),
                         ],
                       ),
                   ],
