@@ -16,8 +16,8 @@ module.exports = async function usersRoutes(app) {
     const includeInactive = req.query.include_inactive === 'true'
     const { rows } = await app.db.query(
       includeInactive
-        ? 'SELECT id, name, email, role, active FROM users ORDER BY name'
-        : 'SELECT id, name, email, role, active FROM users WHERE active = true ORDER BY name'
+        ? 'SELECT id, name, email, role, active, location_id FROM users ORDER BY name'
+        : 'SELECT id, name, email, role, active, location_id FROM users WHERE active = true ORDER BY name'
     )
     return rows
   })
@@ -29,21 +29,25 @@ module.exports = async function usersRoutes(app) {
         type: 'object',
         required: ['name', 'email', 'password', 'role'],
         properties: {
-          name:     { type: 'string', minLength: 1 },
-          email:    { type: 'string', format: 'email' },
-          password: { type: 'string', minLength: 6 },
-          role:     { type: 'string', enum: ['admin', 'technician'] },
+          name:        { type: 'string', minLength: 1 },
+          email:       { type: 'string', format: 'email' },
+          password:    { type: 'string', minLength: 6 },
+          role:        { type: 'string', enum: ['admin', 'technician', 'reportes'] },
+          location_id: { type: 'string' },
         },
         additionalProperties: false,
       },
     },
   }, async (req, reply) => {
-    const { name, email, password, role } = req.body
+    const { name, email, password, role, location_id } = req.body
+    if (role === 'reportes' && !location_id) {
+      return reply.code(400).send({ error: 'location_id required for reportes role' })
+    }
     const hash = await bcrypt.hash(password, 10)
     try {
       const { rows } = await app.db.query(
-        'INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role, active',
-        [name, email, hash, role]
+        'INSERT INTO users (name, email, password_hash, role, location_id) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, role, active, location_id',
+        [name, email, hash, role, location_id ?? null]
       )
       return reply.code(201).send(rows[0])
     } catch (err) {
@@ -59,9 +63,10 @@ module.exports = async function usersRoutes(app) {
       body: {
         type: 'object',
         properties: {
-          name:     { type: 'string', minLength: 1 },
-          email:    { type: 'string', format: 'email' },
-          password: { type: 'string', minLength: 6 },
+          name:        { type: 'string', minLength: 1 },
+          email:       { type: 'string', format: 'email' },
+          password:    { type: 'string', minLength: 6 },
+          location_id: { type: 'string' },
         },
         additionalProperties: false,
         minProperties: 1,
@@ -69,17 +74,18 @@ module.exports = async function usersRoutes(app) {
     },
   }, async (req, reply) => {
     const { id } = req.params
-    const { name, email, password } = req.body
+    const { name, email, password, location_id } = req.body
     const updates = []
     const values = []
     let i = 1
-    if (name     !== undefined) { updates.push(`name = $${i++}`);          values.push(name) }
-    if (email    !== undefined) { updates.push(`email = $${i++}`);         values.push(email) }
-    if (password !== undefined) { updates.push(`password_hash = $${i++}`); values.push(await bcrypt.hash(password, 10)) }
+    if (name        !== undefined) { updates.push(`name = $${i++}`);          values.push(name) }
+    if (email       !== undefined) { updates.push(`email = $${i++}`);         values.push(email) }
+    if (password    !== undefined) { updates.push(`password_hash = $${i++}`); values.push(await bcrypt.hash(password, 10)) }
+    if (location_id !== undefined) { updates.push(`location_id = $${i++}`);   values.push(location_id) }
     values.push(id)
     try {
       const { rows } = await app.db.query(
-        `UPDATE users SET ${updates.join(', ')} WHERE id = $${i} AND active = true RETURNING id, name, email, role, active`,
+        `UPDATE users SET ${updates.join(', ')} WHERE id = $${i} AND active = true RETURNING id, name, email, role, active, location_id`,
         values
       )
       if (!rows.length) return reply.code(404).send({ error: 'User not found' })

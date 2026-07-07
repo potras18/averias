@@ -271,4 +271,44 @@ async function getMachineStates(db, { from, to, locationId }) {
   return rows
 }
 
-module.exports = { getInspectionRows, getMttrHours, getMttrTopMachines, getTopProblematic, buildSummary, groupByLocation, getDailyBreakdown, getCardReaderStats, getDispenserStats, getMachineStates }
+// Resolution-time stats for client incidencias (resolved_at - created_at), in hours.
+async function getIncidenciaResolution(db, { from, to, locationId }) {
+  const build = (statusCond) => {
+    const conditions = [statusCond]
+    const params = []
+    let idx = 1
+    if (from)       { conditions.push(`i.created_at >= $${idx++}`);      params.push(from) }
+    if (to)         { conditions.push(`i.created_at::date <= $${idx++}`); params.push(to) }
+    if (locationId) { conditions.push(`m.location_id = $${idx++}`);       params.push(locationId) }
+    return { where: `WHERE ${conditions.join(' AND ')}`, params }
+  }
+
+  const resolved = build("i.status = 'resolved'")
+  const { rows } = await db.query(
+    `SELECT
+       AVG(EXTRACT(EPOCH FROM (i.resolved_at - i.created_at)) / 3600.0) AS avg_hours,
+       PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (i.resolved_at - i.created_at)) / 3600.0) AS median_hours,
+       COUNT(*) AS resolved_count
+     FROM incidencias i JOIN machines m ON m.id = i.machine_id
+     ${resolved.where}`,
+    resolved.params
+  )
+
+  const open = build("i.status = 'open'")
+  const { rows: openRows } = await db.query(
+    `SELECT COUNT(*) AS open_count
+     FROM incidencias i JOIN machines m ON m.id = i.machine_id
+     ${open.where}`,
+    open.params
+  )
+
+  const r = rows[0]
+  return {
+    avgHours:      r.avg_hours    !== null ? Number(r.avg_hours) : null,
+    medianHours:   r.median_hours !== null ? Number(r.median_hours) : null,
+    resolvedCount: parseInt(r.resolved_count, 10),
+    openCount:     parseInt(openRows[0].open_count, 10),
+  }
+}
+
+module.exports = { getInspectionRows, getMttrHours, getMttrTopMachines, getTopProblematic, buildSummary, groupByLocation, getDailyBreakdown, getCardReaderStats, getDispenserStats, getMachineStates, getIncidenciaResolution }

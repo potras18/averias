@@ -115,7 +115,12 @@ module.exports = async function machinesRoutes(app) {
       },
     },
   }, async (req) => {
-    const { location_id, include_inactive, inspection_date } = req.query
+    let { location_id, include_inactive, inspection_date } = req.query
+    // A reportes (client) user only ever sees active machines of their own location.
+    if (req.user.role === 'reportes') {
+      location_id = req.user.location_id
+      include_inactive = undefined
+    }
     const where = []
     const params = []
     let i = 1

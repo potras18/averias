@@ -20,7 +20,7 @@ module.exports = async function authRoutes(app) {
   }, async (req, reply) => {
     const { email, password } = req.body
     const { rows } = await app.db.query(
-      'SELECT id, name, email, password_hash, role FROM users WHERE email = $1 AND active = true',
+      'SELECT id, name, email, password_hash, role, location_id FROM users WHERE email = $1 AND active = true',
       [email]
     )
     if (!rows.length || !(await bcrypt.compare(password, rows[0].password_hash))) {
@@ -28,7 +28,7 @@ module.exports = async function authRoutes(app) {
     }
     const user = rows[0]
     const accessToken = app.jwt.sign(
-      { sub: user.id, name: user.name, role: user.role },
+      { sub: user.id, name: user.name, role: user.role, location_id: user.location_id },
       { expiresIn: '8h' }
     )
     const refreshToken = randomUUID()
@@ -57,7 +57,7 @@ module.exports = async function authRoutes(app) {
   }, async (req, reply) => {
     const hash = createHash('sha256').update(req.body.refreshToken).digest('hex')
     const { rows } = await app.db.query(
-      `SELECT rt.user_id, u.name, u.role, u.active
+      `SELECT rt.user_id, u.name, u.role, u.active, u.location_id
        FROM refresh_tokens rt
        JOIN users u ON u.id = rt.user_id
        WHERE rt.token_hash = $1 AND rt.expires_at > now()`,
@@ -65,8 +65,8 @@ module.exports = async function authRoutes(app) {
     )
     if (!rows.length) return reply.code(401).send({ error: 'Invalid or expired refresh token' })
     if (!rows[0].active) return reply.code(401).send({ error: 'Invalid or expired refresh token' })
-    const { user_id, name, role } = rows[0]
-    const accessToken = app.jwt.sign({ sub: user_id, name, role }, { expiresIn: '8h' })
+    const { user_id, name, role, location_id } = rows[0]
+    const accessToken = app.jwt.sign({ sub: user_id, name, role, location_id }, { expiresIn: '8h' })
     const newRefreshToken = randomUUID()
     const newHash = createHash('sha256').update(newRefreshToken).digest('hex')
     await app.db.query('BEGIN')
