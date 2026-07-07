@@ -22,12 +22,17 @@ import 'widgets/web_shell.dart';
 final _storage = StorageService();
 final _api = ApiClient(_storage);
 
-WebShell _shell({required String route, required Widget child}) => WebShell(
-      currentRoute: route,
-      api: _api,
-      storage: _storage,
-      child: child,
-    );
+/// Maps the current location to the sidebar section it belongs to, so detail
+/// and form sub-routes keep their parent nav item highlighted.
+String _sectionFor(String location) {
+  if (location.startsWith('/history')) return '/history';
+  if (location.startsWith('/reports')) return '/reports';
+  if (location.startsWith('/stats')) return '/stats';
+  if (location.startsWith('/repuestos')) return '/repuestos';
+  if (location.startsWith('/admin')) return '/admin';
+  if (location.startsWith('/scan')) return '/scan';
+  return '/machines';
+}
 
 final _router = GoRouter(
   initialLocation: '/login',
@@ -40,112 +45,90 @@ final _router = GoRouter(
   },
   routes: [
     GoRoute(path: '/login', builder: (_, __) => LoginScreen(api: _api, storage: _storage)),
-    GoRoute(
-      path: '/machines',
-      builder: (_, state) => _shell(
-        route: '/machines',
-        child: MachineListScreen(
-          api: _api,
-          storage: _storage,
-          preselectedId: state.uri.queryParameters['selected'],
-        ),
+    // The shell (desktop sidebar + content) is built once and persists across
+    // navigations, so only the content swaps — the menu stays fixed.
+    ShellRoute(
+      builder: (context, state, child) => WebShell(
+        currentRoute: _sectionFor(state.uri.path),
+        api: _api,
+        storage: _storage,
+        child: child,
       ),
-    ),
-    GoRoute(
-      path: '/machines/:id',
-      builder: (_, state) => _shell(
-        route: '/machines',
-        child: MachineDetailScreen(
-          api: _api,
-          storage: _storage,
-          machineId: state.pathParameters['id']!,
+      routes: [
+        GoRoute(
+          path: '/machines',
+          builder: (_, state) => MachineListScreen(
+            api: _api,
+            storage: _storage,
+            preselectedId: state.uri.queryParameters['selected'],
+          ),
         ),
-      ),
-    ),
-    GoRoute(
-      path: '/history',
-      builder: (_, state) => _shell(
-        route: '/history',
-        child: MachineHistoryScreen(
-          api: _api,
-          preselectedId: state.uri.queryParameters['selected'],
+        GoRoute(
+          path: '/machines/:id',
+          builder: (_, state) => MachineDetailScreen(
+            api: _api,
+            storage: _storage,
+            machineId: state.pathParameters['id']!,
+          ),
         ),
-      ),
-    ),
-    GoRoute(
-      path: '/history/:id',
-      builder: (_, state) => _shell(
-        route: '/history',
-        child: MachineHistoryDetailScreen(
-          api: _api,
-          machineId: state.pathParameters['id']!,
+        GoRoute(
+          path: '/history',
+          builder: (_, state) => MachineHistoryScreen(
+            api: _api,
+            preselectedId: state.uri.queryParameters['selected'],
+          ),
         ),
-      ),
-    ),
-    GoRoute(
-      path: '/machines/:id/inspect',
-      builder: (_, state) {
-        final extra = state.extra as Map<String, dynamic>? ?? {};
-        return _shell(
-          route: '/machines',
-          child: InspectionFormScreen(
+        GoRoute(
+          path: '/history/:id',
+          builder: (_, state) => MachineHistoryDetailScreen(
             api: _api,
             machineId: state.pathParameters['id']!,
-            hasRedemptionTickets: extra['hasRedemptionTickets'] as bool? ?? false,
-            inspection: extra['inspection'] as dynamic,
           ),
-        );
-      },
-    ),
-    GoRoute(
-      path: '/scan',
-      builder: (_, __) => _shell(route: '/scan', child: QrScannerScreen(api: _api)),
-    ),
-    GoRoute(
-      path: '/reports',
-      builder: (_, __) => _shell(route: '/reports', child: ReportScreen(api: _api)),
-    ),
-    GoRoute(
-      path: '/stats',
-      builder: (_, __) => _shell(route: '/stats', child: StatsScreen(api: _api)),
-    ),
-    GoRoute(
-      path: '/admin',
-      builder: (_, __) =>
-          _shell(route: '/admin', child: AdminScreen(api: _api, storage: _storage)),
-    ),
-    GoRoute(
-      path: '/repuestos',
-      builder: (_, __) => _shell(
-        route: '/repuestos',
-        child: SparePartsScreen(api: _api, storage: _storage),
-      ),
-    ),
-    GoRoute(
-      path: '/repuestos/new',
-      builder: (_, state) {
-        final extra = state.extra as Map<String, dynamic>? ?? {};
-        return _shell(
-          route: '/repuestos',
-          child: SparePartFormScreen(
-            api: _api,
-            preselectedMachineId: extra['machineId'] as String?,
-          ),
-        );
-      },
-    ),
-    GoRoute(
-      path: '/repuestos/:id/edit',
-      builder: (_, state) {
-        final extra = state.extra as Map<String, dynamic>? ?? {};
-        return _shell(
-          route: '/repuestos',
-          child: SparePartFormScreen(
-            api: _api,
-            sparePart: extra['sparePart'] as SparePart?,
-          ),
-        );
-      },
+        ),
+        GoRoute(
+          path: '/machines/:id/inspect',
+          builder: (_, state) {
+            final extra = state.extra as Map<String, dynamic>? ?? {};
+            return InspectionFormScreen(
+              api: _api,
+              machineId: state.pathParameters['id']!,
+              hasRedemptionTickets: extra['hasRedemptionTickets'] as bool? ?? false,
+              inspection: extra['inspection'] as dynamic,
+            );
+          },
+        ),
+        GoRoute(path: '/scan', builder: (_, __) => QrScannerScreen(api: _api)),
+        GoRoute(path: '/reports', builder: (_, __) => ReportScreen(api: _api)),
+        GoRoute(path: '/stats', builder: (_, __) => StatsScreen(api: _api)),
+        GoRoute(
+          path: '/admin',
+          builder: (_, __) => AdminScreen(api: _api, storage: _storage),
+        ),
+        GoRoute(
+          path: '/repuestos',
+          builder: (_, __) => SparePartsScreen(api: _api, storage: _storage),
+        ),
+        GoRoute(
+          path: '/repuestos/new',
+          builder: (_, state) {
+            final extra = state.extra as Map<String, dynamic>? ?? {};
+            return SparePartFormScreen(
+              api: _api,
+              preselectedMachineId: extra['machineId'] as String?,
+            );
+          },
+        ),
+        GoRoute(
+          path: '/repuestos/:id/edit',
+          builder: (_, state) {
+            final extra = state.extra as Map<String, dynamic>? ?? {};
+            return SparePartFormScreen(
+              api: _api,
+              sparePart: extra['sparePart'] as SparePart?,
+            );
+          },
+        ),
+      ],
     ),
   ],
 );
