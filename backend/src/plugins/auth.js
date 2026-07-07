@@ -21,4 +21,12 @@ module.exports = fp(async function authPlugin(app) {
       return reply.code(403).send({ error: 'Forbidden' })
     }
   })
+  // Factory: preHandler that allows only the given roles.
+  app.decorate('requireRole', function (...roles) {
+    return async function (request, reply) {
+      if (!roles.includes(request.user.role)) {
+        return reply.code(403).send({ error: 'Forbidden' })
+      }
+    }
+  })
 })

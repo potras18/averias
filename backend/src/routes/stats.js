@@ -7,7 +7,7 @@ const { decrypt }        = require('../email/crypto')
 const { renderEmailTemplate } = require('../email/template')
 const {
   getInspectionRows, getMttrHours, getMttrTopMachines, getTopProblematic, buildSummary,
-  getDailyBreakdown, getCardReaderStats, getDispenserStats,
+  getDailyBreakdown, getCardReaderStats, getDispenserStats, getIncidenciaResolution,
 } = require('../reports/queries')
 
 module.exports = async function statsRoutes(app) {
@@ -22,7 +22,7 @@ module.exports = async function statsRoutes(app) {
   }
 
   async function buildStatsData(db, filters) {
-    const [rows, mttrStats, mttrTopMachines, topProblematic, dailyBreakdown, cardReaderStats, dispenserStats] =
+    const [rows, mttrStats, mttrTopMachines, topProblematic, dailyBreakdown, cardReaderStats, dispenserStats, incidenciaResolution] =
       await Promise.all([
         getInspectionRows(db, filters),
         getMttrHours(db, filters),
@@ -31,9 +31,11 @@ module.exports = async function statsRoutes(app) {
         getDailyBreakdown(db, filters),
         getCardReaderStats(db, filters),
         getDispenserStats(db, filters),
+        getIncidenciaResolution(db, filters),
       ])
     const summary = buildSummary(rows)
     return {
+      incidenciaResolution,
       mttrHours: mttrStats.mean,
       mttrMedianHours: mttrStats.median,
       mttrTopMachines,
@@ -66,6 +68,10 @@ module.exports = async function statsRoutes(app) {
       daily_breakdown:     data.dailyBreakdown,
       card_reader_stats:   data.cardReaderStats,
       dispenser_stats:     data.dispenserStats,
+      avg_resolution_hours:    data.incidenciaResolution.avgHours,
+      median_resolution_hours: data.incidenciaResolution.medianHours,
+      resolved_incidencias:    data.incidenciaResolution.resolvedCount,
+      open_incidencias:        data.incidenciaResolution.openCount,
     })
   })
 

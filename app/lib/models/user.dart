@@ -4,6 +4,7 @@ class User {
   final String email;
   final String role;
   final bool active;
+  final String? locationId;
 
   const User({
     required this.id,
@@ -11,6 +12,7 @@ class User {
     required this.email,
     required this.role,
     this.active = true,
+    this.locationId,
   });
 
   factory User.fromJson(Map<String, dynamic> json) => User(
@@ -19,5 +21,6 @@ class User {
     email: json['email'] as String,
     role: json['role'] as String? ?? 'technician',
     active: json['active'] as bool? ?? true,
+    locationId: json['location_id'] as String?,
   );
 }

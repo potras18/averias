@@ -14,6 +14,7 @@ const statsRoutes = require('./routes/stats')
 const usersRoutes = require('./routes/users')
 const repuestosRoutes = require('./routes/repuestos')
 const settingsRoutes = require('./routes/settings')
+const incidenciasRoutes = require('./routes/incidencias')
 
 function buildApp(opts = {}) {
   const app = Fastify({ logger: opts.logger ?? false })
@@ -33,6 +34,7 @@ function buildApp(opts = {}) {
   app.register(usersRoutes, { prefix: '/users' })
   app.register(repuestosRoutes, { prefix: '/repuestos' })
   app.register(settingsRoutes, { prefix: '/settings' })
+  app.register(incidenciasRoutes, { prefix: '/incidencias' })
   app.setErrorHandler((error, request, reply) => {
     request.log.error(error)
     const status = error.statusCode ?? 500

@@ -55,7 +55,9 @@ class _LoginScreenState extends State<LoginScreen> {
     final enabled = await widget.storage.getBiometricEnabled();
     if (!mounted || token == null || !enabled) return;
     final ok = await _biometric.authenticate();
-    if (mounted && ok) context.go('/machines');
+    if (!ok) return;
+    final role = await widget.storage.getRole();
+    if (mounted) context.go(role == 'reportes' ? '/incidencia' : '/machines');
   }
 
   Future<void> _submit() async {
@@ -65,7 +67,8 @@ class _LoginScreenState extends State<LoginScreen> {
       await _auth.login(_emailCtrl.text.trim(), _passCtrl.text);
       if (mounted) setState(() { _loading = false; });
       await _offerBiometric();
-      if (mounted) context.go('/machines');
+      final role = await widget.storage.getRole();
+      if (mounted) context.go(role == 'reportes' ? '/incidencia' : '/machines');
     } catch (e) {
       setState(() { _error = _loginErrorMessage(e); });
     } finally {

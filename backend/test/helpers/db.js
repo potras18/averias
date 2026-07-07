@@ -6,7 +6,7 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 
 async function resetDb() {
   await pool.query(
-    'TRUNCATE refresh_tokens, ticket_checks, spare_parts, inspections, machines, locations RESTART IDENTITY CASCADE'
+    'TRUNCATE refresh_tokens, ticket_checks, spare_parts, incidencias, inspections, machines, locations RESTART IDENTITY CASCADE'
   )
   await pool.query(`
     UPDATE settings SET value = CASE
@@ -44,13 +44,13 @@ async function seedSettings(overrides = {}) {
 }
 
 
-async function seedUser({ name = 'Tech User', email = 'tech@example.com', password = 'secret123', role, active = true } = {}) {
+async function seedUser({ name = 'Tech User', email = 'tech@example.com', password = 'secret123', role, active = true, locationId = null } = {}) {
   const hash = await bcrypt.hash(password, 12)
   const { rows } = await pool.query(
-    `INSERT INTO users (name, email, password_hash, role, active) VALUES ($1, $2, $3, $4, $5)
-     ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, active = EXCLUDED.active
-     RETURNING id, name, email, role, active`,
-    [name, email, hash, role ?? 'technician', active]
+    `INSERT INTO users (name, email, password_hash, role, active, location_id) VALUES ($1, $2, $3, $4, $5, $6)
+     ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, active = EXCLUDED.active, location_id = EXCLUDED.location_id
+     RETURNING id, name, email, role, active, location_id`,
+    [name, email, hash, role ?? 'technician', active, locationId]
   )
   return { ...rows[0], password }
 }

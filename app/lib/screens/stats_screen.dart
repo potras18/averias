@@ -552,6 +552,49 @@ class _StatsScreenState extends State<StatsScreen> {
     );
   }
 
+  Widget _buildIncidenciasCard() {
+    final avg = _stats!.avgResolutionHours;
+    final median = _stats!.medianResolutionHours;
+    return Row(
+      children: [
+        Expanded(
+          child: _MetricCard(
+            title: 'Resolución de incidencias',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  avg != null ? '${avg.toStringAsFixed(1)} h' : '—',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                if (median != null)
+                  Text(
+                    'Mediana: ${median.toStringAsFixed(1)} h',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                Text(
+                  '${_stats!.resolvedIncidencias} resueltas',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _MetricCard(
+            title: 'Incidencias abiertas',
+            child: Text(
+              '${_stats!.openIncidencias}',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildCharts(bool isDesktop) {
     if (isDesktop) {
       return Column(
@@ -637,6 +680,8 @@ class _StatsScreenState extends State<StatsScreen> {
             if (_stats != null) ...[
               const SizedBox(height: 8),
               _buildSummaryRow(),
+              const SizedBox(height: 12),
+              _buildIncidenciasCard(),
               const SizedBox(height: 12),
               _buildCharts(isDesktop),
               const SizedBox(height: 20),
