@@ -97,6 +97,10 @@ class StatsResult {
   final List<DailyBreakdown> dailyBreakdown;
   final CardReaderStats cardReaderStats;
   final DispenserStats dispenserStats;
+  final double? avgResolutionHours;
+  final double? medianResolutionHours;
+  final int openIncidencias;
+  final int resolvedIncidencias;
 
   const StatsResult({
     required this.mttrHours,
@@ -110,6 +114,10 @@ class StatsResult {
     required this.dailyBreakdown,
     required this.cardReaderStats,
     required this.dispenserStats,
+    this.avgResolutionHours,
+    this.medianResolutionHours,
+    this.openIncidencias = 0,
+    this.resolvedIncidencias = 0,
   });
 
   factory StatsResult.fromJson(Map<String, dynamic> json) => StatsResult(
@@ -132,5 +140,9 @@ class StatsResult {
         json['card_reader_stats'] as Map<String, dynamic>),
     dispenserStats:  DispenserStats.fromJson(
         json['dispenser_stats'] as Map<String, dynamic>),
+    avgResolutionHours:    (json['avg_resolution_hours'] as num?)?.toDouble(),
+    medianResolutionHours: (json['median_resolution_hours'] as num?)?.toDouble(),
+    openIncidencias:       json['open_incidencias'] as int? ?? 0,
+    resolvedIncidencias:   json['resolved_incidencias'] as int? ?? 0,
   );
 }

@@ -8,6 +8,7 @@ import '../models/stats.dart';
 import '../models/user.dart';
 import '../models/settings.dart';
 import '../models/spare_part.dart';
+import '../models/incidencia.dart';
 import 'storage_service.dart';
 
 class ApiClient {
@@ -303,12 +304,14 @@ class ApiClient {
     required String email,
     required String role,
     required String password,
+    String? locationId,
   }) async {
     final res = await _dio.post('/users', data: {
       'name': name,
       'email': email,
       'role': role,
       'password': password,
+      if (locationId != null) 'location_id': locationId,
     });
     return User.fromJson(res.data as Map<String, dynamic>);
   }
@@ -318,11 +321,13 @@ class ApiClient {
     String? name,
     String? email,
     String? password,
+    String? locationId,
   }) async {
     final res = await _dio.patch('/users/$id', data: {
       if (name != null) 'name': name,
       if (email != null) 'email': email,
       if (password != null && password.isNotEmpty) 'password': password,
+      if (locationId != null) 'location_id': locationId,
     });
     return User.fromJson(res.data as Map<String, dynamic>);
   }
@@ -382,5 +387,41 @@ class ApiClient {
 
   Future<void> deleteSparePart(String id) async {
     await _dio.delete('/repuestos/$id');
+  }
+
+  // Incidencias
+  Future<Incidencia> createIncidencia({
+    required String machineId,
+    String? machineProblemType,
+    String? cardReaderProblemType,
+    String? comment,
+  }) async {
+    final res = await _dio.post('/incidencias', data: {
+      'machine_id': machineId,
+      if (machineProblemType != null) 'machine_problem_type': machineProblemType,
+      if (cardReaderProblemType != null) 'card_reader_problem_type': cardReaderProblemType,
+      if (comment != null && comment.isNotEmpty) 'comment': comment,
+    });
+    return Incidencia.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<List<Incidencia>> getIncidencias({String? status, String? locationId, String? from, String? to}) async {
+    final res = await _dio.get('/incidencias', queryParameters: {
+      if (status != null) 'status': status,
+      if (locationId != null) 'location_id': locationId,
+      if (from != null) 'from': from,
+      if (to != null) 'to': to,
+    });
+    return (res.data as List)
+        .map((j) => Incidencia.fromJson(j as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<Incidencia> resolveIncidencia(String id, {required String resolution, String? comment}) async {
+    final res = await _dio.patch('/incidencias/$id/resolve', data: {
+      'resolution': resolution,
+      if (comment != null && comment.isNotEmpty) 'comment': comment,
+    });
+    return Incidencia.fromJson(res.data as Map<String, dynamic>);
   }
 }

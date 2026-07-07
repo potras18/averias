@@ -398,6 +398,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     final emailCtrl = TextEditingController(text: user?.email ?? '');
     final passCtrl  = TextEditingController();
     String selectedRole = user?.role ?? 'technician';
+    String? selectedLocationId = user?.locationId;
     final formKey = GlobalKey<FormState>();
 
     try {
@@ -448,10 +449,24 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                           value: 'technician', child: Text('Técnico')),
                       DropdownMenuItem(
                           value: 'admin', child: Text('Administrador')),
+                      DropdownMenuItem(
+                          value: 'reportes', child: Text('Cliente (avisos)')),
                     ],
                     onChanged: (v) =>
                         setDialogState(() { selectedRole = v!; }),
                   ),
+                  if (selectedRole == 'reportes')
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedLocationId,
+                      decoration: const InputDecoration(labelText: 'Ubicación *'),
+                      items: _locations
+                          .map((l) => DropdownMenuItem(value: l.id, child: Text(l.name)))
+                          .toList(),
+                      validator: (v) => (selectedRole == 'reportes' && (v == null || v.isEmpty))
+                          ? 'Requerido'
+                          : null,
+                      onChanged: (v) => setDialogState(() { selectedLocationId = v; }),
+                    ),
                 ],
               ),
             ),
@@ -480,12 +495,14 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
       final password = passCtrl.text;
 
       try {
+        final locationId = selectedRole == 'reportes' ? selectedLocationId : null;
         if (user == null) {
           await widget.api.createUser(
             name: name,
             email: email,
             role: selectedRole,
             password: password,
+            locationId: locationId,
           );
         } else {
           await widget.api.updateUser(
@@ -493,8 +510,10 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
             name: name,
             email: email,
             password: password.isEmpty ? null : password,
+            locationId: locationId,
           );
-          if (selectedRole != user.role) {
+          // /users/:id/role only supports admin/technician; reportes is set at creation.
+          if (selectedRole != user.role && selectedRole != 'reportes') {
             await widget.api.updateUserRole(user.id, selectedRole);
           }
         }

@@ -14,6 +14,8 @@ import 'screens/stats_screen.dart';
 import 'screens/admin_screen.dart';
 import 'screens/spare_parts_screen.dart';
 import 'screens/spare_part_form_screen.dart';
+import 'screens/incidencia_form_screen.dart';
+import 'screens/incidencias_screen.dart';
 import 'models/spare_part.dart';
 import 'services/storage_service.dart';
 import 'services/api_client.dart';
@@ -29,6 +31,7 @@ String _sectionFor(String location) {
   if (location.startsWith('/reports')) return '/reports';
   if (location.startsWith('/stats')) return '/stats';
   if (location.startsWith('/repuestos')) return '/repuestos';
+  if (location.startsWith('/incidencias')) return '/incidencias';
   if (location.startsWith('/admin')) return '/admin';
   if (location.startsWith('/scan')) return '/scan';
   return '/machines';
@@ -43,13 +46,19 @@ final _router = GoRouter(
   initialLocation: '/login',
   redirect: (context, state) async {
     final token = await _storage.getAccessToken();
-    if (token == null && !state.matchedLocation.startsWith('/login')) {
-      return '/login';
-    }
+    final loc = state.matchedLocation;
+    final atLogin = loc.startsWith('/login');
+    if (token == null) return atLogin ? null : '/login';
+    // Client (reportes) users are confined to the single report page.
+    final role = await _storage.getRole();
+    if (role == 'reportes') return loc == '/incidencia' ? null : '/incidencia';
+    // Staff never sit on the login or client page while authenticated.
+    if (atLogin || loc == '/incidencia') return '/machines';
     return null;
   },
   routes: [
     GoRoute(path: '/login', builder: (_, __) => LoginScreen(api: _api, storage: _storage)),
+    GoRoute(path: '/incidencia', builder: (_, __) => IncidenciaFormScreen(api: _api, storage: _storage)),
     // The shell (desktop sidebar + content) is built once and persists across
     // navigations, so only the content swaps — the menu stays fixed.
     ShellRoute(
@@ -138,6 +147,10 @@ final _router = GoRouter(
           path: '/repuestos',
           pageBuilder: (_, state) =>
               _noTransition(state, SparePartsScreen(api: _api, storage: _storage)),
+        ),
+        GoRoute(
+          path: '/incidencias',
+          pageBuilder: (_, state) => _noTransition(state, IncidenciasScreen(api: _api)),
         ),
         GoRoute(
           path: '/repuestos/new',
