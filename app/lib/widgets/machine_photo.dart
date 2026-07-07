@@ -137,8 +137,8 @@ class _MachinePhotoState extends State<MachinePhoto> {
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: SizedBox(
-            height: 160,
-            width: double.infinity,
+            width: 150,
+            height: 200,
             child: widget.hasImage ? _thumbnail() : _placeholder(),
           ),
         ),
@@ -167,6 +167,7 @@ class _MachinePhotoState extends State<MachinePhoto> {
 
   Widget _placeholder() => Container(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        alignment: Alignment.center,
         child: Icon(
           Icons.photo_camera_back_outlined,
           size: 48,
