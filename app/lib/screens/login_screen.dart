@@ -29,6 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _loading = false;
+  bool _obscure = true;
   String? _error;
 
   late final AuthService _auth;
@@ -141,8 +142,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _passCtrl,
-                    decoration: const InputDecoration(labelText: 'Contraseña'),
-                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: 'Contraseña',
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
+                        tooltip: _obscure ? 'Mostrar contraseña' : 'Ocultar contraseña',
+                        onPressed: () => setState(() => _obscure = !_obscure),
+                      ),
+                    ),
+                    obscureText: _obscure,
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => _loading ? null : _submit(),
                     validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null,

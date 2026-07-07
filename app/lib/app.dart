@@ -34,6 +34,11 @@ String _sectionFor(String location) {
   return '/machines';
 }
 
+/// Content swaps with no transition animation — only the inner content changes,
+/// the shell stays put.
+Page<void> _noTransition(GoRouterState state, Widget child) =>
+    NoTransitionPage(key: state.pageKey, child: child);
+
 final _router = GoRouter(
   initialLocation: '/login',
   redirect: (context, state) async {
@@ -57,74 +62,106 @@ final _router = GoRouter(
       routes: [
         GoRoute(
           path: '/machines',
-          builder: (_, state) => MachineListScreen(
-            api: _api,
-            storage: _storage,
-            preselectedId: state.uri.queryParameters['selected'],
+          pageBuilder: (_, state) => _noTransition(
+            state,
+            MachineListScreen(
+              api: _api,
+              storage: _storage,
+              preselectedId: state.uri.queryParameters['selected'],
+            ),
           ),
         ),
         GoRoute(
           path: '/machines/:id',
-          builder: (_, state) => MachineDetailScreen(
-            api: _api,
-            storage: _storage,
-            machineId: state.pathParameters['id']!,
+          pageBuilder: (_, state) => _noTransition(
+            state,
+            MachineDetailScreen(
+              api: _api,
+              storage: _storage,
+              machineId: state.pathParameters['id']!,
+            ),
           ),
         ),
         GoRoute(
           path: '/history',
-          builder: (_, state) => MachineHistoryScreen(
-            api: _api,
-            preselectedId: state.uri.queryParameters['selected'],
+          pageBuilder: (_, state) => _noTransition(
+            state,
+            MachineHistoryScreen(
+              api: _api,
+              preselectedId: state.uri.queryParameters['selected'],
+            ),
           ),
         ),
         GoRoute(
           path: '/history/:id',
-          builder: (_, state) => MachineHistoryDetailScreen(
-            api: _api,
-            machineId: state.pathParameters['id']!,
+          pageBuilder: (_, state) => _noTransition(
+            state,
+            MachineHistoryDetailScreen(
+              api: _api,
+              machineId: state.pathParameters['id']!,
+            ),
           ),
         ),
         GoRoute(
           path: '/machines/:id/inspect',
-          builder: (_, state) {
+          pageBuilder: (_, state) {
             final extra = state.extra as Map<String, dynamic>? ?? {};
-            return InspectionFormScreen(
-              api: _api,
-              machineId: state.pathParameters['id']!,
-              hasRedemptionTickets: extra['hasRedemptionTickets'] as bool? ?? false,
-              inspection: extra['inspection'] as dynamic,
+            return _noTransition(
+              state,
+              InspectionFormScreen(
+                api: _api,
+                machineId: state.pathParameters['id']!,
+                hasRedemptionTickets: extra['hasRedemptionTickets'] as bool? ?? false,
+                inspection: extra['inspection'] as dynamic,
+              ),
             );
           },
         ),
-        GoRoute(path: '/scan', builder: (_, __) => QrScannerScreen(api: _api)),
-        GoRoute(path: '/reports', builder: (_, __) => ReportScreen(api: _api)),
-        GoRoute(path: '/stats', builder: (_, __) => StatsScreen(api: _api)),
+        GoRoute(
+          path: '/scan',
+          pageBuilder: (_, state) => _noTransition(state, QrScannerScreen(api: _api)),
+        ),
+        GoRoute(
+          path: '/reports',
+          pageBuilder: (_, state) => _noTransition(state, ReportScreen(api: _api)),
+        ),
+        GoRoute(
+          path: '/stats',
+          pageBuilder: (_, state) => _noTransition(state, StatsScreen(api: _api)),
+        ),
         GoRoute(
           path: '/admin',
-          builder: (_, __) => AdminScreen(api: _api, storage: _storage),
+          pageBuilder: (_, state) =>
+              _noTransition(state, AdminScreen(api: _api, storage: _storage)),
         ),
         GoRoute(
           path: '/repuestos',
-          builder: (_, __) => SparePartsScreen(api: _api, storage: _storage),
+          pageBuilder: (_, state) =>
+              _noTransition(state, SparePartsScreen(api: _api, storage: _storage)),
         ),
         GoRoute(
           path: '/repuestos/new',
-          builder: (_, state) {
+          pageBuilder: (_, state) {
             final extra = state.extra as Map<String, dynamic>? ?? {};
-            return SparePartFormScreen(
-              api: _api,
-              preselectedMachineId: extra['machineId'] as String?,
+            return _noTransition(
+              state,
+              SparePartFormScreen(
+                api: _api,
+                preselectedMachineId: extra['machineId'] as String?,
+              ),
             );
           },
         ),
         GoRoute(
           path: '/repuestos/:id/edit',
-          builder: (_, state) {
+          pageBuilder: (_, state) {
             final extra = state.extra as Map<String, dynamic>? ?? {};
-            return SparePartFormScreen(
-              api: _api,
-              sparePart: extra['sparePart'] as SparePart?,
+            return _noTransition(
+              state,
+              SparePartFormScreen(
+                api: _api,
+                sparePart: extra['sparePart'] as SparePart?,
+              ),
             );
           },
         ),
