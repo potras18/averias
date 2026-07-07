@@ -4,8 +4,9 @@
 
 | Rol | Permisos |
 |-----|----------|
-| **Técnico** | Consultar máquinas, crear inspecciones, ver informes y estadísticas, gestionar repuestos |
+| **Técnico** | Consultar máquinas, crear inspecciones, ver informes y estadísticas, gestionar repuestos, resolver incidencias |
 | **Administrador** | Todo lo anterior + gestionar usuarios, localizaciones y máquinas, eliminar repuestos |
+| **Cliente (avisos)** | Rol limitado para el cliente: solo puede reportar averías (incidencias) de las máquinas de **su** ubicación, desde una única pantalla. No accede al resto de la aplicación. Se crea un usuario cliente por cada ubicación. |
 
 ---
 
@@ -172,8 +173,26 @@ Panel con métricas agregadas del periodo seleccionado.
 - Top 5 máquinas más problemáticas.
 - Estadísticas del lector de tarjetas (% OK / fallo, tipo de fallo más frecuente).
 - Estadísticas del dispensador de tickets (% revisado, niveles lleno / bajo / vacío).
+- **Resolución de incidencias:** tiempo medio y mediana (horas) desde que el cliente abre un aviso hasta que se resuelve, y número de incidencias abiertas.
 
 También permite generar un PDF de estadísticas o enviarlo por email a los destinatarios configurados en Ajustes.
+
+---
+
+### Incidencias (avisos de avería)
+
+Flujo para que el **cliente** avise de averías y el personal las resuelva. No confundir con "Informes" (que es la generación de PDF).
+
+**Pantalla del cliente (rol Cliente/avisos):** al iniciar sesión, un usuario cliente solo ve una pantalla para reportar una avería:
+- Elige una de **sus** máquinas (solo las de su ubicación).
+- Indica el problema de la **máquina** (No enciende / No acepta pago / Problema de pantalla / Ruido o problema mecánico / No entrega premio / Otro) y/o del **lector de tarjetas** (No lee / Error de comunicación / Daño físico / Otro). Al menos uno.
+- Comentario opcional.
+- Al enviar, la máquina pasa automáticamente a **fuera de servicio**.
+
+**Pantalla del personal ("Incidencias" en el menú):** técnicos y administradores ven la lista de avisos:
+- Filtro **Abiertas / Resueltas**.
+- Cada aviso muestra máquina, ubicación, tipos de problema, comentario y fecha.
+- Botón **Resolver** → elegir el resultado: **Funcionando** (la máquina vuelve a operativa) o **En reparación**. Esto registra la inspección correspondiente y marca el aviso como resuelto con su fecha, alimentando las estadísticas de tiempo de resolución.
 
 ---
 
@@ -208,9 +227,10 @@ Para no dar de alta las máquinas una a una, se puede subir un CSV. Hay una plan
 
 #### Usuarios
 - Listar usuarios activos e inactivos.
-- **Crear usuario:** nombre, email, contraseña (mín. 6 caracteres), rol (admin / técnico).
-- **Editar usuario:** nombre, email, contraseña (opcional al editar).
-- **Cambiar rol:** admin ↔ técnico. Bloquea si solo queda un admin activo.
+- **Crear usuario:** nombre, email, contraseña (mín. 6 caracteres), rol (admin / técnico / cliente).
+- **Crear usuario Cliente (avisos):** al elegir el rol "Cliente (avisos)" hay que asignarle una **ubicación** (obligatoria). Ese usuario solo podrá reportar averías de las máquinas de esa ubicación. Crea un usuario cliente por cada ubicación.
+- **Editar usuario:** nombre, email, contraseña (opcional al editar); en clientes, también su ubicación.
+- **Cambiar rol:** admin ↔ técnico. Bloquea si solo queda un admin activo. (El rol cliente se asigna al crear el usuario.)
 - **Desactivar cuenta:** la cuenta pasa a inactiva (no se elimina). Bloquea si es tu propia cuenta o el último admin activo.
 
 > **Regla de seguridad:** siempre debe existir al menos un usuario administrador activo. El sistema impide cualquier acción que lo viole.
