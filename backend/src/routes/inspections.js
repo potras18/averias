@@ -205,15 +205,35 @@ module.exports = async function inspectionsRoutes(app) {
       params: { type: 'object', properties: { id: { type: 'string' } } },
     },
   }, async (req, reply) => {
+    const { id } = req.params
+    const client = await app.db.connect()
     try {
-      const { rowCount } = await app.db.query('DELETE FROM inspections WHERE id = $1', [req.params.id])
-      if (rowCount === 0) return reply.code(404).send({ error: 'Inspección no encontrada' })
+      await client.query('BEGIN')
+      // Una incidencia ya borrada (inactiva) no debe seguir bloqueando el borrado
+      // físico de la inspección que enlazaba — solo una incidencia activa lo bloquea.
+      await client.query(
+        'UPDATE incidencias SET open_inspection_id = NULL WHERE open_inspection_id = $1 AND active = false',
+        [id]
+      )
+      await client.query(
+        'UPDATE incidencias SET resolve_inspection_id = NULL WHERE resolve_inspection_id = $1 AND active = false',
+        [id]
+      )
+      const { rowCount } = await client.query('DELETE FROM inspections WHERE id = $1', [id])
+      if (rowCount === 0) {
+        await client.query('ROLLBACK')
+        return reply.code(404).send({ error: 'Inspección no encontrada' })
+      }
+      await client.query('COMMIT')
       return { ok: true }
     } catch (err) {
+      await client.query('ROLLBACK')
       if (err.code === '23503') {
         return reply.code(409).send({ error: 'No se puede borrar: esta inspección está vinculada a una incidencia' })
       }
       throw err
+    } finally {
+      client.release()
     }
   })
 }

@@ -244,3 +244,30 @@ test('DELETE /inspections/:id vinculada a una incidencia → 409', async () => {
   const res = await st.delete(`/inspections/${insp.id}`).set(authAdmin())
   expect(res.status).toBe(409)
 })
+
+test('DELETE /inspections/:id vinculada a una incidencia YA BORRADA (inactiva) → se puede borrar', async () => {
+  const insp = await seedInspection({ machineId: machine.id, technicianId: techUserId })
+  const { rows } = await pool.query(
+    `INSERT INTO incidencias (machine_id, reported_by, open_inspection_id)
+     VALUES ($1, $2, $3) RETURNING id`,
+    [machine.id, techUserId, insp.id]
+  )
+  await pool.query('UPDATE incidencias SET active = false WHERE id = $1', [rows[0].id])
+
+  const res = await st.delete(`/inspections/${insp.id}`).set(authAdmin())
+  expect(res.status).toBe(200)
+  expect(res.body).toEqual({ ok: true })
+})
+
+test('DELETE /inspections/:id vinculada como resolve_inspection_id a una incidencia YA BORRADA → se puede borrar', async () => {
+  const insp = await seedInspection({ machineId: machine.id, technicianId: techUserId })
+  const { rows } = await pool.query(
+    `INSERT INTO incidencias (machine_id, reported_by, resolve_inspection_id, status)
+     VALUES ($1, $2, $3, 'resolved') RETURNING id`,
+    [machine.id, techUserId, insp.id]
+  )
+  await pool.query('UPDATE incidencias SET active = false WHERE id = $1', [rows[0].id])
+
+  const res = await st.delete(`/inspections/${insp.id}`).set(authAdmin())
+  expect(res.status).toBe(200)
+})
