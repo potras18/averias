@@ -97,6 +97,7 @@ final _router = GoRouter(
             state,
             MachineHistoryScreen(
               api: _api,
+              storage: _storage,
               preselectedId: state.uri.queryParameters['selected'],
             ),
           ),
@@ -107,6 +108,7 @@ final _router = GoRouter(
             state,
             MachineHistoryDetailScreen(
               api: _api,
+              storage: _storage,
               machineId: state.pathParameters['id']!,
             ),
           ),
