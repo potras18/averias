@@ -143,6 +143,11 @@ test('stats includes incidencia resolution counts', async () => {
   await st.patch(`/incidencias/${created.body.id}/resolve`).set(asTech()).send({ resolution: 'operative' })
   await st.post('/incidencias').set(asReportes()).send({ machine_id: machineA.id, machine_problem_type: 'pantalla' })
 
+  const deleted = await st.post('/incidencias').set(asReportes())
+    .send({ machine_id: machineA.id, machine_problem_type: 'mecanico' })
+  await st.patch(`/incidencias/${deleted.body.id}/resolve`).set(asTech()).send({ resolution: 'operative' })
+  await pool.query('UPDATE incidencias SET active = false WHERE id = $1', [deleted.body.id])
+
   const stats = await st.get('/stats').set(asTech())
   expect(stats.status).toBe(200)
   expect(stats.body.resolved_incidencias).toBe(1)
@@ -198,6 +203,7 @@ test('editar incidencia borrada → 404', async () => {
 test('admin borra una incidencia (soft delete)', async () => {
   const created = await st.post('/incidencias').set(asReportes())
     .send({ machine_id: machineA.id, machine_problem_type: 'otro' })
+  await st.patch(`/incidencias/${created.body.id}/resolve`).set(asAdmin()).send({ resolution: 'operative' })
 
   const res = await st.delete(`/incidencias/${created.body.id}`).set(asAdmin())
   expect(res.status).toBe(200)
@@ -217,7 +223,23 @@ test('technician no puede borrar una incidencia → 403', async () => {
 test('borrar dos veces → segunda vez 404', async () => {
   const created = await st.post('/incidencias').set(asReportes())
     .send({ machine_id: machineA.id, machine_problem_type: 'otro' })
+  await st.patch(`/incidencias/${created.body.id}/resolve`).set(asAdmin()).send({ resolution: 'operative' })
   await st.delete(`/incidencias/${created.body.id}`).set(asAdmin())
   const again = await st.delete(`/incidencias/${created.body.id}`).set(asAdmin())
   expect(again.status).toBe(404)
+})
+
+test('borrar incidencia abierta (sin resolver) → 409', async () => {
+  const created = await st.post('/incidencias').set(asReportes())
+    .send({ machine_id: machineA.id, machine_problem_type: 'otro' })
+  const res = await st.delete(`/incidencias/${created.body.id}`).set(asAdmin())
+  expect(res.status).toBe(409)
+})
+
+test('resolver incidencia borrada → 404', async () => {
+  const created = await st.post('/incidencias').set(asReportes())
+    .send({ machine_id: machineA.id, machine_problem_type: 'otro' })
+  await pool.query('UPDATE incidencias SET active = false WHERE id = $1', [created.body.id])
+  const res = await st.patch(`/incidencias/${created.body.id}/resolve`).set(asAdmin()).send({ resolution: 'operative' })
+  expect(res.status).toBe(404)
 })

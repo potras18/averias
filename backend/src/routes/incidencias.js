@@ -154,18 +154,21 @@ module.exports = async function incidenciasRoutes(app) {
     return fetchIncidencia(app.db, id)
   })
 
-  // DELETE /incidencias/:id — admin borra (soft delete) una incidencia.
+  // DELETE /incidencias/:id — admin borra (soft delete) una incidencia ya resuelta.
   app.delete('/:id', {
     preHandler: [app.authenticate, app.requireAdmin],
     schema: {
       params: { type: 'object', properties: { id: { type: 'string' } } },
     },
   }, async (req, reply) => {
-    const { rowCount } = await app.db.query(
-      'UPDATE incidencias SET active = false WHERE id = $1 AND active = true',
-      [req.params.id]
+    const { rows: existing } = await app.db.query(
+      'SELECT status FROM incidencias WHERE id = $1 AND active = true', [req.params.id]
     )
-    if (rowCount === 0) return reply.code(404).send({ error: 'Incidencia not found' })
+    if (!existing.length) return reply.code(404).send({ error: 'Incidencia not found' })
+    if (existing[0].status === 'open') {
+      return reply.code(409).send({ error: 'Cannot delete an open incidencia; resolve it first' })
+    }
+    await app.db.query('UPDATE incidencias SET active = false WHERE id = $1', [req.params.id])
     return { ok: true }
   })
 
@@ -188,7 +191,7 @@ module.exports = async function incidenciasRoutes(app) {
     const { id } = req.params
     const { resolution, comment } = req.body
     const { rows: existing } = await app.db.query(
-      'SELECT machine_id, status FROM incidencias WHERE id = $1', [id]
+      'SELECT machine_id, status FROM incidencias WHERE id = $1 AND active = true', [id]
     )
     if (!existing.length) return reply.code(404).send({ error: 'Incidencia not found' })
     if (existing[0].status === 'resolved') return reply.code(409).send({ error: 'Already resolved' })

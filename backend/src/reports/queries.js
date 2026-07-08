@@ -274,7 +274,7 @@ async function getMachineStates(db, { from, to, locationId }) {
 // Resolution-time stats for client incidencias (resolved_at - created_at), in hours.
 async function getIncidenciaResolution(db, { from, to, locationId }) {
   const build = (statusCond) => {
-    const conditions = [statusCond]
+    const conditions = [statusCond, 'i.active = true']
     const params = []
     let idx = 1
     if (from)       { conditions.push(`i.created_at >= $${idx++}`);      params.push(from) }
