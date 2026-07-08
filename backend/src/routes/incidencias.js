@@ -120,6 +120,40 @@ module.exports = async function incidenciasRoutes(app) {
     return rows
   })
 
+  // PATCH /incidencias/:id — admin edita los datos del reporte (no status/resolution).
+  app.patch('/:id', {
+    preHandler: [app.authenticate, app.requireAdmin],
+    schema: {
+      params: { type: 'object', properties: { id: { type: 'string' } } },
+      body: {
+        type: 'object',
+        properties: {
+          machine_problem_type:     { type: 'string', enum: MACHINE_PROBLEMS },
+          card_reader_problem_type: { type: 'string', enum: CARD_PROBLEMS },
+          comment:                  { type: 'string' },
+        },
+        additionalProperties: false,
+        minProperties: 1,
+      },
+    },
+  }, async (req, reply) => {
+    const { id } = req.params
+    const { machine_problem_type, card_reader_problem_type, comment } = req.body
+    const updates = []
+    const values = []
+    let i = 1
+    if (machine_problem_type     !== undefined) { updates.push(`machine_problem_type = $${i++}`);     values.push(machine_problem_type) }
+    if (card_reader_problem_type !== undefined) { updates.push(`card_reader_problem_type = $${i++}`);  values.push(card_reader_problem_type) }
+    if (comment                  !== undefined) { updates.push(`comment = $${i++}`);                   values.push(comment) }
+    values.push(id)
+    const { rowCount } = await app.db.query(
+      `UPDATE incidencias SET ${updates.join(', ')} WHERE id = $${i} AND active = true`,
+      values
+    )
+    if (rowCount === 0) return reply.code(404).send({ error: 'Incidencia not found' })
+    return fetchIncidencia(app.db, id)
+  })
+
   // PATCH /incidencias/:id/resolve — staff resolves; creates the resulting inspection.
   app.patch('/:id/resolve', {
     preHandler: [app.authenticate, app.requireRole('technician', 'admin')],

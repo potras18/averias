@@ -160,3 +160,37 @@ test('GET /incidencias no incluye incidencias inactivas', async () => {
   expect(list.status).toBe(200)
   expect(list.body.map((i) => i.id)).not.toContain(created.body.id)
 })
+
+test('admin edita machine_problem_type y comment de una incidencia', async () => {
+  const created = await st.post('/incidencias').set(asReportes())
+    .send({ machine_id: machineA.id, machine_problem_type: 'no_enciende', comment: 'Original' })
+
+  const res = await st.patch(`/incidencias/${created.body.id}`).set(asAdmin())
+    .send({ machine_problem_type: 'pantalla', comment: 'Corregido' })
+  expect(res.status).toBe(200)
+  expect(res.body.machine_problem_type).toBe('pantalla')
+  expect(res.body.comment).toBe('Corregido')
+})
+
+test('technician no puede editar una incidencia → 403', async () => {
+  const created = await st.post('/incidencias').set(asReportes())
+    .send({ machine_id: machineA.id, machine_problem_type: 'otro' })
+  const res = await st.patch(`/incidencias/${created.body.id}`).set(asTech())
+    .send({ comment: 'Intento' })
+  expect(res.status).toBe(403)
+})
+
+test('editar incidencia inexistente → 404', async () => {
+  const res = await st.patch('/incidencias/00000000-0000-0000-0000-000000000000').set(asAdmin())
+    .send({ comment: 'x' })
+  expect(res.status).toBe(404)
+})
+
+test('editar incidencia borrada → 404', async () => {
+  const created = await st.post('/incidencias').set(asReportes())
+    .send({ machine_id: machineA.id, machine_problem_type: 'otro' })
+  await pool.query('UPDATE incidencias SET active = false WHERE id = $1', [created.body.id])
+  const res = await st.patch(`/incidencias/${created.body.id}`).set(asAdmin())
+    .send({ comment: 'x' })
+  expect(res.status).toBe(404)
+})
