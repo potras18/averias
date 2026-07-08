@@ -42,6 +42,11 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
 
   Widget _buildError(BuildContext context, MobileScannerException error, Widget? child) {
     final isPermissionDenied = error.errorCode == MobileScannerErrorCode.permissionDenied;
+    final detail = error.errorDetails;
+    final detailText = [
+      if (detail?.code != null) 'code: ${detail!.code}',
+      if (detail?.message != null) detail!.message!,
+    ].join(' — ');
     return ColoredBox(
       color: Colors.black,
       child: Center(
@@ -59,6 +64,14 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                 style: const TextStyle(color: Colors.white),
                 textAlign: TextAlign.center,
               ),
+              if (detailText.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  detailText,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
+              ],
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () => _controller.start(),
