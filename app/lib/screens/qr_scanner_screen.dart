@@ -40,7 +40,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     }
   }
 
-  Widget _buildError(BuildContext context, MobileScannerException error, Widget? child) {
+  Widget _buildError(BuildContext context, MobileScannerException error) {
     final isPermissionDenied = error.errorCode == MobileScannerErrorCode.permissionDenied;
     final detail = error.errorDetails;
     final detailText = [
