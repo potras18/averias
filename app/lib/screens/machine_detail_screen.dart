@@ -1,6 +1,7 @@
 // averias/app/lib/screens/machine_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dio/dio.dart';
 import '../models/machine.dart';
 import '../models/inspection.dart';
 import '../models/spare_part.dart';
@@ -10,6 +11,7 @@ import '../widgets/status_badge.dart';
 import '../widgets/desktop_shell_scope.dart';
 import '../widgets/section_card.dart';
 import '../widgets/machine_photo.dart';
+import '../widgets/confirm_dialog.dart';
 
 class MachineDetailScreen extends StatefulWidget {
   final ApiClient api;
@@ -65,6 +67,29 @@ class _MachineDetailScreenState extends State<MachineDetailScreen>
     ).then((_) => setState(() {
           _machineFuture = widget.api.getMachineById(widget.machineId);
         }));
+  }
+
+  Future<void> _deleteInspection(Inspection inspection) async {
+    final ok = await showConfirmDialog(
+      context,
+      title: 'Borrar inspección',
+      message: '¿Borrar esta inspección? No se puede deshacer.',
+      confirmLabel: 'Borrar',
+    );
+    if (!ok || !mounted) return;
+    try {
+      await widget.api.deleteInspection(inspection.id);
+      if (mounted) setState(() {
+        _machineFuture = widget.api.getMachineById(widget.machineId);
+      });
+    } on DioException catch (e) {
+      final message = e.response?.statusCode == 409
+          ? (e.response?.data?['error'] as String? ?? 'No se pudo borrar la inspección')
+          : 'No se pudo borrar la inspección';
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      }
+    }
   }
 
   @override
@@ -166,6 +191,7 @@ class _MachineDetailScreenState extends State<MachineDetailScreen>
                               role: _role,
                               currentUserId: _userId,
                               onEdit: () => _openEdit(machine, i),
+                              onDelete: () => _deleteInspection(i),
                             )),
                     ],
                   ),
@@ -230,12 +256,14 @@ class _InspectionTile extends StatelessWidget {
   final String? role;
   final String? currentUserId;
   final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const _InspectionTile({
     required this.inspection,
     this.role,
     this.currentUserId,
     this.onEdit,
+    this.onDelete,
   });
 
   bool _canEdit() {
@@ -271,13 +299,23 @@ class _InspectionTile extends StatelessWidget {
                   style: const TextStyle(color: Colors.red)),
           ],
         ),
-        trailing: _canEdit()
-            ? IconButton(
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_canEdit())
+              IconButton(
                 icon: const Icon(Icons.edit),
                 tooltip: 'Editar inspección',
                 onPressed: onEdit,
-              )
-            : null,
+              ),
+            if (role == 'admin')
+              IconButton(
+                icon: const Icon(Icons.delete),
+                tooltip: 'Borrar inspección',
+                onPressed: onDelete,
+              ),
+          ],
+        ),
       ),
     );
   }

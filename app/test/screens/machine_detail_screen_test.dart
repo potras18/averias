@@ -45,6 +45,8 @@ void main() {
     api = MockApiClient();
     storage = MockStorageService();
     when(() => api.getMachineById('machine-1')).thenAnswer((_) async => testMachine);
+    when(() => api.getSpareParts(machineId: any(named: 'machineId')))
+        .thenAnswer((_) async => []);
     when(() => storage.getRole()).thenAnswer((_) async => 'technician');
     when(() => storage.getUserId()).thenAnswer((_) async => 'user-1');
   });
@@ -92,5 +94,50 @@ void main() {
 
     // todayInspection.technicianId is 'user-1', current user is 'user-OTHER' — no edit button
     expect(find.byIcon(Icons.edit), findsNothing);
+  });
+
+  testWidgets('admin sees delete buttons on all inspections', (tester) async {
+    when(() => storage.getRole()).thenAnswer((_) async => 'admin');
+
+    await tester.pumpWidget(MaterialApp(
+      home: MachineDetailScreen(api: api, storage: storage, machineId: 'machine-1'),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.delete), findsNWidgets(2));
+  });
+
+  testWidgets('technician does not see delete button', (tester) async {
+    when(() => storage.getRole()).thenAnswer((_) async => 'technician');
+
+    await tester.pumpWidget(MaterialApp(
+      home: MachineDetailScreen(api: api, storage: storage, machineId: 'machine-1'),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.delete), findsNothing);
+  });
+
+  testWidgets('admin deletes an inspection after confirming', (tester) async {
+    when(() => storage.getRole()).thenAnswer((_) async => 'admin');
+    when(() => api.deleteInspection('insp-today')).thenAnswer((_) async {});
+
+    await tester.pumpWidget(MaterialApp(
+      home: MachineDetailScreen(api: api, storage: storage, machineId: 'machine-1'),
+    ));
+    await tester.pumpAndSettle();
+
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.delete).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Borrar').last);
+    await tester.pumpAndSettle();
+
+    verify(() => api.deleteInspection('insp-today')).called(1);
   });
 }
