@@ -424,4 +424,22 @@ class ApiClient {
     });
     return Incidencia.fromJson(res.data as Map<String, dynamic>);
   }
+
+  Future<Incidencia> updateIncidencia(
+    String id, {
+    String? machineProblemType,
+    String? cardReaderProblemType,
+    String? comment,
+  }) async {
+    final res = await _dio.patch('/incidencias/$id', data: {
+      if (machineProblemType != null) 'machine_problem_type': machineProblemType,
+      if (cardReaderProblemType != null) 'card_reader_problem_type': cardReaderProblemType,
+      if (comment != null) 'comment': comment,
+    });
+    return Incidencia.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<void> deleteIncidencia(String id) async {
+    await _dio.delete('/incidencias/$id');
+  }
 }
