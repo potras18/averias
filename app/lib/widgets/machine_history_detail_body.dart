@@ -62,7 +62,12 @@ class _MachineHistoryDetailBodyState extends State<MachineHistoryDetailBody> {
     if (!ok || !mounted) return;
     try {
       await widget.api.deleteInspection(inspection.id);
-      if (mounted) setState(() { _future = _load(); });
+      if (mounted) {
+        setState(() {
+          _inspectionPage = 0;
+          _future = _load();
+        });
+      }
     } on DioException catch (e) {
       final message = e.response?.statusCode == 409
           ? (e.response?.data?['error'] as String? ?? 'No se pudo borrar la inspección')

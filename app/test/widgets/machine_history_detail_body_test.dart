@@ -229,4 +229,39 @@ void main() {
 
     verify(() => api.deleteInspection('insp-1')).called(1);
   });
+
+  testWidgets('deleting the last inspection on page 2 resets to page 1 with remaining inspections visible', (tester) async {
+    when(() => storage.getRole()).thenAnswer((_) async => 'admin');
+    when(() => api.getInspections(machineId: 'm-1'))
+        .thenAnswer((_) async => _generateInspections(11));
+    when(() => api.deleteInspection('insp-gen-10')).thenAnswer((_) async {});
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(body: MachineHistoryDetailBody(api: api, storage: storage, machineId: 'm-1')),
+    ));
+    await tester.pumpAndSettle();
+
+    // Navigate to page 2 (the 11th inspection, insp-gen-10)
+    await tester.scrollUntilVisible(find.widgetWithIcon(IconButton, Icons.chevron_right), 200);
+    await Scrollable.ensureVisible(
+      tester.element(find.widgetWithIcon(IconButton, Icons.chevron_right)),
+      alignment: 1.0,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithIcon(IconButton, Icons.chevron_right));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('insp-gen-10')), findsOneWidget);
+
+    // Delete the only inspection on page 2
+    when(() => api.getInspections(machineId: 'm-1'))
+        .thenAnswer((_) async => _generateInspections(10));
+    await tester.tap(find.byIcon(Icons.delete));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Borrar').last);
+    await tester.pumpAndSettle();
+
+    // Must land back on page 1 with its inspections visible, not a blank page
+    expect(find.byKey(const ValueKey('insp-gen-0')), findsOneWidget);
+    expect(find.textContaining('Página'), findsNothing);
+  });
 }
