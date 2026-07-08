@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dio/dio.dart';
 import '../models/machine.dart';
 import '../models/inspection.dart';
 import '../models/spare_part.dart';
@@ -162,6 +163,29 @@ class _MachineListScreenState extends State<MachineListScreen> {
       _detailFuture = widget.api.getMachineById(id);
       _partsFuture = widget.api.getSpareParts(machineId: id);
     });
+  }
+
+  Future<void> _deleteInspection(Inspection inspection) async {
+    final ok = await showConfirmDialog(
+      context,
+      title: 'Borrar inspección',
+      message: '¿Borrar esta inspección? No se puede deshacer.',
+      confirmLabel: 'Borrar',
+    );
+    if (!ok || !mounted) return;
+    try {
+      await widget.api.deleteInspection(inspection.id);
+      if (mounted) setState(() {
+        _detailFuture = widget.api.getMachineById(_selectedMachineId!);
+      });
+    } on DioException catch (e) {
+      final message = e.response?.statusCode == 409
+          ? (e.response?.data?['error'] as String? ?? 'No se pudo borrar la inspección')
+          : 'No se pudo borrar la inspección';
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      }
+    }
   }
 
   List<Machine> get _filtered {
@@ -380,6 +404,7 @@ class _MachineListScreenState extends State<MachineListScreen> {
                                 _detailFuture = widget.api.getMachineById(_selectedMachineId!);
                                 _partsFuture = widget.api.getSpareParts(machineId: _selectedMachineId!);
                               })),
+                          onDelete: () => _deleteInspection(i),
                         )),
                 ],
               ),
@@ -484,12 +509,14 @@ class _InspectionTile extends StatelessWidget {
   final String? role;
   final String? currentUserId;
   final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const _InspectionTile({
     required this.inspection,
     this.role,
     this.currentUserId,
     this.onEdit,
+    this.onDelete,
   });
 
   bool _canEdit() {
@@ -532,6 +559,12 @@ class _InspectionTile extends StatelessWidget {
                 icon: const Icon(Icons.edit),
                 tooltip: 'Editar inspección',
                 onPressed: onEdit,
+              ),
+            if (role == 'admin')
+              IconButton(
+                icon: const Icon(Icons.delete),
+                tooltip: 'Borrar inspección',
+                onPressed: onDelete,
               ),
           ],
         ),

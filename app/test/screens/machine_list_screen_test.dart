@@ -29,6 +29,12 @@ final _fakeInspection = Inspection(
   inspectedAt: DateTime(2024, 1, 1),
 );
 
+final _machine1WithInspection = Machine(
+  id: 'm-1', name: 'Pinball A', qrCode: 'QR-A',
+  hasRedemptionTickets: false, active: true, locationName: 'Sala A',
+  inspections: [_fakeInspection],
+);
+
 Widget _desktopWrap(Widget child) => DesktopShellScope(
       isDesktop: true,
       child: SizedBox(
@@ -51,9 +57,11 @@ void main() {
     api = MockApiClient();
     storage = MockStorageService();
     when(() => storage.getRole()).thenAnswer((_) async => 'technician');
+    when(() => storage.getUserId()).thenAnswer((_) async => 'user-1');
     when(() => api.getMachines(inspectionDate: any(named: 'inspectionDate'))).thenAnswer((_) async => [machine1, machine2]);
     when(() => api.getMachineById('m-1')).thenAnswer((_) async => machine1);
     when(() => api.getMachineById('m-2')).thenAnswer((_) async => machine2);
+    when(() => api.getSpareParts(machineId: any(named: 'machineId'))).thenAnswer((_) async => []);
   });
 
   testWidgets('desktop: shows list panel and detail panel side by side', (tester) async {
@@ -121,6 +129,54 @@ void main() {
     await tester.pumpAndSettle();
 
     verify(() => api.createInspection(any())).called(1);
+  });
+
+  testWidgets('desktop: admin sees delete button on inspection in detail panel', (tester) async {
+    when(() => storage.getRole()).thenAnswer((_) async => 'admin');
+    when(() => api.getMachineById('m-1')).thenAnswer((_) async => _machine1WithInspection);
+
+    await tester.pumpWidget(_desktopWrap(
+      MachineListScreen(api: api, storage: storage),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.delete), findsOneWidget);
+  });
+
+  testWidgets('desktop: technician does not see delete button on inspection', (tester) async {
+    when(() => storage.getRole()).thenAnswer((_) async => 'technician');
+    when(() => api.getMachineById('m-1')).thenAnswer((_) async => _machine1WithInspection);
+
+    await tester.pumpWidget(_desktopWrap(
+      MachineListScreen(api: api, storage: storage),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.delete), findsNothing);
+  });
+
+  testWidgets('desktop: admin deletes an inspection from detail panel after confirming', (tester) async {
+    when(() => storage.getRole()).thenAnswer((_) async => 'admin');
+    when(() => api.getMachineById('m-1')).thenAnswer((_) async => _machine1WithInspection);
+    when(() => api.deleteInspection('insp-1')).thenAnswer((_) async {});
+
+    await tester.pumpWidget(_desktopWrap(
+      MachineListScreen(api: api, storage: storage),
+    ));
+    await tester.pumpAndSettle();
+
+    tester.view.physicalSize = const Size(1000, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.delete));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Borrar').last);
+    await tester.pumpAndSettle();
+
+    verify(() => api.deleteInspection('insp-1')).called(1);
   });
 
   testWidgets('mobile: shows machine cards list without master-detail', (tester) async {
