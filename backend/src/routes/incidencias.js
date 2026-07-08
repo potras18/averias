@@ -98,14 +98,14 @@ module.exports = async function incidenciasRoutes(app) {
     },
   }, async (req) => {
     const { status, location_id, from, to } = req.query
-    const where = []
+    const where = ['i.active = true']
     const params = []
     let i = 1
     if (status)      { where.push(`i.status = $${i++}`);        params.push(status) }
     if (location_id) { where.push(`m.location_id = $${i++}`);   params.push(location_id) }
     if (from)        { where.push(`i.created_at >= $${i++}`);   params.push(from) }
     if (to)          { where.push(`i.created_at <= $${i++}`);   params.push(to) }
-    const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : ''
+    const whereClause = `WHERE ${where.join(' AND ')}`
     const { rows } = await app.db.query(
       `SELECT ${INCIDENCIA_FIELDS}
        FROM incidencias i

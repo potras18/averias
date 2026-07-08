@@ -150,3 +150,13 @@ test('stats includes incidencia resolution counts', async () => {
   expect(stats.body).toHaveProperty('avg_resolution_hours')
   expect(stats.body).toHaveProperty('median_resolution_hours')
 })
+
+test('GET /incidencias no incluye incidencias inactivas', async () => {
+  const created = await st.post('/incidencias').set(asReportes())
+    .send({ machine_id: machineA.id, machine_problem_type: 'otro' })
+  await pool.query('UPDATE incidencias SET active = false WHERE id = $1', [created.body.id])
+
+  const list = await st.get('/incidencias').set(asTech())
+  expect(list.status).toBe(200)
+  expect(list.body.map((i) => i.id)).not.toContain(created.body.id)
+})
