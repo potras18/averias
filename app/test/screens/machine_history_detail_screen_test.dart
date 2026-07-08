@@ -4,12 +4,15 @@ import 'package:mocktail/mocktail.dart';
 import 'package:go_router/go_router.dart';
 import 'package:averias_app/screens/machine_history_detail_screen.dart';
 import 'package:averias_app/services/api_client.dart';
+import 'package:averias_app/services/storage_service.dart';
 import 'package:averias_app/models/machine.dart';
 import 'package:averias_app/models/inspection.dart';
 import 'package:averias_app/models/spare_part.dart';
 import 'package:averias_app/widgets/desktop_shell_scope.dart';
 
 class MockApiClient extends Mock implements ApiClient {}
+
+class MockStorageService extends Mock implements StorageService {}
 
 final _machine = Machine(
   id: 'm-1', name: 'Pinball', qrCode: 'QR-1',
@@ -18,9 +21,12 @@ final _machine = Machine(
 
 void main() {
   late MockApiClient api;
+  late MockStorageService storage;
 
   setUp(() {
     api = MockApiClient();
+    storage = MockStorageService();
+    when(() => storage.getRole()).thenAnswer((_) async => 'technician');
     when(() => api.getMachineById('m-1')).thenAnswer((_) async => _machine);
     when(() => api.getInspections(machineId: 'm-1')).thenAnswer((_) async => <Inspection>[]);
     when(() => api.getSpareParts(machineId: 'm-1')).thenAnswer((_) async => <SparePart>[]);
@@ -30,7 +36,7 @@ void main() {
     await tester.pumpWidget(DesktopShellScope(
       isDesktop: false,
       child: MaterialApp(
-        home: MachineHistoryDetailScreen(api: api, machineId: 'm-1'),
+        home: MachineHistoryDetailScreen(api: api, storage: storage, machineId: 'm-1'),
       ),
     ));
     await tester.pumpAndSettle();
@@ -43,7 +49,7 @@ void main() {
     final router = GoRouter(routes: [
       GoRoute(
         path: '/history/:id',
-        builder: (_, state) => MachineHistoryDetailScreen(api: api, machineId: state.pathParameters['id']!),
+        builder: (_, state) => MachineHistoryDetailScreen(api: api, storage: storage, machineId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/history',

@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/api_client.dart';
+import '../services/storage_service.dart';
 import '../widgets/desktop_shell_scope.dart';
 import '../widgets/machine_history_detail_body.dart';
 
 class MachineHistoryDetailScreen extends StatefulWidget {
   final ApiClient api;
+  final StorageService storage;
   final String machineId;
 
   const MachineHistoryDetailScreen({
     super.key,
     required this.api,
+    required this.storage,
     required this.machineId,
   });
 
@@ -35,7 +38,7 @@ class _MachineHistoryDetailScreenState extends State<MachineHistoryDetailScreen>
     }
     return Scaffold(
       appBar: AppBar(title: const Text('Histórico')),
-      body: MachineHistoryDetailBody(api: widget.api, machineId: widget.machineId),
+      body: MachineHistoryDetailBody(api: widget.api, storage: widget.storage, machineId: widget.machineId),
     );
   }
 }

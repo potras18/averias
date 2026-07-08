@@ -3,16 +3,19 @@ import 'package:go_router/go_router.dart';
 import '../models/machine.dart';
 import '../models/location.dart';
 import '../services/api_client.dart';
+import '../services/storage_service.dart';
 import '../widgets/desktop_shell_scope.dart';
 import '../widgets/machine_history_detail_body.dart';
 
 class MachineHistoryScreen extends StatefulWidget {
   final ApiClient api;
+  final StorageService storage;
   final String? preselectedId;
 
   const MachineHistoryScreen({
     super.key,
     required this.api,
+    required this.storage,
     this.preselectedId,
   });
 
@@ -129,6 +132,7 @@ class _MachineHistoryScreenState extends State<MachineHistoryScreen> {
                 ? MachineHistoryDetailBody(
                     key: ValueKey(_selectedMachineId),
                     api: widget.api,
+                    storage: widget.storage,
                     machineId: _selectedMachineId!,
                   )
                 : const Center(child: Text('Selecciona una máquina')),

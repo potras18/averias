@@ -4,6 +4,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:go_router/go_router.dart';
 import 'package:averias_app/screens/machine_history_screen.dart';
 import 'package:averias_app/services/api_client.dart';
+import 'package:averias_app/services/storage_service.dart';
 import 'package:averias_app/models/machine.dart';
 import 'package:averias_app/models/location.dart';
 import 'package:averias_app/models/inspection.dart';
@@ -11,6 +12,8 @@ import 'package:averias_app/models/spare_part.dart';
 import 'package:averias_app/widgets/desktop_shell_scope.dart';
 
 class MockApiClient extends Mock implements ApiClient {}
+
+class MockStorageService extends Mock implements StorageService {}
 
 final _locationA = Location(id: 'loc-a', name: 'Sala A');
 final _locationB = Location(id: 'loc-b', name: 'Sala B');
@@ -40,9 +43,12 @@ Widget _mobileWrap(Widget child) => DesktopShellScope(
 
 void main() {
   late MockApiClient api;
+  late MockStorageService storage;
 
   setUp(() {
     api = MockApiClient();
+    storage = MockStorageService();
+    when(() => storage.getRole()).thenAnswer((_) async => 'technician');
     when(() => api.getLocations()).thenAnswer((_) async => [_locationA, _locationB]);
     when(() => api.getMachines(
           locationId: any(named: 'locationId'),
@@ -57,7 +63,7 @@ void main() {
   });
 
   testWidgets('desktop: shows search field, location filter and machine list', (tester) async {
-    await tester.pumpWidget(_desktopWrap(MachineHistoryScreen(api: api)));
+    await tester.pumpWidget(_desktopWrap(MachineHistoryScreen(api: api, storage: storage)));
     await tester.pumpAndSettle();
 
     expect(find.byType(TextField), findsOneWidget);
@@ -66,7 +72,7 @@ void main() {
   });
 
   testWidgets('desktop: selecting a machine loads its full history in the detail panel', (tester) async {
-    await tester.pumpWidget(_desktopWrap(MachineHistoryScreen(api: api)));
+    await tester.pumpWidget(_desktopWrap(MachineHistoryScreen(api: api, storage: storage)));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Pinball A'));
@@ -77,7 +83,7 @@ void main() {
   });
 
   testWidgets('desktop: search filters the machine list by name', (tester) async {
-    await tester.pumpWidget(_desktopWrap(MachineHistoryScreen(api: api)));
+    await tester.pumpWidget(_desktopWrap(MachineHistoryScreen(api: api, storage: storage)));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), 'Futbolín');
@@ -102,7 +108,7 @@ void main() {
               ),
             ]);
 
-    await tester.pumpWidget(_desktopWrap(MachineHistoryScreen(api: api)));
+    await tester.pumpWidget(_desktopWrap(MachineHistoryScreen(api: api, storage: storage)));
     await tester.pumpAndSettle();
 
     // 'Futbolín B' doesn't contain '1' in its name, but its QR code does — the
@@ -115,7 +121,7 @@ void main() {
   });
 
   testWidgets('desktop: changing location filter re-fetches machines for that location', (tester) async {
-    await tester.pumpWidget(_desktopWrap(MachineHistoryScreen(api: api)));
+    await tester.pumpWidget(_desktopWrap(MachineHistoryScreen(api: api, storage: storage)));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byType(DropdownButtonFormField<String?>));
@@ -128,7 +134,7 @@ void main() {
 
   testWidgets('mobile: tapping a machine pushes to /history/:id', (tester) async {
     final router = GoRouter(routes: [
-      GoRoute(path: '/', builder: (_, __) => MachineHistoryScreen(api: api)),
+      GoRoute(path: '/', builder: (_, __) => MachineHistoryScreen(api: api, storage: storage)),
       GoRoute(path: '/history/:id', builder: (_, state) => Text('detail-${state.pathParameters['id']}')),
     ]);
 
@@ -145,14 +151,14 @@ void main() {
   });
 
   testWidgets('desktop: preselectedId renders the detail panel for that machine', (tester) async {
-    await tester.pumpWidget(_desktopWrap(MachineHistoryScreen(api: api, preselectedId: 'm-1')));
+    await tester.pumpWidget(_desktopWrap(MachineHistoryScreen(api: api, storage: storage, preselectedId: 'm-1')));
     await tester.pumpAndSettle();
 
     expect(find.text('Historial de inspecciones (0)'), findsOneWidget);
   });
 
   testWidgets('loads machines including inactive/decommissioned ones', (tester) async {
-    await tester.pumpWidget(_desktopWrap(MachineHistoryScreen(api: api)));
+    await tester.pumpWidget(_desktopWrap(MachineHistoryScreen(api: api, storage: storage)));
     await tester.pumpAndSettle();
 
     verify(() => api.getMachines(
