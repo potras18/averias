@@ -11,7 +11,7 @@ jest.mock('../src/email/mailer', () => ({
 
 const supertest = require('supertest')
 const { buildApp } = require('../src/app')
-const { resetDb, seedUser, seedLocation, seedMachine, seedInspection, seedSettings } = require('./helpers/db')
+const { pool, resetDb, seedUser, seedLocation, seedMachine, seedInspection, seedSettings } = require('./helpers/db')
 
 let app, st, token
 
@@ -159,6 +159,48 @@ describe('GET /stats', () => {
     })
     expect(res.body.dispenser_stats.pct_no_check).toBe(100)
     expect(res.body.dispenser_stats.pct_ok).toBe(0)
+  })
+
+  it('same-day duplicate inspections: only the most recent counts for pct/top_problematic/daily_breakdown', async () => {
+    const loc = await seedLocation({ name: 'Dedup Loc' })
+    const tech = await seedUser({ email: 'dedup-tech@example.com' })
+    const machine = await seedMachine({ locationId: loc.id, name: 'Dedup Machine', qrCode: 'DEDUP-1' })
+
+    await seedInspection({ machineId: machine.id, technicianId: tech.id, status: 'out_of_service', inspectedAt: '2026-04-01T08:00:00Z' })
+    await seedInspection({ machineId: machine.id, technicianId: tech.id, status: 'operative', inspectedAt: '2026-04-01T18:00:00Z' })
+
+    const res = await st.get(`/stats?location_id=${loc.id}`).set(auth())
+    expect(res.status).toBe(200)
+    expect(res.body.pct_operative).toBe(100)
+    expect(res.body.pct_out_of_service).toBe(0)
+    expect(res.body.top_problematic.find((m) => m.name === 'Dedup Machine')).toBeUndefined()
+
+    const dailyEntry = res.body.daily_breakdown.find((d) => d.date === '2026-04-01')
+    expect(dailyEntry).toEqual({ date: '2026-04-01', operative: 1, out_of_service: 0, in_repair: 0 })
+  })
+
+  it('same-day duplicate inspections: only the most recent counts for card_reader_stats/dispenser_stats', async () => {
+    const loc = await seedLocation({ name: 'Dedup Loc 2' })
+    const tech = await seedUser({ email: 'dedup-tech-2@example.com' })
+    const machine = await seedMachine({ locationId: loc.id, name: 'Dedup Machine 2', qrCode: 'DEDUP-2' })
+
+    const morning = await seedInspection({ machineId: machine.id, technicianId: tech.id, status: 'operative', cardReaderOk: false, inspectedAt: '2026-04-02T08:00:00Z' })
+    await pool.query(
+      'INSERT INTO ticket_checks (inspection_id, dispenser_ok, ticket_level) VALUES ($1, false, $2)',
+      [morning.id, 'empty']
+    )
+    const afternoon = await seedInspection({ machineId: machine.id, technicianId: tech.id, status: 'operative', cardReaderOk: true, inspectedAt: '2026-04-02T18:00:00Z' })
+    await pool.query(
+      'INSERT INTO ticket_checks (inspection_id, dispenser_ok, ticket_level) VALUES ($1, true, $2)',
+      [afternoon.id, 'full']
+    )
+
+    const res = await st.get(`/stats?location_id=${loc.id}`).set(auth())
+    expect(res.status).toBe(200)
+    expect(res.body.card_reader_stats.pct_ok).toBe(100)
+    expect(res.body.dispenser_stats.pct_ok).toBe(100)
+    expect(res.body.dispenser_stats.pct_full).toBe(100)
+    expect(res.body.dispenser_stats.pct_empty).toBe(0)
   })
 })
 

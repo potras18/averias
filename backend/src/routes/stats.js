@@ -8,6 +8,7 @@ const { renderEmailTemplate } = require('../email/template')
 const {
   getInspectionRows, getMttrHours, getMttrTopMachines, getTopProblematic, buildSummary,
   getDailyBreakdown, getCardReaderStats, getDispenserStats, getIncidenciaResolution,
+  dedupeLatestPerMachineDay,
 } = require('../reports/queries')
 
 module.exports = async function statsRoutes(app) {
@@ -22,17 +23,13 @@ module.exports = async function statsRoutes(app) {
   }
 
   async function buildStatsData(db, filters) {
-    const [rows, mttrStats, mttrTopMachines, topProblematic, dailyBreakdown, cardReaderStats, dispenserStats, incidenciaResolution] =
-      await Promise.all([
-        getInspectionRows(db, filters),
-        getMttrHours(db, filters),
-        getMttrTopMachines(db, filters),
-        getTopProblematic(db, filters),
-        getDailyBreakdown(db, filters),
-        getCardReaderStats(db, filters),
-        getDispenserStats(db, filters),
-        getIncidenciaResolution(db, filters),
-      ])
+    const [rawRows, mttrStats, mttrTopMachines, incidenciaResolution] = await Promise.all([
+      getInspectionRows(db, filters),
+      getMttrHours(db, filters),
+      getMttrTopMachines(db, filters),
+      getIncidenciaResolution(db, filters),
+    ])
+    const rows = dedupeLatestPerMachineDay(rawRows)
     const summary = buildSummary(rows)
     return {
       incidenciaResolution,
@@ -43,10 +40,10 @@ module.exports = async function statsRoutes(app) {
       pctOutOfService: summary.pctOutOfService,
       pctInRepair:     summary.pctInRepair,
       totalMachines:   summary.total,
-      topProblematic,
-      dailyBreakdown,
-      cardReaderStats,
-      dispenserStats,
+      topProblematic:  getTopProblematic(rows),
+      dailyBreakdown:  getDailyBreakdown(rows),
+      cardReaderStats: getCardReaderStats(rows),
+      dispenserStats:  getDispenserStats(rows),
     }
   }
 
