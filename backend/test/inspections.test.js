@@ -1,7 +1,7 @@
 // averias/backend/test/inspections.test.js
 'use strict'
 const supertest = require('supertest')
-const { resetDb, seedUser, seedLocation, seedMachine, seedInspection } = require('./helpers/db')
+const { pool, resetDb, seedUser, seedLocation, seedMachine, seedInspection } = require('./helpers/db')
 const { buildApp } = require('../src/app')
 
 let app, st, token, machine, ticketMachine, userId
@@ -198,4 +198,49 @@ test('PATCH /inspections/:id technician cannot edit another technician today ins
     .send({ status: 'in_repair' })
   expect(res.status).toBe(403)
   expect(res.body.error).toBe('No puedes editar inspecciones de otros técnicos')
+})
+
+test('DELETE /inspections/:id admin borra una inspección', async () => {
+  const insp = await seedInspection({ machineId: machine.id, technicianId: techUserId })
+  const res = await st.delete(`/inspections/${insp.id}`).set(authAdmin())
+  expect(res.status).toBe(200)
+  expect(res.body).toEqual({ ok: true })
+
+  const list = await st.get('/inspections').query({ machine_id: machine.id }).set(auth())
+  expect(list.body.map((i) => i.id)).not.toContain(insp.id)
+})
+
+test('DELETE /inspections/:id borra en cascada el ticket_check asociado', async () => {
+  const insp = await seedInspection({ machineId: ticketMachine.id, technicianId: techUserId })
+  await pool.query(
+    'INSERT INTO ticket_checks (inspection_id, dispenser_ok, ticket_level) VALUES ($1, true, $2)',
+    [insp.id, 'full']
+  )
+  const res = await st.delete(`/inspections/${insp.id}`).set(authAdmin())
+  expect(res.status).toBe(200)
+
+  const { rows } = await pool.query('SELECT * FROM ticket_checks WHERE inspection_id = $1', [insp.id])
+  expect(rows.length).toBe(0)
+})
+
+test('DELETE /inspections/:id technician no puede borrar → 403', async () => {
+  const insp = await seedInspection({ machineId: machine.id, technicianId: techUserId })
+  const res = await st.delete(`/inspections/${insp.id}`).set(auth())
+  expect(res.status).toBe(403)
+})
+
+test('DELETE /inspections/:id inexistente → 404', async () => {
+  const res = await st.delete('/inspections/00000000-0000-0000-0000-000000000000').set(authAdmin())
+  expect(res.status).toBe(404)
+})
+
+test('DELETE /inspections/:id vinculada a una incidencia → 409', async () => {
+  const insp = await seedInspection({ machineId: machine.id, technicianId: techUserId })
+  await pool.query(
+    `INSERT INTO incidencias (machine_id, reported_by, open_inspection_id)
+     VALUES ($1, $2, $3)`,
+    [machine.id, techUserId, insp.id]
+  )
+  const res = await st.delete(`/inspections/${insp.id}`).set(authAdmin())
+  expect(res.status).toBe(409)
 })

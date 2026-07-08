@@ -197,4 +197,23 @@ module.exports = async function inspectionsRoutes(app) {
     )
     return rows
   })
+
+  // DELETE /inspections/:id — admin borra físicamente una inspección.
+  app.delete('/:id', {
+    preHandler: [app.authenticate, app.requireAdmin],
+    schema: {
+      params: { type: 'object', properties: { id: { type: 'string' } } },
+    },
+  }, async (req, reply) => {
+    try {
+      const { rowCount } = await app.db.query('DELETE FROM inspections WHERE id = $1', [req.params.id])
+      if (rowCount === 0) return reply.code(404).send({ error: 'Inspección no encontrada' })
+      return { ok: true }
+    } catch (err) {
+      if (err.code === '23503') {
+        return reply.code(409).send({ error: 'No se puede borrar: esta inspección está vinculada a una incidencia' })
+      }
+      throw err
+    }
+  })
 }
