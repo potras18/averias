@@ -88,24 +88,30 @@ async function getMttrTopMachines(db, { from, to, locationId }) {
   return rows.map(r => ({ name: r.name, avg_hours: parseFloat(r.avg_hours) }))
 }
 
-async function getTopProblematic(db, { from, to, locationId }) {
-  const conditions = [`i.status IN ('out_of_service', 'in_repair')`]
-  const params = []
-  let idx = 1
-  if (from)       { conditions.push(`i.inspected_at >= $${idx++}`); params.push(from) }
-  if (to)         { conditions.push(`i.inspected_at::date <= $${idx++}`); params.push(to) }
-  if (locationId) { conditions.push(`m.location_id = $${idx++}`);   params.push(locationId) }
-  const { rows } = await db.query(
-    `SELECT m.name, COUNT(*) AS fault_count
-     FROM inspections i
-     JOIN machines m ON m.id = i.machine_id
-     WHERE ${conditions.join(' AND ')}
-     GROUP BY m.id, m.name
-     ORDER BY fault_count DESC
-     LIMIT 5`,
-    params
-  )
-  return rows.map(r => ({ name: r.name, fault_count: Number(r.fault_count) }))
+function dedupeLatestPerMachineDay(rows) {
+  const seen = new Set()
+  const result = []
+  for (const row of rows) {
+    const day = new Date(row.inspected_at).toISOString().slice(0, 10)
+    const key = `${row.machine_id}_${day}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    result.push(row)
+  }
+  return result
+}
+
+function getTopProblematic(rows) {
+  const counts = new Map()
+  for (const row of rows) {
+    if (row.status !== 'out_of_service' && row.status !== 'in_repair') continue
+    const entry = counts.get(row.machine_id) ?? { name: row.machine_name, fault_count: 0 }
+    entry.fault_count += 1
+    counts.set(row.machine_id, entry)
+  }
+  return Array.from(counts.values())
+    .sort((a, b) => b.fault_count - a.fault_count)
+    .slice(0, 5)
 }
 
 function buildSummary(rows) {
@@ -130,120 +136,51 @@ function groupByLocation(rows) {
   return Array.from(map.values())
 }
 
-async function getDailyBreakdown(db, { from, to, locationId }) {
-  const conditions = []
-  const params = []
-  let idx = 1
-  if (from)       { conditions.push(`i.inspected_at >= $${idx++}`); params.push(from) }
-  if (to)         { conditions.push(`i.inspected_at::date <= $${idx++}`); params.push(to) }
-  if (locationId) { conditions.push(`m.location_id = $${idx++}`);   params.push(locationId) }
-  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
-  const { rows } = await db.query(
-    `SELECT
-       to_char(inspected_at::date, 'YYYY-MM-DD') AS date,
-       COUNT(*) FILTER (WHERE i.status = 'operative')      AS operative,
-       COUNT(*) FILTER (WHERE i.status = 'out_of_service') AS out_of_service,
-       COUNT(*) FILTER (WHERE i.status = 'in_repair')      AS in_repair
-     FROM inspections i
-     JOIN machines m ON m.id = i.machine_id
-     ${where}
-     GROUP BY inspected_at::date
-     ORDER BY inspected_at::date ASC`,
-    params
-  )
-  return rows.map(r => ({
-    date:          r.date,
-    operative:     Number(r.operative),
-    out_of_service: Number(r.out_of_service),
-    in_repair:     Number(r.in_repair),
-  }))
+function getDailyBreakdown(rows) {
+  const byDay = new Map()
+  for (const row of rows) {
+    const day = new Date(row.inspected_at).toISOString().slice(0, 10)
+    if (!byDay.has(day)) byDay.set(day, { date: day, operative: 0, out_of_service: 0, in_repair: 0 })
+    byDay.get(day)[row.status] += 1
+  }
+  return Array.from(byDay.values()).sort((a, b) => a.date.localeCompare(b.date))
 }
 
-async function getCardReaderStats(db, { from, to, locationId }) {
-  const conditions = []
-  const params = []
-  let idx = 1
-  if (from)       { conditions.push(`i.inspected_at >= $${idx++}`); params.push(from) }
-  if (to)         { conditions.push(`i.inspected_at::date <= $${idx++}`); params.push(to) }
-  if (locationId) { conditions.push(`m.location_id = $${idx++}`);   params.push(locationId) }
-  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
-
-  const { rows: [totals] } = await db.query(
-    `SELECT
-       COUNT(*) FILTER (WHERE i.card_reader_ok IS TRUE)  AS ok_count,
-       COUNT(*) FILTER (WHERE i.card_reader_ok IS FALSE) AS fail_count,
-       COUNT(*)                                           AS total
-     FROM inspections i
-     JOIN machines m ON m.id = i.machine_id
-     ${where}`,
-    params
-  )
-  const total = Number(totals.total)
+function getCardReaderStats(rows) {
+  const total = rows.length
   if (total === 0) return { pct_ok: 0, pct_fail: 0, top_failure_type: null }
-
-  const okCount   = Number(totals.ok_count)
-  const failCount = Number(totals.fail_count)
+  const okCount = rows.filter(r => r.card_reader_ok === true).length
+  const failRows = rows.filter(r => r.card_reader_ok === false)
+  const failCount = failRows.length
   let topFailureType = null
-
   if (failCount > 0) {
-    const failWhere = `WHERE i.card_reader_ok IS FALSE${conditions.length ? ' AND ' + conditions.join(' AND ') : ''}`
-    const { rows: failRows } = await db.query(
-      `SELECT card_reader_failure_type, COUNT(*) AS n
-       FROM inspections i
-       JOIN machines m ON m.id = i.machine_id
-       ${failWhere}
-       GROUP BY card_reader_failure_type
-       ORDER BY n DESC
-       LIMIT 1`,
-      params
-    )
-    if (failRows.length > 0) topFailureType = failRows[0].card_reader_failure_type
+    const counts = new Map()
+    for (const r of failRows) {
+      counts.set(r.card_reader_failure_type, (counts.get(r.card_reader_failure_type) ?? 0) + 1)
+    }
+    topFailureType = Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0][0]
   }
-
   return {
-    pct_ok:           (okCount   / total) * 100,
-    pct_fail:         (failCount / total) * 100,
+    pct_ok:   (okCount   / total) * 100,
+    pct_fail: (failCount / total) * 100,
     top_failure_type: topFailureType,
   }
 }
 
-async function getDispenserStats(db, { from, to, locationId }) {
-  const conditions = []
-  const params = []
-  let idx = 1
-  if (from)       { conditions.push(`i.inspected_at >= $${idx++}`); params.push(from) }
-  if (to)         { conditions.push(`i.inspected_at::date <= $${idx++}`); params.push(to) }
-  if (locationId) { conditions.push(`m.location_id = $${idx++}`);   params.push(locationId) }
-  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
-
-  const { rows: [totRow] } = await db.query(
-    `SELECT COUNT(*) AS total FROM inspections i
-     JOIN machines m ON m.id = i.machine_id ${where}`,
-    params
-  )
-  const total = Number(totRow.total)
+function getDispenserStats(rows) {
+  const total = rows.length
   if (total === 0) return { pct_ok: 0, pct_no_check: 0, pct_full: 0, pct_low: 0, pct_empty: 0 }
-
-  const { rows: [d] } = await db.query(
-    `SELECT
-       COUNT(tc.id)                                          AS checked,
-       COUNT(*) FILTER (WHERE tc.dispenser_ok IS TRUE)      AS ok_count,
-       COUNT(*) FILTER (WHERE tc.ticket_level = 'full')     AS full_count,
-       COUNT(*) FILTER (WHERE tc.ticket_level = 'low')      AS low_count,
-       COUNT(*) FILTER (WHERE tc.ticket_level = 'empty')    AS empty_count
-     FROM inspections i
-     JOIN machines m ON m.id = i.machine_id
-     LEFT JOIN ticket_checks tc ON tc.inspection_id = i.id
-     ${where}`,
-    params
-  )
-  const checked = Number(d.checked)
+  const checked   = rows.filter(r => r.dispenser_ok !== null).length
+  const okCount   = rows.filter(r => r.dispenser_ok === true).length
+  const fullCount = rows.filter(r => r.ticket_level === 'full').length
+  const lowCount  = rows.filter(r => r.ticket_level === 'low').length
+  const emptyCount = rows.filter(r => r.ticket_level === 'empty').length
   return {
-    pct_ok:       checked > 0 ? (Number(d.ok_count)    / total) * 100 : 0,
-    pct_no_check: ((total - checked)                    / total) * 100,
-    pct_full:     (Number(d.full_count)                 / total) * 100,
-    pct_low:      (Number(d.low_count)                  / total) * 100,
-    pct_empty:    (Number(d.empty_count)                / total) * 100,
+    pct_ok:       checked > 0 ? (okCount / total) * 100 : 0,
+    pct_no_check: ((total - checked) / total) * 100,
+    pct_full:     (fullCount  / total) * 100,
+    pct_low:      (lowCount   / total) * 100,
+    pct_empty:    (emptyCount / total) * 100,
   }
 }
 
@@ -311,4 +248,4 @@ async function getIncidenciaResolution(db, { from, to, locationId }) {
   }
 }
 
-module.exports = { getInspectionRows, getMttrHours, getMttrTopMachines, getTopProblematic, buildSummary, groupByLocation, getDailyBreakdown, getCardReaderStats, getDispenserStats, getMachineStates, getIncidenciaResolution }
+module.exports = { getInspectionRows, getMttrHours, getMttrTopMachines, getTopProblematic, buildSummary, groupByLocation, getDailyBreakdown, getCardReaderStats, getDispenserStats, getMachineStates, getIncidenciaResolution, dedupeLatestPerMachineDay }
