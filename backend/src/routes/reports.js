@@ -6,6 +6,7 @@ const { decrypt }         = require('../email/crypto')
 const { renderEmailTemplate } = require('../email/template')
 const {
   getInspectionRows, getMttrHours, getTopProblematic, buildSummary, groupByLocation, getMachineStates,
+  dedupeLatestPerMachineDay,
 } = require('../reports/queries')
 
 module.exports = async function reportsRoutes(app) {
@@ -27,16 +28,18 @@ module.exports = async function reportsRoutes(app) {
     const { from, to, location_id } = req.query
     const filters = { from, to, locationId: location_id }
 
-    const [rows, mttrStats, topProblematic, machineStates] = await Promise.all([
+    const [rawRows, mttrStats, machineStates] = await Promise.all([
       getInspectionRows(app.db, filters),
       getMttrHours(app.db, filters),
-      getTopProblematic(app.db, filters),
       getMachineStates(app.db, filters),
     ])
 
-    if (rows.length === 0) {
+    if (rawRows.length === 0) {
       return reply.code(422).send({ error: 'sin_registros' })
     }
+
+    const rows = dedupeLatestPerMachineDay(rawRows)
+    const topProblematic = getTopProblematic(rows)
 
     const html = buildReportHtml({
       from,
@@ -87,16 +90,18 @@ module.exports = async function reportsRoutes(app) {
       from: cfg.smtp_from,
     }
 
-    const [rows, mttrStats, topProblematic, machineStates] = await Promise.all([
+    const [rawRows, mttrStats, machineStates] = await Promise.all([
       getInspectionRows(app.db, filters),
       getMttrHours(app.db, filters),
-      getTopProblematic(app.db, filters),
       getMachineStates(app.db, filters),
     ])
 
-    if (rows.length === 0) {
+    if (rawRows.length === 0) {
       return reply.code(422).send({ error: 'sin_registros' })
     }
+
+    const rows = dedupeLatestPerMachineDay(rawRows)
+    const topProblematic = getTopProblematic(rows)
 
     const html = buildReportHtml({
       from,

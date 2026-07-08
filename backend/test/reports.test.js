@@ -84,6 +84,30 @@ describe('GET /reports/pdf', () => {
     expect(stats.mttrHours).toBe(3)
     expect(typeof stats.mttrHours).toBe('number')
   })
+
+  it('same-day duplicate inspections: only the most recent counts in the listing, summary and top_problematic', async () => {
+    const loc = await seedLocation({ name: 'Dedup Report Loc' })
+    const tech = await seedUser({ email: 'dedup-report-tech@example.com' })
+    const machine = await seedMachine({ locationId: loc.id, name: 'Dedup Report Machine', qrCode: 'RPT-DEDUP-1' })
+
+    await seedInspection({ machineId: machine.id, technicianId: tech.id, status: 'out_of_service', inspectedAt: '2026-05-01T08:00:00Z' })
+    await seedInspection({ machineId: machine.id, technicianId: tech.id, status: 'operative', inspectedAt: '2026-05-01T18:00:00Z' })
+
+    buildReportHtml.mockClear()
+    const res = await st.get(`/reports/pdf?from=2026-05-01&to=2026-05-31&location_id=${loc.id}`).set(auth())
+    expect(res.status).toBe(200)
+
+    expect(buildReportHtml).toHaveBeenCalledTimes(1)
+    const { summary, locationSections, stats } = buildReportHtml.mock.calls[0][0]
+
+    const section = locationSections.find((s) => s.name === 'Dedup Report Loc')
+    const machineRows = section.rows.filter((r) => r.machine_id === machine.id)
+    expect(machineRows).toHaveLength(1)
+    expect(machineRows[0].status).toBe('operative')
+
+    expect(summary.pctOperative).toBe(100)
+    expect(stats.topProblematic.find((m) => m.name === 'Dedup Report Machine')).toBeUndefined()
+  })
 })
 
 describe('POST /reports/email', () => {
