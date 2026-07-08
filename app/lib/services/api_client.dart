@@ -189,6 +189,10 @@ class ApiClient {
     return Inspection.fromJson(res.data as Map<String, dynamic>);
   }
 
+  Future<void> deleteInspection(String id) async {
+    await _dio.delete('/inspections/$id');
+  }
+
   // Reports
   Future<Uint8List> getReportPdf({String? from, String? to, String? locationId}) async {
     final params = <String, String>{
