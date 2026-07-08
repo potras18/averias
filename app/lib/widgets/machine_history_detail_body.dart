@@ -5,16 +5,21 @@ import '../models/spare_part.dart';
 import '../services/api_client.dart';
 import 'status_badge.dart';
 import 'section_card.dart';
+import '../services/storage_service.dart';
+import 'confirm_dialog.dart';
+import 'package:dio/dio.dart';
 
 const _inspectionsPerPage = 10;
 
 class MachineHistoryDetailBody extends StatefulWidget {
   final ApiClient api;
+  final StorageService storage;
   final String machineId;
 
   const MachineHistoryDetailBody({
     super.key,
     required this.api,
+    required this.storage,
     required this.machineId,
   });
 
@@ -25,11 +30,13 @@ class MachineHistoryDetailBody extends StatefulWidget {
 class _MachineHistoryDetailBodyState extends State<MachineHistoryDetailBody> {
   late Future<(Machine, List<Inspection>, List<SparePart>)> _future;
   int _inspectionPage = 0;
+  String? _role;
 
   @override
   void initState() {
     super.initState();
     _future = _load();
+    widget.storage.getRole().then((r) { if (mounted) setState(() => _role = r); });
   }
 
   Future<(Machine, List<Inspection>, List<SparePart>)> _load() async {
@@ -43,6 +50,27 @@ class _MachineHistoryDetailBodyState extends State<MachineHistoryDetailBody> {
       results[1] as List<Inspection>,
       results[2] as List<SparePart>,
     );
+  }
+
+  Future<void> _deleteInspection(Inspection inspection) async {
+    final ok = await showConfirmDialog(
+      context,
+      title: 'Borrar inspección',
+      message: '¿Borrar esta inspección? No se puede deshacer.',
+      confirmLabel: 'Borrar',
+    );
+    if (!ok || !mounted) return;
+    try {
+      await widget.api.deleteInspection(inspection.id);
+      if (mounted) setState(() { _future = _load(); });
+    } on DioException catch (e) {
+      final message = e.response?.statusCode == 409
+          ? (e.response?.data?['error'] as String? ?? 'No se pudo borrar la inspección')
+          : 'No se pudo borrar la inspección';
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      }
+    }
   }
 
   @override
@@ -79,7 +107,12 @@ class _MachineHistoryDetailBodyState extends State<MachineHistoryDetailBody> {
                 if (inspections.isEmpty)
                   const Text('Sin inspecciones registradas')
                 else
-                  ...inspectionPageItems.map((i) => _HistoryInspectionTile(key: ValueKey(i.id), inspection: i)),
+                  ...inspectionPageItems.map((i) => _HistoryInspectionTile(
+                        key: ValueKey(i.id),
+                        inspection: i,
+                        isAdmin: _role == 'admin',
+                        onDelete: () => _deleteInspection(i),
+                      )),
                 if (totalInspectionPages > 1)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
@@ -125,7 +158,14 @@ class _MachineHistoryDetailBodyState extends State<MachineHistoryDetailBody> {
 
 class _HistoryInspectionTile extends StatelessWidget {
   final Inspection inspection;
-  const _HistoryInspectionTile({super.key, required this.inspection});
+  final bool isAdmin;
+  final VoidCallback onDelete;
+  const _HistoryInspectionTile({
+    super.key,
+    required this.inspection,
+    required this.isAdmin,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -150,6 +190,13 @@ class _HistoryInspectionTile extends StatelessWidget {
                   style: const TextStyle(color: Colors.red)),
           ],
         ),
+        trailing: isAdmin
+            ? IconButton(
+                icon: const Icon(Icons.delete),
+                tooltip: 'Borrar inspección',
+                onPressed: onDelete,
+              )
+            : null,
       ),
     );
   }

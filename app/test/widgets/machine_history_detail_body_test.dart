@@ -3,11 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:averias_app/widgets/machine_history_detail_body.dart';
 import 'package:averias_app/services/api_client.dart';
+import 'package:averias_app/services/storage_service.dart';
 import 'package:averias_app/models/machine.dart';
 import 'package:averias_app/models/inspection.dart';
 import 'package:averias_app/models/spare_part.dart';
 
 class MockApiClient extends Mock implements ApiClient {}
+
+class MockStorageService extends Mock implements StorageService {}
 
 final _machine = Machine(
   id: 'm-1',
@@ -68,17 +71,20 @@ List<Inspection> _generateInspections(int count) => List.generate(
 
 void main() {
   late MockApiClient api;
+  late MockStorageService storage;
 
   setUp(() {
     api = MockApiClient();
+    storage = MockStorageService();
     when(() => api.getMachineById('m-1')).thenAnswer((_) async => _machine);
     when(() => api.getInspections(machineId: 'm-1')).thenAnswer((_) async => _inspections);
     when(() => api.getSpareParts(machineId: 'm-1')).thenAnswer((_) async => _parts);
+    when(() => storage.getRole()).thenAnswer((_) async => 'technician');
   });
 
   testWidgets('shows machine name, location and current status', (tester) async {
     await tester.pumpWidget(MaterialApp(
-      home: Scaffold(body: MachineHistoryDetailBody(api: api, machineId: 'm-1')),
+      home: Scaffold(body: MachineHistoryDetailBody(api: api, storage: storage, machineId: 'm-1')),
     ));
     await tester.pumpAndSettle();
 
@@ -89,7 +95,7 @@ void main() {
 
   testWidgets('shows full inspection history with status badge and reader error', (tester) async {
     await tester.pumpWidget(MaterialApp(
-      home: Scaffold(body: MachineHistoryDetailBody(api: api, machineId: 'm-1')),
+      home: Scaffold(body: MachineHistoryDetailBody(api: api, storage: storage, machineId: 'm-1')),
     ));
     await tester.pumpAndSettle();
 
@@ -100,7 +106,7 @@ void main() {
 
   testWidgets('shows full spare parts history', (tester) async {
     await tester.pumpWidget(MaterialApp(
-      home: Scaffold(body: MachineHistoryDetailBody(api: api, machineId: 'm-1')),
+      home: Scaffold(body: MachineHistoryDetailBody(api: api, storage: storage, machineId: 'm-1')),
     ));
     await tester.pumpAndSettle();
 
@@ -113,7 +119,7 @@ void main() {
     when(() => api.getSpareParts(machineId: 'm-1')).thenAnswer((_) async => []);
 
     await tester.pumpWidget(MaterialApp(
-      home: Scaffold(body: MachineHistoryDetailBody(api: api, machineId: 'm-1')),
+      home: Scaffold(body: MachineHistoryDetailBody(api: api, storage: storage, machineId: 'm-1')),
     ));
     await tester.pumpAndSettle();
 
@@ -126,7 +132,7 @@ void main() {
         .thenAnswer((_) async => _generateInspections(12));
 
     await tester.pumpWidget(MaterialApp(
-      home: Scaffold(body: MachineHistoryDetailBody(api: api, machineId: 'm-1')),
+      home: Scaffold(body: MachineHistoryDetailBody(api: api, storage: storage, machineId: 'm-1')),
     ));
     await tester.pumpAndSettle();
 
@@ -148,7 +154,7 @@ void main() {
         .thenAnswer((_) async => _generateInspections(12));
 
     await tester.pumpWidget(MaterialApp(
-      home: Scaffold(body: MachineHistoryDetailBody(api: api, machineId: 'm-1')),
+      home: Scaffold(body: MachineHistoryDetailBody(api: api, storage: storage, machineId: 'm-1')),
     ));
     await tester.pumpAndSettle();
 
@@ -178,10 +184,49 @@ void main() {
 
   testWidgets('no pagination controls when 10 or fewer inspections', (tester) async {
     await tester.pumpWidget(MaterialApp(
-      home: Scaffold(body: MachineHistoryDetailBody(api: api, machineId: 'm-1')),
+      home: Scaffold(body: MachineHistoryDetailBody(api: api, storage: storage, machineId: 'm-1')),
     ));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Página'), findsNothing);
+  });
+
+  testWidgets('admin sees delete button on history inspections', (tester) async {
+    when(() => storage.getRole()).thenAnswer((_) async => 'admin');
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(body: MachineHistoryDetailBody(api: api, storage: storage, machineId: 'm-1')),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.delete), findsNWidgets(2));
+  });
+
+  testWidgets('technician does not see delete button on history inspections', (tester) async {
+    when(() => storage.getRole()).thenAnswer((_) async => 'technician');
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(body: MachineHistoryDetailBody(api: api, storage: storage, machineId: 'm-1')),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.delete), findsNothing);
+  });
+
+  testWidgets('admin deletes an inspection from history after confirming', (tester) async {
+    when(() => storage.getRole()).thenAnswer((_) async => 'admin');
+    when(() => api.deleteInspection('insp-1')).thenAnswer((_) async {});
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(body: MachineHistoryDetailBody(api: api, storage: storage, machineId: 'm-1')),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.delete).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Borrar').last);
+    await tester.pumpAndSettle();
+
+    verify(() => api.deleteInspection('insp-1')).called(1);
   });
 }
