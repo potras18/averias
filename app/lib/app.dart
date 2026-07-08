@@ -150,7 +150,7 @@ final _router = GoRouter(
         ),
         GoRoute(
           path: '/incidencias',
-          pageBuilder: (_, state) => _noTransition(state, IncidenciasScreen(api: _api)),
+          pageBuilder: (_, state) => _noTransition(state, IncidenciasScreen(api: _api, storage: _storage)),
         ),
         GoRoute(
           path: '/repuestos/new',
