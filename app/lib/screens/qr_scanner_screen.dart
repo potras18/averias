@@ -14,6 +14,13 @@ class QrScannerScreen extends StatefulWidget {
 
 class _QrScannerScreenState extends State<QrScannerScreen> {
   bool _processing = false;
+  final MobileScannerController _controller = MobileScannerController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   Future<void> _onDetect(BarcodeCapture capture) async {
     if (_processing) return;
@@ -31,6 +38,37 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
         );
       }
     }
+  }
+
+  Widget _buildError(BuildContext context, MobileScannerException error, Widget? child) {
+    final isPermissionDenied = error.errorCode == MobileScannerErrorCode.permissionDenied;
+    return ColoredBox(
+      color: Colors.black,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.no_photography, color: Colors.white, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                isPermissionDenied
+                    ? 'La app necesita permiso de cámara para escanear.\nActívalo en Ajustes del sistema y vuelve a intentarlo.'
+                    : 'No se pudo iniciar la cámara (${error.errorCode.name}).',
+                style: const TextStyle(color: Colors.white),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () => _controller.start(),
+                child: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -57,7 +95,11 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       appBar: AppBar(title: const Text('Escanear QR')),
       body: Stack(
         children: [
-          MobileScanner(onDetect: _onDetect),
+          MobileScanner(
+            controller: _controller,
+            onDetect: _onDetect,
+            errorBuilder: _buildError,
+          ),
           if (_processing)
             const Center(child: CircularProgressIndicator()),
           Center(
