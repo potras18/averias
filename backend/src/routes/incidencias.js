@@ -154,6 +154,21 @@ module.exports = async function incidenciasRoutes(app) {
     return fetchIncidencia(app.db, id)
   })
 
+  // DELETE /incidencias/:id — admin borra (soft delete) una incidencia.
+  app.delete('/:id', {
+    preHandler: [app.authenticate, app.requireAdmin],
+    schema: {
+      params: { type: 'object', properties: { id: { type: 'string' } } },
+    },
+  }, async (req, reply) => {
+    const { rowCount } = await app.db.query(
+      'UPDATE incidencias SET active = false WHERE id = $1 AND active = true',
+      [req.params.id]
+    )
+    if (rowCount === 0) return reply.code(404).send({ error: 'Incidencia not found' })
+    return { ok: true }
+  })
+
   // PATCH /incidencias/:id/resolve — staff resolves; creates the resulting inspection.
   app.patch('/:id/resolve', {
     preHandler: [app.authenticate, app.requireRole('technician', 'admin')],

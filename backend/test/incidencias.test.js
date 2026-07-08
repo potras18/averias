@@ -194,3 +194,30 @@ test('editar incidencia borrada → 404', async () => {
     .send({ comment: 'x' })
   expect(res.status).toBe(404)
 })
+
+test('admin borra una incidencia (soft delete)', async () => {
+  const created = await st.post('/incidencias').set(asReportes())
+    .send({ machine_id: machineA.id, machine_problem_type: 'otro' })
+
+  const res = await st.delete(`/incidencias/${created.body.id}`).set(asAdmin())
+  expect(res.status).toBe(200)
+  expect(res.body).toEqual({ ok: true })
+
+  const list = await st.get('/incidencias').set(asTech())
+  expect(list.body.map((i) => i.id)).not.toContain(created.body.id)
+})
+
+test('technician no puede borrar una incidencia → 403', async () => {
+  const created = await st.post('/incidencias').set(asReportes())
+    .send({ machine_id: machineA.id, machine_problem_type: 'otro' })
+  const res = await st.delete(`/incidencias/${created.body.id}`).set(asTech())
+  expect(res.status).toBe(403)
+})
+
+test('borrar dos veces → segunda vez 404', async () => {
+  const created = await st.post('/incidencias').set(asReportes())
+    .send({ machine_id: machineA.id, machine_problem_type: 'otro' })
+  await st.delete(`/incidencias/${created.body.id}`).set(asAdmin())
+  const again = await st.delete(`/incidencias/${created.body.id}`).set(asAdmin())
+  expect(again.status).toBe(404)
+})
