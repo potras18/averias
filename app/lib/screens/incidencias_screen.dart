@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/incidencia.dart';
 import '../services/api_client.dart';
+import '../services/storage_service.dart';
+import '../widgets/confirm_dialog.dart';
 
 const _machineProblemLabels = {
   'no_enciende': 'No enciende',
@@ -26,7 +28,8 @@ String _fmt(DateTime d) {
 
 class IncidenciasScreen extends StatefulWidget {
   final ApiClient api;
-  const IncidenciasScreen({super.key, required this.api});
+  final StorageService storage;
+  const IncidenciasScreen({super.key, required this.api, required this.storage});
 
   @override
   State<IncidenciasScreen> createState() => _IncidenciasScreenState();
@@ -35,11 +38,13 @@ class IncidenciasScreen extends StatefulWidget {
 class _IncidenciasScreenState extends State<IncidenciasScreen> {
   String _status = 'open';
   late Future<List<Incidencia>> _future;
+  String? _role;
 
   @override
   void initState() {
     super.initState();
     _reload();
+    widget.storage.getRole().then((r) { if (mounted) setState(() => _role = r); });
   }
 
   void _reload() {
@@ -64,6 +69,49 @@ class _IncidenciasScreenState extends State<IncidenciasScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('No se pudo resolver el aviso')),
+        );
+      }
+    }
+  }
+
+  Future<void> _edit(Incidencia inc) async {
+    final result = await showDialog<({String? machineProblemType, String? cardReaderProblemType, String comment})>(
+      context: context,
+      builder: (ctx) => _EditIncidenciaDialog(incidencia: inc),
+    );
+    if (result == null) return;
+    try {
+      await widget.api.updateIncidencia(
+        inc.id,
+        machineProblemType: result.machineProblemType,
+        cardReaderProblemType: result.cardReaderProblemType,
+        comment: result.comment,
+      );
+      if (mounted) setState(_reload);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo editar el aviso')),
+        );
+      }
+    }
+  }
+
+  Future<void> _delete(Incidencia inc) async {
+    final ok = await showConfirmDialog(
+      context,
+      title: 'Borrar incidencia',
+      message: '¿Borrar esta incidencia? No se puede deshacer.',
+      confirmLabel: 'Borrar',
+    );
+    if (!ok || !mounted) return;
+    try {
+      await widget.api.deleteIncidencia(inc.id);
+      if (mounted) setState(_reload);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo borrar el aviso')),
         );
       }
     }
@@ -115,7 +163,10 @@ class _IncidenciasScreenState extends State<IncidenciasScreen> {
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (_, i) => _IncidenciaCard(
                     incidencia: items[i],
+                    isAdmin: _role == 'admin',
                     onResolve: () => _resolve(items[i]),
+                    onEdit: () => _edit(items[i]),
+                    onDelete: () => _delete(items[i]),
                   ),
                 );
               },
@@ -129,8 +180,17 @@ class _IncidenciasScreenState extends State<IncidenciasScreen> {
 
 class _IncidenciaCard extends StatelessWidget {
   final Incidencia incidencia;
+  final bool isAdmin;
   final VoidCallback onResolve;
-  const _IncidenciaCard({required this.incidencia, required this.onResolve});
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  const _IncidenciaCard({
+    required this.incidencia,
+    required this.isAdmin,
+    required this.onResolve,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -153,6 +213,10 @@ class _IncidenciaCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
+                if (isAdmin) ...[
+                  IconButton(icon: const Icon(Icons.edit), tooltip: 'Editar', onPressed: onEdit),
+                  IconButton(icon: const Icon(Icons.delete), tooltip: 'Borrar', onPressed: onDelete),
+                ],
                 if (inc.status == 'open')
                   FilledButton.icon(
                     icon: const Icon(Icons.check),
@@ -240,6 +304,85 @@ class _ResolveDialogState extends State<_ResolveDialog> {
           onPressed: () => Navigator.pop(
             context,
             (resolution: _resolution, comment: _commentCtrl.text.trim().isEmpty ? null : _commentCtrl.text.trim()),
+          ),
+          child: const Text('Guardar'),
+        ),
+      ],
+    );
+  }
+}
+
+class _EditIncidenciaDialog extends StatefulWidget {
+  final Incidencia incidencia;
+  const _EditIncidenciaDialog({required this.incidencia});
+
+  @override
+  State<_EditIncidenciaDialog> createState() => _EditIncidenciaDialogState();
+}
+
+class _EditIncidenciaDialogState extends State<_EditIncidenciaDialog> {
+  String? _machineProblemType;
+  String? _cardReaderProblemType;
+  late final TextEditingController _commentCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _machineProblemType = widget.incidencia.machineProblemType;
+    _cardReaderProblemType = widget.incidencia.cardReaderProblemType;
+    _commentCtrl = TextEditingController(text: widget.incidencia.comment ?? '');
+  }
+
+  @override
+  void dispose() {
+    _commentCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Editar incidencia'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DropdownButtonFormField<String?>(
+            initialValue: _machineProblemType,
+            decoration: const InputDecoration(labelText: 'Problema de máquina'),
+            items: [
+              const DropdownMenuItem<String?>(value: null, child: Text('Ninguno')),
+              ..._machineProblemLabels.entries
+                  .map((e) => DropdownMenuItem<String?>(value: e.key, child: Text(e.value))),
+            ],
+            onChanged: (v) => setState(() => _machineProblemType = v),
+          ),
+          DropdownButtonFormField<String?>(
+            initialValue: _cardReaderProblemType,
+            decoration: const InputDecoration(labelText: 'Problema de lector'),
+            items: [
+              const DropdownMenuItem<String?>(value: null, child: Text('Ninguno')),
+              ..._cardProblemLabels.entries
+                  .map((e) => DropdownMenuItem<String?>(value: e.key, child: Text(e.value))),
+            ],
+            onChanged: (v) => setState(() => _cardReaderProblemType = v),
+          ),
+          TextField(
+            controller: _commentCtrl,
+            decoration: const InputDecoration(labelText: 'Comentario'),
+            maxLines: 2,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+        FilledButton(
+          onPressed: () => Navigator.pop(
+            context,
+            (
+              machineProblemType: _machineProblemType,
+              cardReaderProblemType: _cardReaderProblemType,
+              comment: _commentCtrl.text.trim(),
+            ),
           ),
           child: const Text('Guardar'),
         ),
