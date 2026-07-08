@@ -14,6 +14,7 @@
 - Endpoint nuevo restringido a `app.requireAdmin` — technician recibe 403. (Distinto de `PATCH /inspections/:id`, que si permite editar al propio técnico su inspección del día.)
 - No se añade ningún flujo para desvincular una incidencia de su inspección; si el borrado choca con una incidencia, se bloquea con 409 y no se ofrece alternativa automática.
 - Botón de borrar (admin-only) va en el Histórico (`_HistoryInspectionTile`, todas las inspecciones) Y en el Detalle de máquina (`_InspectionTile`, últimas 5), independiente del botón de editar existente (que en Detalle también lo ve el propio técnico el mismo día).
+- Tras borrar una inspección, el estado de la máquina debe reflejar la inspección más reciente que quede (ya lo hace automáticamente: `last_status` es un subquery en vivo, no un valor cacheado). Si no queda ninguna inspección, el estado debe mostrarse como "Operativa" — decisión: cambio **global** del valor por defecto (una máquina recién creada sin inspeccionar nunca también pasa a mostrar "Operativa" en vez de "Sin revisar"), no solo tras un borrado. Ver Task 8.
 
 ---
 
@@ -995,7 +996,97 @@ git commit -m "feat(app): wire storage into machine history routes"
 
 ---
 
-## Task 7: Verificación end-to-end
+## Task 8: Sin inspecciones registradas → estado "Operativa" (cambio global)
+
+**Files:**
+- Modify: `app/lib/widgets/status_badge.dart`
+
+**Interfaces:** ninguna nueva — cambio interno de `StatusBadge`, usado ya por `machine_detail_screen.dart`, `machine_list_screen.dart`, `machine_card.dart` y `machine_history_detail_body.dart` sin cambios en sus llamadas.
+
+`StatusBadge` se usa en dos contextos distintos: (a) `status` de una inspección concreta (`inspection.status`), que nunca es `null` (columna `NOT NULL` con `CHECK` de 3 valores) — el caso por defecto del `switch` nunca se alcanza ahí; (b) `machine.lastStatus`, que sí es `null` cuando la máquina no tiene ninguna inspección (nueva sin inspeccionar, o todas sus inspecciones fueron borradas — tras un borrado físico no hay forma de distinguir ambos casos, así que se trata igual). Cambiar solo el caso por defecto del `switch` cambia el comportamiento únicamente para (b).
+
+- [ ] **Step 1: Escribir el test que falla**
+
+Este widget no tiene archivo de test propio. Crear `app/test/widgets/status_badge_test.dart`:
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:averias_app/widgets/status_badge.dart';
+
+void main() {
+  testWidgets('null status shows Operativa', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: StatusBadge(status: null)));
+    expect(find.text('Operativa'), findsOneWidget);
+  });
+
+  testWidgets('operative status shows Operativa', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: StatusBadge(status: 'operative')));
+    expect(find.text('Operativa'), findsOneWidget);
+  });
+
+  testWidgets('out_of_service status shows Fuera de servicio', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: StatusBadge(status: 'out_of_service')));
+    expect(find.text('Fuera de servicio'), findsOneWidget);
+  });
+
+  testWidgets('in_repair status shows En reparación', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: StatusBadge(status: 'in_repair')));
+    expect(find.text('En reparación'), findsOneWidget);
+  });
+}
+```
+
+- [ ] **Step 2: Ejecutar el test y verificar que falla**
+
+Run: `cd app && flutter test test/widgets/status_badge_test.dart`
+Expected: FAIL en `null status shows Operativa` — hoy muestra "Sin revisar".
+
+- [ ] **Step 3: Cambiar el caso por defecto**
+
+En `app/lib/widgets/status_badge.dart`, cambiar:
+
+```dart
+    final (label, color) = switch (status) {
+      'operative' => ('Operativa', Colors.green),
+      'out_of_service' => ('Fuera de servicio', Colors.red),
+      'in_repair' => ('En reparación', Colors.orange),
+      _ => ('Sin revisar', Colors.grey),
+    };
+```
+
+por:
+
+```dart
+    final (label, color) = switch (status) {
+      'out_of_service' => ('Fuera de servicio', Colors.red),
+      'in_repair' => ('En reparación', Colors.orange),
+      _ => ('Operativa', Colors.green),
+    };
+```
+
+(Se fusiona `'operative'` con el caso por defecto — ambos ya producían el mismo resultado.)
+
+- [ ] **Step 4: Ejecutar el test y verificar que pasa**
+
+Run: `cd app && flutter test test/widgets/status_badge_test.dart`
+Expected: PASS, los 4 tests.
+
+- [ ] **Step 5: Ejecutar `flutter analyze` y la suite completa de widgets afectados**
+
+Run: `cd app && flutter analyze lib/widgets/status_badge.dart && flutter test test/widgets/ test/screens/machine_detail_screen_test.dart test/screens/machine_history_detail_screen_test.dart test/screens/machine_history_screen_test.dart`
+Expected: `No issues found!` y todos los tests en verde (ninguno de los tests existentes afirma el texto "Sin revisar", así que no debería romper nada).
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add app/lib/widgets/status_badge.dart app/test/widgets/status_badge_test.dart
+git commit -m "feat(app): machines with no inspection recorded show as Operativa"
+```
+
+---
+
+## Task 9: Verificación end-to-end
 
 **Files:** ninguno (solo verificación)
 
@@ -1017,5 +1108,6 @@ Expected: los archivos tocados por este plan en verde. (Nota: hay ~20 fallos pre
 4. Ir a Detalle de esa máquina (últimas 5 inspecciones), comprobar que también hay icono de borrar junto a editar.
 5. Reportar una incidencia como cliente (rol `reportes`), luego como admin intentar borrar la inspección que la incidencia creó (la más reciente de esa máquina, tipo "out_of_service") → debe fallar con mensaje "está vinculada a una incidencia".
 6. Login como `technician`, comprobar que NO ve el icono de borrar en Histórico ni en Detalle de máquina (sigue viendo editar solo si es su inspección de hoy).
+7. Elegir una máquina con una única inspección "Fuera de servicio", borrarla como admin → el estado de la máquina (Detalle, Histórico, listado) debe pasar a mostrar "Operativa".
 
-Expected: comportamiento acorde a los pasos 2-6, sin errores en consola.
+Expected: comportamiento acorde a los pasos 2-7, sin errores en consola.
