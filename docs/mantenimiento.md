@@ -28,6 +28,10 @@ El script (`backend/migrations/run.js`) ejecuta **todos** los archivos `.sql` en
 | `011_settings.sql` | Tabla de configuración (SMTP + destinatarios email) |
 | `012_email_templates.sql` | Claves de plantillas de email (asunto/cuerpo de informes y estadísticas) |
 | `013_spare_parts_instalado.sql` | Añade el estado `instalado` al CHECK de `spare_parts.status` |
+| `014_machines_image.sql` | Columnas `image`/`image_mime` en máquinas (foto opcional) |
+| `015_users_location.sql` | Columna `location_id` en usuarios (para el rol Cliente/avisos) |
+| `016_incidencias.sql` | Tabla de incidencias (avisos de avería de clientes) |
+| `017_incidencias_active.sql` | Columna `active` en incidencias (borrado lógico) |
 
 ### Añadir una nueva migración
 
@@ -45,7 +49,8 @@ users
   name TEXT
   email TEXT UNIQUE
   password_hash TEXT
-  role VARCHAR(20)       -- 'admin' | 'technician'
+  role VARCHAR(20)       -- 'admin' | 'technician' | 'reportes' (cliente/avisos)
+  location_id UUID → locations   -- solo se usa con role='reportes'
   active BOOLEAN         -- false = cuenta desactivada
   created_at TIMESTAMPTZ
 
@@ -61,6 +66,8 @@ machines
   qr_code TEXT UNIQUE
   has_redemption_tickets BOOLEAN
   active BOOLEAN         -- false = dada de baja
+  image BYTEA            -- foto opcional
+  image_mime TEXT
   created_at TIMESTAMPTZ
 
 inspections
@@ -72,6 +79,26 @@ inspections
   card_reader_failure_type TEXT  -- 'no_lee' | 'error_comunicacion' | 'dano_fisico' | 'otro'
   comment TEXT
   inspected_at TIMESTAMPTZ
+  -- Sin columna active: el borrado (solo admin) es FÍSICO, no lógico. Bloqueado
+  -- (409) si la inspección está referenciada por una incidencia activa
+  -- (incidencias.open_inspection_id / resolve_inspection_id).
+
+incidencias
+  id UUID PK
+  machine_id UUID → machines
+  reported_by UUID → users          -- el cliente (role='reportes') que reportó
+  machine_problem_type TEXT      -- 'no_enciende' | 'no_acepta_pago' | 'pantalla' | 'mecanico' | 'no_entrega_premio' | 'otro'
+  card_reader_problem_type TEXT  -- 'no_lee' | 'error_comunicacion' | 'dano_fisico' | 'otro'
+  comment TEXT
+  status TEXT             -- 'open' | 'resolved'
+  created_at TIMESTAMPTZ
+  resolved_at TIMESTAMPTZ
+  resolved_by UUID → users
+  resolution TEXT         -- 'operative' | 'in_repair'
+  open_inspection_id UUID → inspections     -- inspección creada al reportar (deja la máquina fuera de servicio)
+  resolve_inspection_id UUID → inspections  -- inspección creada al resolver
+  active BOOLEAN          -- false = borrada (borrado lógico, solo admin). No se puede
+                          -- borrar una incidencia abierta; hay que resolverla primero.
 
 ticket_checks
   id UUID PK
@@ -115,9 +142,9 @@ settings
 Toda la gestión de usuarios se realiza desde el Panel de administración (pestaña Usuarios).
 
 **Operaciones disponibles:**
-- Crear usuario (admin o técnico).
-- Editar nombre, email y contraseña.
-- Cambiar rol entre admin y técnico.
+- Crear usuario (admin, técnico o cliente/avisos — este último requiere asignar una ubicación).
+- Editar nombre, email y contraseña (en clientes, también su ubicación).
+- Cambiar rol entre admin y técnico (el rol cliente se fija al crear el usuario, no se puede cambiar después).
 - Desactivar cuenta (nunca se borran; se mantiene el histórico de inspecciones).
 
 **Regla crítica:** debe existir siempre al menos un usuario administrador activo. El sistema bloquea cualquier acción que lo violaría.

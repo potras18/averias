@@ -42,6 +42,8 @@ Vista principal. Muestra todas las máquinas activas con su estado y fecha de ú
 | Fuera de servicio | No funciona |
 | En reparación | En proceso de reparación |
 
+El estado se calcula a partir de la inspección más reciente registrada. Una máquina sin ninguna inspección registrada (nueva, o porque un administrador ha borrado todas las suyas) se muestra como **Operativa** por defecto.
+
 ---
 
 ### Detalle de máquina *(solo móvil)*
@@ -54,6 +56,8 @@ Muestra la información completa de una máquina en dos pestañas:
 - Código QR de la máquina (para imprimir etiquetas).
 - Historial de las últimas 5 inspecciones con técnico y fecha.
 - Si la máquina tiene dispensador de tickets: estado del dispensador y nivel de tickets en cada revisión.
+- **Editar inspección:** el propio técnico puede editar una inspección suya del mismo día; un administrador puede editar cualquier inspección, de cualquier fecha.
+- **Borrar inspección** *(solo admin)*: borrado permanente, no se puede deshacer. Si la inspección está vinculada a una incidencia de cliente que sigue activa (no borrada), no se puede borrar hasta borrar esa incidencia primero.
 
 **Pestaña Repuestos:**
 - Lista de solicitudes de repuestos para esta máquina.
@@ -73,6 +77,7 @@ Vista de consulta del histórico completo de cualquier máquina (activa o inacti
 - En escritorio, se muestra a la derecha al seleccionar una máquina de la lista; en móvil, al pulsar sobre ella.
 - Historial de inspecciones (paginado) con técnico, fecha, estado y datos del lector/tickets.
 - Historial de repuestos solicitados para esa máquina, con su estado.
+- **Borrar inspección** *(solo admin)*: disponible en cualquier inspección del historial, no solo en las últimas 5. Mismas reglas que en Detalle de máquina (borrado permanente, bloqueado si está vinculada a una incidencia activa).
 
 ---
 
@@ -124,6 +129,8 @@ Genera informes PDF de inspecciones por periodo y localización.
 - MTTR (tiempo medio de reparación en horas).
 - Top 5 máquinas con más averías.
 - Desglose por localización.
+
+> Si una máquina tiene más de una inspección el mismo día, en el listado y en todos los cálculos (porcentajes, top 5) solo cuenta la más reciente de ese día.
 
 ---
 
@@ -177,6 +184,8 @@ Panel con métricas agregadas del periodo seleccionado.
 
 También permite generar un PDF de estadísticas o enviarlo por email a los destinatarios configurados en Ajustes.
 
+> Igual que en Informes: si una máquina tiene más de una inspección el mismo día, solo la más reciente cuenta en los porcentajes, el top 5, el gráfico diario y las estadísticas de lector/dispensador.
+
 ---
 
 ### Incidencias (avisos de avería)
@@ -193,6 +202,8 @@ Flujo para que el **cliente** avise de averías y el personal las resuelva. No c
 - Filtro **Abiertas / Resueltas**.
 - Cada aviso muestra máquina, ubicación, tipos de problema, comentario y fecha.
 - Botón **Resolver** → elegir el resultado: **Funcionando** (la máquina vuelve a operativa) o **En reparación**. Esto registra la inspección correspondiente y marca el aviso como resuelto con su fecha, alimentando las estadísticas de tiempo de resolución.
+- **Editar** *(solo admin)*: corregir el tipo de problema (máquina y/o lector) o el comentario de un aviso ya reportado. No permite cambiar si está abierto o resuelto — eso se gestiona solo con Resolver.
+- **Borrar** *(solo admin)*: borrado lógico, el aviso deja de verse en la lista. No se puede borrar un aviso **abierto**; hay que resolverlo primero.
 
 ---
 
