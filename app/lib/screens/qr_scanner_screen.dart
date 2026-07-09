@@ -1,6 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_zxing/flutter_zxing.dart';
 import 'package:go_router/go_router.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/api_client.dart';
 import '../widgets/desktop_shell_scope.dart';
 
@@ -14,80 +15,38 @@ class QrScannerScreen extends StatefulWidget {
 
 class _QrScannerScreenState extends State<QrScannerScreen> {
   bool _processing = false;
-  final MobileScannerController _controller = MobileScannerController();
+  String? _cameraError;
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  void _onControllerCreated(CameraController? controller, Exception? error) {
+    if (error != null && mounted) {
+      setState(() => _cameraError = error.toString());
+    }
   }
 
-  Future<void> _onDetect(BarcodeCapture capture) async {
+  Future<void> _onScan(Code? code) async {
     if (_processing) return;
-    final code = capture.barcodes.firstOrNull?.rawValue;
-    if (code == null) return;
+    final value = code?.text;
+    if (code?.isValid != true || value == null) return;
     setState(() => _processing = true);
     try {
-      final machine = await widget.api.getMachineByQr(code);
+      final machine = await widget.api.getMachineByQr(value);
       if (mounted) context.pushReplacement('/machines/${machine.id}');
     } catch (e) {
       if (mounted) {
         setState(() => _processing = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Máquina no encontrada para código: $code')),
+          SnackBar(content: Text('Máquina no encontrada para código: $value')),
         );
       }
     }
   }
 
-  Widget _buildError(BuildContext context, MobileScannerException error) {
-    final isPermissionDenied = error.errorCode == MobileScannerErrorCode.permissionDenied;
-    final detail = error.errorDetails;
-    final detailText = [
-      if (detail?.code != null) 'code: ${detail!.code}',
-      if (detail?.message != null) detail!.message!,
-    ].join(' — ');
-    return ColoredBox(
-      color: Colors.black,
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.no_photography, color: Colors.white, size: 48),
-              const SizedBox(height: 16),
-              Text(
-                isPermissionDenied
-                    ? 'La app necesita permiso de cámara para escanear.\nActívalo en Ajustes del sistema y vuelve a intentarlo.'
-                    : 'No se pudo iniciar la cámara (${error.errorCode.name}).',
-                style: const TextStyle(color: Colors.white),
-                textAlign: TextAlign.center,
-              ),
-              if (detailText.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  detailText,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () => _controller.start(),
-                child: const Text('Reintentar'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDesktop = DesktopShellScope.of(context)?.isDesktop ?? false;
-    if (isDesktop) {
+    // flutter_zxing uses dart:ffi, which isn't available on web — fall back to
+    // the same "use the mobile app" message there, regardless of screen size.
+    if (isDesktop || kIsWeb) {
       return Scaffold(
         body: Center(
           child: Column(
@@ -106,27 +65,39 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     }
     return Scaffold(
       appBar: AppBar(title: const Text('Escanear QR')),
-      body: Stack(
-        children: [
-          MobileScanner(
-            controller: _controller,
-            onDetect: _onDetect,
-            errorBuilder: _buildError,
-          ),
-          if (_processing)
-            const Center(child: CircularProgressIndicator()),
-          Center(
-            child: Container(
-              width: 220,
-              height: 220,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.white, width: 2),
-                borderRadius: BorderRadius.circular(12),
+      body: _cameraError != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.no_photography, size: 48),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No se pudo iniciar la cámara.\n$_cameraError',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: () => setState(() => _cameraError = null),
+                      child: const Text('Reintentar'),
+                    ),
+                  ],
+                ),
               ),
+            )
+          : Stack(
+              children: [
+                ReaderWidget(
+                  codeFormat: Format.qrCode,
+                  showGallery: false,
+                  onScan: _onScan,
+                  onControllerCreated: _onControllerCreated,
+                ),
+                if (_processing) const Center(child: CircularProgressIndicator()),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }
