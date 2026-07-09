@@ -14,8 +14,8 @@
 
 | Requisito | Versión mínima |
 |-----------|---------------|
-| Flutter SDK | 3.19.0 |
-| Dart | 3.3.0 |
+| Flutter SDK | 3.41.0 (requerido por `flutter_zxing`, escáner QR) |
+| Dart | 3.11.0 |
 | Android SDK (si se compila para Android) | API 21+ |
 | Xcode (si se compila para iOS) | 14+ |
 

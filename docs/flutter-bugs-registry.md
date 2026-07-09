@@ -79,6 +79,23 @@ nameCtrl.dispose();  // ← seguro: animación completada hace tiempo
 
 ---
 
+## BUG-004: `mobile_scanner` crashea la cámara SOLO en build release de Android (funciona en debug)
+
+**Síntoma:** En APK release, la pantalla de escaneo QR muestra fondo negro con icono de exclamación. En debug funciona perfecto. Con permiso de cámara concedido, el error real (una vez instrumentado) es `genericError`, code "error", mensaje una excepción Java nativa tipo `attempt to invoke virtual method '...getClass()' on a null object reference`.
+
+**Investigación (3 intentos, todos en `mobile_scanner`):**
+1. Sin `errorBuilder` custom, el widget no mostraba ningún detalle — solo un icono genérico del paquete. Se añadió `errorBuilder` mostrando `error.errorCode` + `error.errorDetails?.message/code` → confirmó `genericError` con un NPE nativo.
+2. Se subió `mobile_scanner` 5.2.3→7.2.0 (coincide con un issue abierto y sin resolver en el repo del paquete: "Android release build camera doesn't start at all"). El crash cambió de sitio pero seguía siendo el mismo patrón: NPE en una clase ya minificada de un vendor (`o5.b.a(k5.b)`).
+3. Se cambió de variante **bundled** → **unbundled** MLKit (`dev.steenbakker.mobile_scanner.useUnbundled=true`). El crash **persistió con el mismo patrón exacto**, solo cambiaron las letras de la clase minificada (`m5.c m5.b.a(j5.b)`).
+
+**Causa raíz:** El bug vive en la capa compartida CameraX/MLKit que usan TANTO la variante bundled como unbundled de `mobile_scanner` — no es un problema de configuración de nuestro lado, ni algo arreglable cambiando parámetros del paquete.
+
+**Fix:** Reemplazar `mobile_scanner` por `flutter_zxing`, que usa el plugin oficial `camera` de Flutter (la misma vía de acceso a cámara que ya usa `image_picker` en esta app, que sí funciona en release) para la vista previa, y una librería C++ separada (zxing-cpp vía FFI) solo para decodificar — evita CameraX/MLKit por completo. `flutter_zxing` no soporta web (usa `dart:ffi`); hay que añadir un guard `kIsWeb` además del guard de escritorio existente para no intentar construir el `ReaderWidget` ahí.
+
+**Regla:** Si un plugin de cámara/ML crashea solo en release y cambiar una opción de configuración del MISMO plugin (bundled/unbundled, versión mayor) reproduce el MISMO patrón de crash en un sitio distinto — no es una casualidad, es que el bug vive en la capa nativa compartida entre esas variantes. Tras 2-3 intentos de configuración fallidos con el mismo patrón, dejar de tocar ese plugin y cambiar a uno con una implementación nativa fundamentalmente distinta (aquí: CameraX/MLKit → `camera` oficial + zxing-cpp). No hace falta lograr un stack trace perfecto para tomar esa decisión si el patrón de fallo se repite de forma idéntica entre variantes.
+
+---
+
 ## Patrón general: errores en cascada
 
 Cuando Flutter lanza múltiples errores en secuencia:

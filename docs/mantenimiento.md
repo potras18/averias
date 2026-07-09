@@ -220,6 +220,50 @@ pm2 restart averias-backend
 
 ---
 
+## PM2 y arranque en boot
+
+El backend corre bajo PM2 (`averias-backend`), gestionado por el servicio systemd `pm2-ubuntu.service` (`ExecStart=pm2 resurrect`, habilitado con `systemctl enable`). Esto es lo que hace que el backend vuelva a arrancar solo si el VPS se reinicia (mantenimiento del proveedor, actualización de kernel, etc.).
+
+**Verificar que está bien configurado:**
+
+```bash
+systemctl is-enabled pm2-ubuntu   # debe decir "enabled"
+systemctl is-active pm2-ubuntu    # debe decir "active"
+pm2 status                        # averias-backend debe estar "online"
+```
+
+**Si el backend está caído y la web da 502 "Bad Gateway":** el proceso PM2 murió y nada lo revivió. Diagnosticar:
+
+```bash
+pm2 status                                          # ¿aparece averias-backend?
+uptime                                               # ¿se reinició el VPS hace poco?
+sudo journalctl -xeu pm2-ubuntu --no-pager | tail -40  # ¿por qué falló el servicio?
+```
+
+Arranque manual de emergencia si `pm2 status` no muestra el proceso:
+
+```bash
+cd ~/averias-backend && pm2 start src/server.js --name averias-backend
+pm2 save   # congela la lista de procesos para el próximo `pm2 resurrect`
+```
+
+**Si el servicio systemd existe pero falla al reiniciar** (error típico: `Can't open PID file '/home/ubuntu/.pm2/pm2.pid' (yet?)`), es porque el daemon PM2 ya estaba corriendo fuera de systemd cuando se instaló/reinició el servicio. Solución (implica un corte de segundos):
+
+```bash
+pm2 kill
+sudo systemctl restart pm2-ubuntu
+sleep 5 && systemctl is-active pm2-ubuntu && pm2 status
+```
+
+**Reinstalar el servicio desde cero** (si `/etc/systemd/system/pm2-ubuntu.service` no existe):
+
+```bash
+sudo env PATH=$PATH:/usr/bin pm2 startup systemd -u ubuntu --hp /home/ubuntu
+pm2 save
+```
+
+---
+
 ## Actualización de la app Flutter
 
 Compilar de nuevo y distribuir:
