@@ -44,3 +44,46 @@ describe('role_permissions seed (migration 018)', () => {
     expect(rows.length).toBe(0)
   })
 })
+
+describe('app.hasPermission / app.requirePermission', () => {
+  const { buildApp } = require('../src/app')
+  let app
+
+  beforeAll(async () => {
+    app = buildApp()
+    await app.ready()
+  })
+
+  afterAll(() => app.close())
+
+  test('admin siempre true, sin tocar la tabla', async () => {
+    expect(await app.hasPermission('admin', 'admin.view')).toBe(true)
+    expect(await app.hasPermission('admin', 'clave.inexistente')).toBe(true)
+  })
+
+  test('technician: false en estadisticas.view, true en informes.view', async () => {
+    expect(await app.hasPermission('technician', 'estadisticas.view')).toBe(false)
+    expect(await app.hasPermission('technician', 'informes.view')).toBe(true)
+  })
+
+  test('gerente: true en estadisticas.view, false en incidencias.edit', async () => {
+    expect(await app.hasPermission('gerente', 'estadisticas.view')).toBe(true)
+    expect(await app.hasPermission('gerente', 'incidencias.edit')).toBe(false)
+  })
+
+  test('clave desconocida → false (deny por defecto)', async () => {
+    expect(await app.hasPermission('technician', 'no.existe')).toBe(false)
+    expect(await app.hasPermission('gerente', 'no.existe')).toBe(false)
+  })
+
+  test('la caché se invalida con invalidatePermissionCache', async () => {
+    expect(await app.hasPermission('gerente', 'maquinas.view')).toBe(false)
+    await pool.query("UPDATE role_permissions SET allowed = true WHERE role = 'gerente' AND permission_key = 'maquinas.view'")
+    expect(await app.hasPermission('gerente', 'maquinas.view')).toBe(false) // cacheado
+    app.invalidatePermissionCache()
+    expect(await app.hasPermission('gerente', 'maquinas.view')).toBe(true)
+    // restaurar
+    await pool.query("UPDATE role_permissions SET allowed = false WHERE role = 'gerente' AND permission_key = 'maquinas.view'")
+    app.invalidatePermissionCache()
+  })
+})
