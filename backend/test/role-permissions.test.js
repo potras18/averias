@@ -91,7 +91,7 @@ describe('app.hasPermission / app.requirePermission', () => {
 describe('GET/PUT /role-permissions', () => {
   const supertest = require('supertest')
   const { buildApp } = require('../src/app')
-  let app, st, adminToken, techToken
+  let app, st, adminToken, techToken, gerenteToken
 
   beforeAll(async () => {
     app = buildApp()
@@ -100,16 +100,20 @@ describe('GET/PUT /role-permissions', () => {
     await resetDb()
     const admin = await seedUser({ email: 'rp-admin@x.com', password: 'pass123', role: 'admin' })
     const tech = await seedUser({ email: 'rp-tech@x.com', password: 'pass123', role: 'technician' })
+    const gerente = await seedUser({ email: 'rp-gerente@x.com', password: 'pass123', role: 'gerente' })
     const a = await st.post('/auth/login').send({ email: admin.email, password: admin.password })
     const t = await st.post('/auth/login').send({ email: tech.email, password: tech.password })
+    const g = await st.post('/auth/login').send({ email: gerente.email, password: gerente.password })
     adminToken = a.body.accessToken
     techToken = t.body.accessToken
+    gerenteToken = g.body.accessToken
   })
 
   afterAll(() => app.close())
 
   const asAdmin = () => ({ Authorization: `Bearer ${adminToken}` })
   const asTech = () => ({ Authorization: `Bearer ${techToken}` })
+  const asGerente = () => ({ Authorization: `Bearer ${gerenteToken}` })
 
   test('GET devuelve la matriz completa para admin', async () => {
     const res = await st.get('/role-permissions').set(asAdmin())
@@ -166,5 +170,13 @@ describe('GET/PUT /role-permissions', () => {
     expect(res.status).toBe(200)
     expect(res.body['admin.view']).toBe(true)
     expect(res.body['maquinas.edit']).toBe(true)
+  })
+
+  test('GET /me devuelve los permisos propios de gerente (no technician)', async () => {
+    const res = await st.get('/role-permissions/me').set(asGerente())
+    expect(res.status).toBe(200)
+    expect(res.body['estadisticas.view']).toBe(true)
+    expect(res.body['maquinas.view']).toBe(false)
+    expect(res.body['incidencias.edit']).toBe(false)
   })
 })
