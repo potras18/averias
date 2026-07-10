@@ -21,7 +21,7 @@ module.exports = async function reportsRoutes(app) {
   }
 
   app.get('/pdf', {
-    preHandler: [app.authenticate],
+    preHandler: [app.authenticate, app.requirePermission('informes.view')],
     schema: { querystring: QUERY_SCHEMA },
     config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
   }, async (req, reply) => {
@@ -59,7 +59,7 @@ module.exports = async function reportsRoutes(app) {
   })
 
   app.post('/email', {
-    preHandler: [app.authenticate],
+    preHandler: [app.authenticate, app.requirePermission('informes.view')],
     schema: {
       body: {
         type: ['object', 'null'],

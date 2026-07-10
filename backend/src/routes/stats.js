@@ -48,7 +48,7 @@ module.exports = async function statsRoutes(app) {
   }
 
   app.get('/', {
-    preHandler: [app.authenticate],
+    preHandler: [app.authenticate, app.requirePermission('estadisticas.view')],
     schema: { querystring: QUERY_SCHEMA },
   }, async (req, reply) => {
     const { from, to, location_id } = req.query
@@ -73,7 +73,7 @@ module.exports = async function statsRoutes(app) {
   })
 
   app.get('/pdf', {
-    preHandler: [app.authenticate],
+    preHandler: [app.authenticate, app.requirePermission('estadisticas.view')],
     schema: { querystring: QUERY_SCHEMA },
     config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
   }, async (req, reply) => {
@@ -103,7 +103,7 @@ module.exports = async function statsRoutes(app) {
   })
 
   app.post('/email', {
-    preHandler: [app.authenticate],
+    preHandler: [app.authenticate, app.requirePermission('estadisticas.view')],
     schema: {
       body: {
         type: ['object', 'null'],

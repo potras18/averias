@@ -38,6 +38,18 @@ beforeAll(async () => {
 
 afterAll(() => app.close())
 
+let gerenteToken
+beforeAll(async () => {
+  const gerente = await seedUser({ email: 'rpt-gerente@example.com', role: 'gerente' })
+  gerenteToken = (await st.post('/auth/login').send({ email: gerente.email, password: gerente.password })).body.accessToken
+})
+
+test('GET /reports/pdf → 200 para gerente (informes.view)', async () => {
+  const res = await st.get('/reports/pdf').set({ Authorization: `Bearer ${gerenteToken}` })
+  expect(res.status).toBe(200)
+  expect(res.headers['content-type']).toContain('application/pdf')
+})
+
 const auth = () => ({ Authorization: `Bearer ${token}` })
 
 describe('GET /reports/pdf', () => {

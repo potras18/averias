@@ -14,15 +14,20 @@ const { buildApp } = require('../src/app')
 const { pool, resetDb, seedUser, seedLocation, seedMachine, seedInspection, seedSettings } = require('./helpers/db')
 
 let app, st, token
+let techToken, gerenteToken
 
 beforeAll(async () => {
   app = buildApp()
   await app.ready()
   st = supertest(app.server)
   await resetDb()
-  const user = await seedUser()
+  const user = await seedUser({ email: 'stats-admin@example.com', role: 'admin' })
   const loginRes = await st.post('/auth/login').send({ email: user.email, password: user.password })
   token = loginRes.body.accessToken
+  const tech = await seedUser({ email: 'stats-tech@example.com', role: 'technician' })
+  const gerente = await seedUser({ email: 'stats-gerente@example.com', role: 'gerente' })
+  techToken = (await st.post('/auth/login').send({ email: tech.email, password: tech.password })).body.accessToken
+  gerenteToken = (await st.post('/auth/login').send({ email: gerente.email, password: gerente.password })).body.accessToken
   const loc = await seedLocation()
   const machine = await seedMachine({ locationId: loc.id, qrCode: 'STA-1' })
   await st.post('/inspections')
@@ -201,6 +206,16 @@ describe('GET /stats', () => {
     expect(res.body.dispenser_stats.pct_ok).toBe(100)
     expect(res.body.dispenser_stats.pct_full).toBe(100)
     expect(res.body.dispenser_stats.pct_empty).toBe(0)
+  })
+
+  it('technician recibe 403 (sin estadisticas.view)', async () => {
+    const res = await st.get('/stats').set({ Authorization: `Bearer ${techToken}` })
+    expect(res.status).toBe(403)
+  })
+
+  it('gerente recibe 200 (con estadisticas.view)', async () => {
+    const res = await st.get('/stats').set({ Authorization: `Bearer ${gerenteToken}` })
+    expect(res.status).toBe(200)
   })
 })
 
