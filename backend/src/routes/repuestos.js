@@ -116,7 +116,7 @@ module.exports = async function repuestosRoutes(app) {
   })
 
   app.delete('/:id', {
-    preHandler: [app.authenticate, app.requireAdmin],
+    preHandler: [app.authenticate, app.requirePermission('repuestos.edit')],
     schema: {
       params: { type: 'object', properties: { id: { type: 'string' } } },
     },

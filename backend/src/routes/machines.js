@@ -146,7 +146,7 @@ module.exports = async function machinesRoutes(app) {
   })
 
   app.post('/', {
-    preHandler: [app.authenticate, app.requireAdmin],
+    preHandler: [app.authenticate, app.requirePermission('maquinas.edit')],
     schema: {
       body: {
         type: 'object',
@@ -172,7 +172,7 @@ module.exports = async function machinesRoutes(app) {
 
   // POST /machines/import — carga masiva desde CSV (crea ubicaciones que no existan)
   app.post('/import', {
-    preHandler: [app.authenticate, app.requireAdmin],
+    preHandler: [app.authenticate, app.requirePermission('maquinas.edit')],
     schema: {
       body: {
         type: 'object',
@@ -229,7 +229,7 @@ module.exports = async function machinesRoutes(app) {
   })
 
   app.put('/:id', {
-    preHandler: [app.authenticate, app.requireAdmin],
+    preHandler: [app.authenticate, app.requirePermission('maquinas.edit')],
     schema: {
       body: {
         type: 'object',
@@ -259,7 +259,7 @@ module.exports = async function machinesRoutes(app) {
     return machine
   })
 
-  app.patch('/:id/decommission', { preHandler: [app.authenticate, app.requireAdmin] }, async (req, reply) => {
+  app.patch('/:id/decommission', { preHandler: [app.authenticate, app.requirePermission('maquinas.edit')] }, async (req, reply) => {
     const { rowCount } = await app.db.query(
       'UPDATE machines SET active = false WHERE id = $1',
       [req.params.id]
@@ -282,7 +282,7 @@ module.exports = async function machinesRoutes(app) {
   // PUT /machines/:id/image — admin only
   app.put('/:id/image', {
     bodyLimit: 6291456,
-    preHandler: [app.authenticate, app.requireAdmin],
+    preHandler: [app.authenticate, app.requirePermission('maquinas.edit')],
     schema: {
       body: {
         type: 'object',
@@ -310,7 +310,7 @@ module.exports = async function machinesRoutes(app) {
 
   // DELETE /machines/:id/image — admin only
   app.delete('/:id/image', {
-    preHandler: [app.authenticate, app.requireAdmin],
+    preHandler: [app.authenticate, app.requirePermission('maquinas.edit')],
   }, async (req, reply) => {
     const { rowCount } = await app.db.query(
       'UPDATE machines SET image = NULL, image_mime = NULL WHERE id = $1',
