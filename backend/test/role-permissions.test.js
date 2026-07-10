@@ -1,7 +1,7 @@
 'use strict'
 require('./helpers/env')
 
-const { pool } = require('./helpers/db')
+const { pool, resetDb, seedUser } = require('./helpers/db')
 
 // Root-level afterAll: closes the shared helpers pool exactly once, after ALL
 // describes in this file (Tasks 1-3 append more describes below). Per-describe
@@ -85,5 +85,71 @@ describe('app.hasPermission / app.requirePermission', () => {
     // restaurar
     await pool.query("UPDATE role_permissions SET allowed = false WHERE role = 'gerente' AND permission_key = 'maquinas.view'")
     app.invalidatePermissionCache()
+  })
+})
+
+describe('GET/PUT /role-permissions', () => {
+  const supertest = require('supertest')
+  const { buildApp } = require('../src/app')
+  let app, st, adminToken, techToken
+
+  beforeAll(async () => {
+    app = buildApp()
+    await app.ready()
+    st = supertest(app.server)
+    await resetDb()
+    const admin = await seedUser({ email: 'rp-admin@x.com', password: 'pass123', role: 'admin' })
+    const tech = await seedUser({ email: 'rp-tech@x.com', password: 'pass123', role: 'technician' })
+    const a = await st.post('/auth/login').send({ email: admin.email, password: admin.password })
+    const t = await st.post('/auth/login').send({ email: tech.email, password: tech.password })
+    adminToken = a.body.accessToken
+    techToken = t.body.accessToken
+  })
+
+  afterAll(() => app.close())
+
+  const asAdmin = () => ({ Authorization: `Bearer ${adminToken}` })
+  const asTech = () => ({ Authorization: `Bearer ${techToken}` })
+
+  test('GET devuelve la matriz completa para admin', async () => {
+    const res = await st.get('/role-permissions').set(asAdmin())
+    expect(res.status).toBe(200)
+    const map = Object.fromEntries(res.body.map(r => [`${r.role}:${r.permission_key}`, r.allowed]))
+    expect(map['technician:estadisticas.view']).toBe(false)
+    expect(map['gerente:estadisticas.view']).toBe(true)
+    // admin implícito todo-true
+    expect(map['admin:estadisticas.view']).toBe(true)
+    expect(map['admin:admin.view']).toBe(true)
+  })
+
+  test('GET → 403 para technician (admin.view false)', async () => {
+    const res = await st.get('/role-permissions').set(asTech())
+    expect(res.status).toBe(403)
+  })
+
+  test('PUT hace upsert e invalida la caché', async () => {
+    const put = await st.put('/role-permissions').set(asAdmin()).send([
+      { role: 'gerente', permission_key: 'repuestos.view', allowed: true },
+    ])
+    expect(put.status).toBe(200)
+    expect(await app.hasPermission('gerente', 'repuestos.view')).toBe(true)
+    // restaurar
+    await st.put('/role-permissions').set(asAdmin()).send([
+      { role: 'gerente', permission_key: 'repuestos.view', allowed: false },
+    ])
+  })
+
+  test('PUT con role admin → 400', async () => {
+    const res = await st.put('/role-permissions').set(asAdmin()).send([
+      { role: 'admin', permission_key: 'admin.view', allowed: false },
+    ])
+    expect(res.status).toBe(400)
+  })
+
+  test('PUT → 403 para technician', async () => {
+    const res = await st.put('/role-permissions').set(asTech()).send([
+      { role: 'gerente', permission_key: 'repuestos.view', allowed: true },
+    ])
+    expect(res.status).toBe(403)
   })
 })

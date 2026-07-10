@@ -15,6 +15,7 @@ const usersRoutes = require('./routes/users')
 const repuestosRoutes = require('./routes/repuestos')
 const settingsRoutes = require('./routes/settings')
 const incidenciasRoutes = require('./routes/incidencias')
+const rolePermissionsRoutes = require('./routes/role-permissions')
 
 function buildApp(opts = {}) {
   const app = Fastify({ logger: opts.logger ?? false })
@@ -35,6 +36,7 @@ function buildApp(opts = {}) {
   app.register(repuestosRoutes, { prefix: '/repuestos' })
   app.register(settingsRoutes, { prefix: '/settings' })
   app.register(incidenciasRoutes, { prefix: '/incidencias' })
+  app.register(rolePermissionsRoutes, { prefix: '/role-permissions' })
   app.setErrorHandler((error, request, reply) => {
     request.log.error(error)
     const status = error.statusCode ?? 500
