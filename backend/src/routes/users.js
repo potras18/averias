@@ -32,7 +32,7 @@ module.exports = async function usersRoutes(app) {
           name:        { type: 'string', minLength: 1 },
           email:       { type: 'string', format: 'email' },
           password:    { type: 'string', minLength: 6 },
-          role:        { type: 'string', enum: ['admin', 'technician', 'reportes'] },
+          role:        { type: 'string', enum: ['admin', 'technician', 'reportes', 'gerente'] },
           location_id: { type: 'string' },
         },
         additionalProperties: false,
