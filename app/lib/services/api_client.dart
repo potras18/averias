@@ -9,6 +9,7 @@ import '../models/user.dart';
 import '../models/settings.dart';
 import '../models/spare_part.dart';
 import '../models/incidencia.dart';
+import '../models/role_permission.dart';
 import 'storage_service.dart';
 
 class ApiClient {
@@ -445,5 +446,17 @@ class ApiClient {
 
   Future<void> deleteIncidencia(String id) async {
     await _dio.delete('/incidencias/$id');
+  }
+
+  // Role permissions
+  Future<List<RolePermission>> getRolePermissions() async {
+    final res = await _dio.get('/role-permissions');
+    return (res.data as List)
+        .map((j) => RolePermission.fromJson(j as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> updateRolePermissions(List<RolePermission> perms) async {
+    await _dio.put('/role-permissions', data: perms.map((p) => p.toJson()).toList());
   }
 }
