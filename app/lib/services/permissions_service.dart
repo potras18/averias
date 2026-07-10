@@ -3,7 +3,8 @@ import 'api_client.dart';
 import 'storage_service.dart';
 
 /// Session-wide permission resolver. Loaded once per login from
-/// GET /role-permissions. `admin` short-circuits to "allow all"; `reportes`
+/// GET /role-permissions/me (the caller's own resolved permissions).
+/// `admin` short-circuits to "allow all"; `reportes`
 /// is handled separately by the router redirect. On a load failure we fall
 /// back to the most restrictive built-in set (technician minus stats), never
 /// failing open.
@@ -53,10 +54,7 @@ class PermissionsService {
       return;
     }
     try {
-      final matrix = await _api!.getRolePermissions();
-      _perms = {
-        for (final r in matrix.where((r) => r.role == role)) r.key: r.allowed,
-      };
+      _perms = await _api!.getMyPermissions();
     } catch (_) {
       _perms = Map.of(fallbackNonAdmin);
     }

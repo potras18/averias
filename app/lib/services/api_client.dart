@@ -459,4 +459,9 @@ class ApiClient {
   Future<void> updateRolePermissions(List<RolePermission> perms) async {
     await _dio.put('/role-permissions', data: perms.map((p) => p.toJson()).toList());
   }
+
+  Future<Map<String, bool>> getMyPermissions() async {
+    final res = await _dio.get('/role-permissions/me');
+    return Map<String, bool>.from(res.data as Map);
+  }
 }

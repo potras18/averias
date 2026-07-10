@@ -152,4 +152,19 @@ describe('GET/PUT /role-permissions', () => {
     ])
     expect(res.status).toBe(403)
   })
+
+  test('GET /me devuelve los permisos propios de technician sin admin.view', async () => {
+    const res = await st.get('/role-permissions/me').set(asTech())
+    expect(res.status).toBe(200)
+    expect(res.body['estadisticas.view']).toBe(false)
+    expect(res.body['informes.view']).toBe(true)
+    expect(res.body['admin.view']).toBe(false)
+  })
+
+  test('GET /me devuelve todo true para admin', async () => {
+    const res = await st.get('/role-permissions/me').set(asAdmin())
+    expect(res.status).toBe(200)
+    expect(res.body['admin.view']).toBe(true)
+    expect(res.body['maquinas.edit']).toBe(true)
+  })
 })

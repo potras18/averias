@@ -69,4 +69,17 @@ module.exports = async function rolePermissionsRoutes(app) {
     app.invalidatePermissionCache()
     return { ok: true }
   })
+
+  // GET /role-permissions/me — the calling user's own resolved permissions.
+  // Unlike GET /, this is open to any authenticated user (not admin.view-gated) —
+  // every role needs to load its own permission set, including gerente, whose
+  // admin.view is false and would otherwise 403 against the admin-only matrix route.
+  app.get('/me', { preHandler: [app.authenticate] }, async (req) => {
+    const role = req.user.role
+    const out = {}
+    for (const key of PERMISSION_KEYS) {
+      out[key] = await app.hasPermission(role, key)
+    }
+    return out
+  })
 }
