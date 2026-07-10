@@ -148,7 +148,7 @@ test('stats includes incidencia resolution counts', async () => {
   await st.patch(`/incidencias/${deleted.body.id}/resolve`).set(asTech()).send({ resolution: 'operative' })
   await pool.query('UPDATE incidencias SET active = false WHERE id = $1', [deleted.body.id])
 
-  const stats = await st.get('/stats').set(asTech())
+  const stats = await st.get('/stats').set(asAdmin())
   expect(stats.status).toBe(200)
   expect(stats.body.resolved_incidencias).toBe(1)
   expect(stats.body.open_incidencias).toBe(1)
