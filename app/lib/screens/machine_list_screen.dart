@@ -625,7 +625,7 @@ class _SparePartTile extends StatelessWidget {
               padding: EdgeInsets.zero,
             ),
             IconButton(icon: const Icon(Icons.edit), tooltip: 'Editar', onPressed: onEdit),
-            if (role == 'admin')
+            if (PermissionsService.instance.can('repuestos.edit'))
               IconButton(icon: const Icon(Icons.delete_outline), tooltip: 'Eliminar', onPressed: onDelete),
           ],
         ),
