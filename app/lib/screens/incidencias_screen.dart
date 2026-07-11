@@ -3,6 +3,7 @@ import '../models/incidencia.dart';
 import '../services/api_client.dart';
 import '../services/storage_service.dart';
 import '../widgets/confirm_dialog.dart';
+import '../services/permissions_service.dart';
 
 const _machineProblemLabels = {
   'no_enciende': 'No enciende',
@@ -164,6 +165,7 @@ class _IncidenciasScreenState extends State<IncidenciasScreen> {
                   itemBuilder: (_, i) => _IncidenciaCard(
                     incidencia: items[i],
                     isAdmin: _role == 'admin',
+                    canEdit: PermissionsService.instance.can('incidencias.edit'),
                     onResolve: () => _resolve(items[i]),
                     onEdit: () => _edit(items[i]),
                     onDelete: () => _delete(items[i]),
@@ -181,12 +183,14 @@ class _IncidenciasScreenState extends State<IncidenciasScreen> {
 class _IncidenciaCard extends StatelessWidget {
   final Incidencia incidencia;
   final bool isAdmin;
+  final bool canEdit;
   final VoidCallback onResolve;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   const _IncidenciaCard({
     required this.incidencia,
     required this.isAdmin,
+    required this.canEdit,
     required this.onResolve,
     required this.onEdit,
     required this.onDelete,
@@ -217,13 +221,13 @@ class _IncidenciaCard extends StatelessWidget {
                   IconButton(icon: const Icon(Icons.edit), tooltip: 'Editar', onPressed: onEdit),
                   IconButton(icon: const Icon(Icons.delete), tooltip: 'Borrar', onPressed: onDelete),
                 ],
-                if (inc.status == 'open')
+                if (inc.status == 'open' && canEdit)
                   FilledButton.icon(
                     icon: const Icon(Icons.check),
                     label: const Text('Resolver'),
                     onPressed: onResolve,
                   )
-                else
+                else if (inc.status != 'open')
                   Chip(
                     label: Text(inc.resolution == 'operative' ? 'Funcionando' : 'En reparación'),
                   ),
