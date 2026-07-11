@@ -6,6 +6,7 @@ import '../models/inspection.dart';
 import '../models/spare_part.dart';
 import '../services/api_client.dart';
 import '../services/storage_service.dart';
+import '../services/permissions_service.dart';
 import '../widgets/desktop_shell_scope.dart';
 import '../widgets/machine_card.dart';
 import '../widgets/confirm_dialog.dart';
@@ -211,32 +212,36 @@ class _MachineListScreenState extends State<MachineListScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              if (_role == 'admin')
+              if (PermissionsService.instance.can('admin.view'))
                 IconButton(
                   icon: const Icon(Icons.settings),
                   tooltip: 'Administración',
                   onPressed: () => context.push('/admin'),
                 ),
-              IconButton(
-                icon: const Icon(Icons.history),
-                tooltip: 'Histórico',
-                onPressed: () => context.push('/history'),
-              ),
-              IconButton(
-                icon: const Icon(Icons.build),
-                tooltip: 'Repuestos',
-                onPressed: () => context.push('/repuestos'),
-              ),
-              IconButton(
-                icon: const Icon(Icons.bar_chart),
-                tooltip: 'Estadísticas',
-                onPressed: () => context.push('/stats'),
-              ),
-              IconButton(
-                icon: const Icon(Icons.assessment),
-                tooltip: 'Informes',
-                onPressed: () => context.push('/reports'),
-              ),
+              if (PermissionsService.instance.can('inspecciones.view'))
+                IconButton(
+                  icon: const Icon(Icons.history),
+                  tooltip: 'Histórico',
+                  onPressed: () => context.push('/history'),
+                ),
+              if (PermissionsService.instance.can('repuestos.view'))
+                IconButton(
+                  icon: const Icon(Icons.build),
+                  tooltip: 'Repuestos',
+                  onPressed: () => context.push('/repuestos'),
+                ),
+              if (PermissionsService.instance.can('estadisticas.view'))
+                IconButton(
+                  icon: const Icon(Icons.bar_chart),
+                  tooltip: 'Estadísticas',
+                  onPressed: () => context.push('/stats'),
+                ),
+              if (PermissionsService.instance.can('informes.view'))
+                IconButton(
+                  icon: const Icon(Icons.assessment),
+                  tooltip: 'Informes',
+                  onPressed: () => context.push('/reports'),
+                ),
               IconButton(
                 icon: const Icon(Icons.qr_code_scanner),
                 tooltip: 'Escanear QR',

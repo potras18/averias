@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:averias_app/screens/machine_list_screen.dart';
 import 'package:averias_app/services/api_client.dart';
 import 'package:averias_app/services/storage_service.dart';
+import 'package:averias_app/services/permissions_service.dart';
 import 'package:averias_app/models/machine.dart';
 import 'package:averias_app/models/inspection.dart';
 import 'package:averias_app/widgets/desktop_shell_scope.dart';
@@ -62,6 +63,9 @@ void main() {
     when(() => api.getMachineById('m-1')).thenAnswer((_) async => machine1);
     when(() => api.getMachineById('m-2')).thenAnswer((_) async => machine2);
     when(() => api.getSpareParts(machineId: any(named: 'machineId'))).thenAnswer((_) async => []);
+    // The mobile AppBar icons now gate on PermissionsService.instance.can(...)
+    // rather than storage.getRole() directly; seed the technician default set.
+    PermissionsService.instance.debugSet('technician', PermissionsService.fallbackNonAdmin);
   });
 
   testWidgets('desktop: shows list panel and detail panel side by side', (tester) async {

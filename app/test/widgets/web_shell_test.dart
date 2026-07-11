@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:averias_app/widgets/web_shell.dart';
 import 'package:averias_app/services/api_client.dart';
 import 'package:averias_app/services/storage_service.dart';
+import 'package:averias_app/services/permissions_service.dart';
 
 class MockApiClient extends Mock implements ApiClient {}
 class MockStorageService extends Mock implements StorageService {}
@@ -31,6 +32,9 @@ void main() {
     api = MockApiClient();
     storage = MockStorageService();
     when(() => storage.getRole()).thenAnswer((_) async => 'technician');
+    // WebShell reads nav visibility from the permission singleton now (not
+    // storage.getRole() directly), so each test seeds it via debugSet.
+    PermissionsService.instance.reset();
   });
 
   testWidgets('desktop (>=900px) shows sidebar and child', (tester) async {
@@ -65,6 +69,9 @@ void main() {
 
   testWidgets('sidebar shows nav items for technician', (tester) async {
     _setDesktop(tester);
+    // Real technician default permission set (see PermissionsService.fallbackNonAdmin):
+    // everything except estadisticas.view and admin.view.
+    PermissionsService.instance.debugSet('technician', PermissionsService.fallbackNonAdmin);
     await tester.pumpWidget(MaterialApp(
       home: WebShell(currentRoute: '/machines', api: api, storage: storage, child: const SizedBox()),
     ));
@@ -72,13 +79,15 @@ void main() {
     expect(find.text('Máquinas'), findsOneWidget);
     expect(find.text('Histórico'), findsOneWidget);
     expect(find.text('Reportes'), findsOneWidget);
-    expect(find.text('Estadísticas'), findsOneWidget);
+    expect(find.text('Estadísticas'), findsNothing);  // technician has no estadisticas.view
     expect(find.text('Admin'), findsNothing);  // no admin for technician
   });
 
   testWidgets('sidebar shows Admin item for admin role', (tester) async {
     _setDesktop(tester);
     when(() => storage.getRole()).thenAnswer((_) async => 'admin');
+    // 'admin' short-circuits PermissionsService.can() to true for everything.
+    PermissionsService.instance.debugSet('admin', {});
     await tester.pumpWidget(MaterialApp(
       home: WebShell(currentRoute: '/machines', api: api, storage: storage, child: const SizedBox()),
     ));

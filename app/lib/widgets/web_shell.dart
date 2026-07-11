@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/api_client.dart';
 import '../services/storage_service.dart';
+import '../services/permissions_service.dart';
 import 'desktop_shell_scope.dart';
 
 class WebShell extends StatefulWidget {
@@ -23,13 +24,11 @@ class WebShell extends StatefulWidget {
 }
 
 class _WebShellState extends State<WebShell> {
-  String? _role;
-
   @override
   void initState() {
     super.initState();
-    widget.storage.getRole().then((r) {
-      if (mounted) setState(() => _role = r);
+    PermissionsService.instance.ensureLoaded().then((_) {
+      if (mounted) setState(() {});
     });
   }
 
@@ -38,6 +37,7 @@ class _WebShellState extends State<WebShell> {
       await widget.api.logout();
     } catch (_) {}
     await widget.storage.clear();
+    PermissionsService.instance.reset();
     if (mounted) context.go('/login');
   }
 
@@ -53,7 +53,6 @@ class _WebShellState extends State<WebShell> {
                   width: 220,
                   child: _Sidebar(
                     currentRoute: widget.currentRoute,
-                    role: _role,
                     onLogout: _logout,
                     onNavigate: (route) => context.go(route),
                   ),
@@ -69,13 +68,11 @@ class _WebShellState extends State<WebShell> {
 
 class _Sidebar extends StatelessWidget {
   final String currentRoute;
-  final String? role;
   final VoidCallback onLogout;
   final void Function(String route) onNavigate;
 
   const _Sidebar({
     required this.currentRoute,
-    required this.role,
     required this.onLogout,
     required this.onNavigate,
   });
@@ -118,43 +115,49 @@ class _Sidebar extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _NavItem(
-                    icon: Icons.list_alt,
-                    label: 'Máquinas',
-                    selected: currentRoute == '/machines',
-                    onTap: () => onNavigate('/machines'),
-                  ),
-                  _NavItem(
-                    icon: Icons.history,
-                    label: 'Histórico',
-                    selected: currentRoute == '/history',
-                    onTap: () => onNavigate('/history'),
-                  ),
-                  _NavItem(
-                    icon: Icons.assessment,
-                    label: 'Reportes',
-                    selected: currentRoute == '/reports',
-                    onTap: () => onNavigate('/reports'),
-                  ),
-                  _NavItem(
-                    icon: Icons.bar_chart,
-                    label: 'Estadísticas',
-                    selected: currentRoute == '/stats',
-                    onTap: () => onNavigate('/stats'),
-                  ),
-                  _NavItem(
-                    icon: Icons.build,
-                    label: 'Repuestos',
-                    selected: currentRoute == '/repuestos',
-                    onTap: () => onNavigate('/repuestos'),
-                  ),
-                  _NavItem(
-                    icon: Icons.report_problem,
-                    label: 'Incidencias',
-                    selected: currentRoute == '/incidencias',
-                    onTap: () => onNavigate('/incidencias'),
-                  ),
-                  if (role == 'admin')
+                  if (PermissionsService.instance.can('maquinas.view'))
+                    _NavItem(
+                      icon: Icons.list_alt,
+                      label: 'Máquinas',
+                      selected: currentRoute == '/machines',
+                      onTap: () => onNavigate('/machines'),
+                    ),
+                  if (PermissionsService.instance.can('inspecciones.view'))
+                    _NavItem(
+                      icon: Icons.history,
+                      label: 'Histórico',
+                      selected: currentRoute == '/history',
+                      onTap: () => onNavigate('/history'),
+                    ),
+                  if (PermissionsService.instance.can('informes.view'))
+                    _NavItem(
+                      icon: Icons.assessment,
+                      label: 'Reportes',
+                      selected: currentRoute == '/reports',
+                      onTap: () => onNavigate('/reports'),
+                    ),
+                  if (PermissionsService.instance.can('estadisticas.view'))
+                    _NavItem(
+                      icon: Icons.bar_chart,
+                      label: 'Estadísticas',
+                      selected: currentRoute == '/stats',
+                      onTap: () => onNavigate('/stats'),
+                    ),
+                  if (PermissionsService.instance.can('repuestos.view'))
+                    _NavItem(
+                      icon: Icons.build,
+                      label: 'Repuestos',
+                      selected: currentRoute == '/repuestos',
+                      onTap: () => onNavigate('/repuestos'),
+                    ),
+                  if (PermissionsService.instance.can('incidencias.view'))
+                    _NavItem(
+                      icon: Icons.report_problem,
+                      label: 'Incidencias',
+                      selected: currentRoute == '/incidencias',
+                      onTap: () => onNavigate('/incidencias'),
+                    ),
+                  if (PermissionsService.instance.can('admin.view'))
                     _NavItem(
                       icon: Icons.settings,
                       label: 'Admin',
