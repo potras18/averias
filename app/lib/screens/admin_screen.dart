@@ -450,6 +450,8 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                       DropdownMenuItem(
                           value: 'technician', child: Text('Técnico')),
                       DropdownMenuItem(
+                          value: 'gerente', child: Text('Gerente')),
+                      DropdownMenuItem(
                           value: 'admin', child: Text('Administrador')),
                       DropdownMenuItem(
                           value: 'reportes', child: Text('Cliente (avisos)')),
