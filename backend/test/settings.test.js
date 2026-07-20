@@ -141,3 +141,23 @@ describe('PUT /settings', () => {
     expect(res.status).toBe(401)
   })
 })
+
+describe('GET /settings/public', () => {
+  it('returns ticket_level_question_enabled for a technician (non-admin)', async () => {
+    const res = await st.get('/settings/public').set(auth(techTok))
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ ticket_level_question_enabled: true })
+  })
+
+  it('reflects the stored value when disabled', async () => {
+    await seedSettings({ ticket_level_question_enabled: 'false' })
+    const res = await st.get('/settings/public').set(auth(techTok))
+    expect(res.status).toBe(200)
+    expect(res.body.ticket_level_question_enabled).toBe(false)
+  })
+
+  it('returns 401 without token', async () => {
+    const res = await st.get('/settings/public')
+    expect(res.status).toBe(401)
+  })
+})

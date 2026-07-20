@@ -30,6 +30,15 @@ function formatSettings(raw) {
 }
 
 module.exports = async function settingsRoutes(app) {
+  app.get('/public', {
+    preHandler: [app.authenticate],
+  }, async () => {
+    const raw = await loadSettings(app.db)
+    return {
+      ticket_level_question_enabled: (raw.ticket_level_question_enabled ?? 'true') !== 'false',
+    }
+  })
+
   app.get('/', {
     preHandler: [app.authenticate],
   }, async (req, reply) => {
