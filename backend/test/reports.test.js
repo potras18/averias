@@ -97,6 +97,24 @@ describe('GET /reports/pdf', () => {
     expect(typeof stats.mttrHours).toBe('number')
   })
 
+  it('passes ticketLevelEnabled=true to the report template by default', async () => {
+    await seedSettings()
+    buildReportHtml.mockClear()
+    const res = await st.get('/reports/pdf').set(auth())
+    expect(res.status).toBe(200)
+    expect(buildReportHtml).toHaveBeenCalledTimes(1)
+    expect(buildReportHtml.mock.calls[0][0].ticketLevelEnabled).toBe(true)
+  })
+
+  it('passes ticketLevelEnabled=false when the setting is disabled', async () => {
+    await seedSettings({ ticket_level_question_enabled: 'false' })
+    buildReportHtml.mockClear()
+    const res = await st.get('/reports/pdf').set(auth())
+    expect(res.status).toBe(200)
+    expect(buildReportHtml.mock.calls[0][0].ticketLevelEnabled).toBe(false)
+    await seedSettings() // restaurar defaults para no filtrar estado a otros tests
+  })
+
   it('same-day duplicate inspections: only the most recent counts in the listing, summary and top_problematic', async () => {
     const loc = await seedLocation({ name: 'Dedup Report Loc' })
     const tech = await seedUser({ email: 'dedup-report-tech@example.com' })

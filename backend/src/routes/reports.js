@@ -6,7 +6,7 @@ const { decrypt }         = require('../email/crypto')
 const { renderEmailTemplate } = require('../email/template')
 const {
   getInspectionRows, getMttrHours, getTopProblematic, buildSummary, groupByLocation, getMachineStates,
-  dedupeLatestPerMachineDay,
+  dedupeLatestPerMachineDay, getTicketLevelEnabled,
 } = require('../reports/queries')
 
 module.exports = async function reportsRoutes(app) {
@@ -28,10 +28,11 @@ module.exports = async function reportsRoutes(app) {
     const { from, to, location_id } = req.query
     const filters = { from, to, locationId: location_id }
 
-    const [rawRows, mttrStats, machineStates] = await Promise.all([
+    const [rawRows, mttrStats, machineStates, ticketLevelEnabled] = await Promise.all([
       getInspectionRows(app.db, filters),
       getMttrHours(app.db, filters),
       getMachineStates(app.db, filters),
+      getTicketLevelEnabled(app.db),
     ])
 
     if (rawRows.length === 0) {
@@ -50,6 +51,7 @@ module.exports = async function reportsRoutes(app) {
       locationSections: groupByLocation(rows),
       machineStates,
       stats: { mttrHours: mttrStats.mean, topProblematic },
+      ticketLevelEnabled,
     })
 
     const pdfBuffer = await generatePdf(html)
@@ -90,10 +92,11 @@ module.exports = async function reportsRoutes(app) {
       from: cfg.smtp_from,
     }
 
-    const [rawRows, mttrStats, machineStates] = await Promise.all([
+    const [rawRows, mttrStats, machineStates, ticketLevelEnabled] = await Promise.all([
       getInspectionRows(app.db, filters),
       getMttrHours(app.db, filters),
       getMachineStates(app.db, filters),
+      getTicketLevelEnabled(app.db),
     ])
 
     if (rawRows.length === 0) {
@@ -112,6 +115,7 @@ module.exports = async function reportsRoutes(app) {
       locationSections: groupByLocation(rows),
       machineStates,
       stats: { mttrHours: mttrStats.mean, topProblematic },
+      ticketLevelEnabled,
     })
 
     const fromLabel = from ?? 'todo'
