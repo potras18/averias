@@ -167,7 +167,14 @@ function getCardReaderStats(rows) {
   }
 }
 
-function getDispenserStats(rows) {
+async function getTicketLevelEnabled(db) {
+  const { rows } = await db.query(
+    "SELECT value FROM settings WHERE key = 'ticket_level_question_enabled'"
+  )
+  return rows.length === 0 || rows[0].value !== 'false'
+}
+
+function getDispenserStats(rows, ticketLevelEnabled = true) {
   const total = rows.length
   if (total === 0) return { pct_ok: 0, pct_no_check: 0, pct_full: 0, pct_low: 0, pct_empty: 0 }
   const checked   = rows.filter(r => r.dispenser_ok !== null).length
@@ -178,9 +185,9 @@ function getDispenserStats(rows) {
   return {
     pct_ok:       checked > 0 ? (okCount / total) * 100 : 0,
     pct_no_check: ((total - checked) / total) * 100,
-    pct_full:     (fullCount  / total) * 100,
-    pct_low:      (lowCount   / total) * 100,
-    pct_empty:    (emptyCount / total) * 100,
+    pct_full:     ticketLevelEnabled ? (fullCount  / total) * 100 : 0,
+    pct_low:      ticketLevelEnabled ? (lowCount   / total) * 100 : 0,
+    pct_empty:    ticketLevelEnabled ? (emptyCount / total) * 100 : 0,
   }
 }
 
@@ -248,4 +255,4 @@ async function getIncidenciaResolution(db, { from, to, locationId }) {
   }
 }
 
-module.exports = { getInspectionRows, getMttrHours, getMttrTopMachines, getTopProblematic, buildSummary, groupByLocation, getDailyBreakdown, getCardReaderStats, getDispenserStats, getMachineStates, getIncidenciaResolution, dedupeLatestPerMachineDay }
+module.exports = { getInspectionRows, getMttrHours, getMttrTopMachines, getTopProblematic, buildSummary, groupByLocation, getDailyBreakdown, getCardReaderStats, getDispenserStats, getMachineStates, getIncidenciaResolution, dedupeLatestPerMachineDay, getTicketLevelEnabled }
