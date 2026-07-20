@@ -219,14 +219,17 @@ describe('GET /stats', () => {
     )
     await seedSettings({ ticket_level_question_enabled: 'false' })
 
-    const res = await st.get(`/stats?location_id=${loc.id}`).set(auth())
-    expect(res.status).toBe(200)
-    expect(res.body.dispenser_stats.pct_ok).toBe(100)
-    expect(res.body.dispenser_stats.pct_full).toBe(0)
-    expect(res.body.dispenser_stats.pct_low).toBe(0)
-    expect(res.body.dispenser_stats.pct_empty).toBe(0)
-
-    await seedSettings() // restaurar defaults para no filtrar estado a otros tests
+    try {
+      const res = await st.get(`/stats?location_id=${loc.id}`).set(auth())
+      expect(res.status).toBe(200)
+      expect(res.body.dispenser_stats.pct_ok).toBe(100)
+      expect(res.body.dispenser_stats.pct_full).toBe(0)
+      expect(res.body.dispenser_stats.pct_low).toBe(0)
+      expect(res.body.dispenser_stats.pct_empty).toBe(0)
+    } finally {
+      // restaurar, incluso si una aserción anterior lanza
+      await seedSettings()
+    }
   })
 
   it('technician recibe 403 (sin estadisticas.view)', async () => {
