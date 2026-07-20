@@ -285,4 +285,48 @@ void main() {
     expect(captured['email_subject_stats'], 'Asunto stats viejo');
     expect(captured['email_body_stats'], 'Cuerpo stats viejo');
   });
+
+  testWidgets('Ajustes tab shows ticket-level switch and Guardar sends its value', (tester) async {
+    when(() => api.getSettings()).thenAnswer((_) async => const Settings(
+      smtpHost: '', smtpPort: '587', smtpUser: '', smtpPass: '', smtpFrom: '',
+      emailRecipients: [],
+      emailSubjectReports: '', emailBodyReports: '',
+      emailSubjectStats: '', emailBodyStats: '',
+      ticketLevelQuestionEnabled: true,
+    ));
+    when(() => api.updateSettings(any())).thenAnswer((_) async => const Settings(
+      smtpHost: '', smtpPort: '587', smtpUser: '', smtpPass: '', smtpFrom: '',
+      emailRecipients: [],
+      emailSubjectReports: '', emailBodyReports: '',
+      emailSubjectStats: '', emailBodyStats: '',
+      ticketLevelQuestionEnabled: false,
+    ));
+
+    await tester.pumpWidget(MaterialApp(home: AdminScreen(api: api, storage: storage)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Ajustes'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Preguntar nivel de tickets en revisiones'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Preguntar nivel de tickets en revisiones'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.text('Preguntar nivel de tickets en revisiones'));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Guardar'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+
+    final captured = verify(() => api.updateSettings(captureAny())).captured.single as Map<String, dynamic>;
+    expect(captured['ticket_level_question_enabled'], false);
+  });
 }

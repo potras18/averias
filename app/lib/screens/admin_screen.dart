@@ -848,6 +848,7 @@ class _AdminSettingsTabState extends State<_AdminSettingsTab> {
 
   List<String> _recipients = [];
   bool _passWasSet = false;
+  bool _ticketLevelEnabled = true;
   bool _loading    = true;
   bool _saving     = false;
   String? _error;
@@ -889,6 +890,7 @@ class _AdminSettingsTabState extends State<_AdminSettingsTab> {
         _emailBodyReportsCtrl.text    = s.emailBodyReports;
         _emailSubjectStatsCtrl.text   = s.emailSubjectStats;
         _emailBodyStatsCtrl.text      = s.emailBodyStats;
+        _ticketLevelEnabled = s.ticketLevelQuestionEnabled;
         _loading        = false;
       });
     } catch (_) {
@@ -910,6 +912,7 @@ class _AdminSettingsTabState extends State<_AdminSettingsTab> {
         'email_body_reports':    _emailBodyReportsCtrl.text,
         'email_subject_stats':   _emailSubjectStatsCtrl.text,
         'email_body_stats':      _emailBodyStatsCtrl.text,
+        'ticket_level_question_enabled': _ticketLevelEnabled,
       };
       final newPass = _passCtrl.text;
       if (newPass.isNotEmpty) body['smtp_pass'] = newPass;
@@ -1076,6 +1079,18 @@ class _AdminSettingsTabState extends State<_AdminSettingsTab> {
                 controller: _emailBodyStatsCtrl,
                 decoration: const InputDecoration(labelText: 'Cuerpo'),
                 maxLines: 4,
+              ),
+            ],
+          ),
+          _section(
+            icon: Icons.confirmation_number,
+            title: 'Revisiones',
+            children: [
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Preguntar nivel de tickets en revisiones'),
+                value: _ticketLevelEnabled,
+                onChanged: (v) => setState(() => _ticketLevelEnabled = v),
               ),
             ],
           ),
