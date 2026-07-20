@@ -5,6 +5,7 @@ const { encrypt } = require('../email/crypto')
 const ALLOWED_KEYS = [
   'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from', 'email_recipients',
   'email_subject_reports', 'email_body_reports', 'email_subject_stats', 'email_body_stats',
+  'ticket_level_question_enabled',
 ]
 
 async function loadSettings(db) {
@@ -24,6 +25,7 @@ function formatSettings(raw) {
     email_body_reports:    raw.email_body_reports    ?? '',
     email_subject_stats:   raw.email_subject_stats   ?? '',
     email_body_stats:      raw.email_body_stats      ?? '',
+    ticket_level_question_enabled: (raw.ticket_level_question_enabled ?? 'true') !== 'false',
   }
 }
 

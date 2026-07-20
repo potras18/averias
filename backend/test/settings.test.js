@@ -69,6 +69,12 @@ describe('GET /settings', () => {
     })
   })
 
+  it('GET /settings includes ticket_level_question_enabled defaulting to true', async () => {
+    const res = await st.get('/settings').set(auth(adminTok))
+    expect(res.status).toBe(200)
+    expect(res.body.ticket_level_question_enabled).toBe(true)
+  })
+
   it('returns 403 for technician', async () => {
     const res = await st.get('/settings').set(auth(techTok))
     expect(res.status).toBe(403)
@@ -117,6 +123,12 @@ describe('PUT /settings', () => {
     expect(res.status).toBe(200)
     expect(res.body.email_subject_reports).toBe('Asunto custom {archivo}')
     expect(res.body.email_body_reports).toBe('Cuerpo custom')
+  })
+
+  it('PUT /settings accepts and stores ticket_level_question_enabled', async () => {
+    const res = await st.put('/settings').set(auth(adminTok)).send({ ticket_level_question_enabled: false })
+    expect(res.status).toBe(200)
+    expect(res.body.ticket_level_question_enabled).toBe(false)
   })
 
   it('returns 400 for unknown key', async () => {
