@@ -77,14 +77,17 @@ describe('app.hasPermission / app.requirePermission', () => {
   })
 
   test('la caché se invalida con invalidatePermissionCache', async () => {
-    expect(await app.hasPermission('gerente', 'maquinas.view')).toBe(false)
-    await pool.query("UPDATE role_permissions SET allowed = true WHERE role = 'gerente' AND permission_key = 'maquinas.view'")
-    expect(await app.hasPermission('gerente', 'maquinas.view')).toBe(false) // cacheado
-    app.invalidatePermissionCache()
-    expect(await app.hasPermission('gerente', 'maquinas.view')).toBe(true)
-    // restaurar
-    await pool.query("UPDATE role_permissions SET allowed = false WHERE role = 'gerente' AND permission_key = 'maquinas.view'")
-    app.invalidatePermissionCache()
+    try {
+      expect(await app.hasPermission('gerente', 'maquinas.view')).toBe(false)
+      await pool.query("UPDATE role_permissions SET allowed = true WHERE role = 'gerente' AND permission_key = 'maquinas.view'")
+      expect(await app.hasPermission('gerente', 'maquinas.view')).toBe(false) // cacheado
+      app.invalidatePermissionCache()
+      expect(await app.hasPermission('gerente', 'maquinas.view')).toBe(true)
+    } finally {
+      // restaurar, incluso si una aserción anterior lanza
+      await pool.query("UPDATE role_permissions SET allowed = false WHERE role = 'gerente' AND permission_key = 'maquinas.view'")
+      app.invalidatePermissionCache()
+    }
   })
 })
 
