@@ -272,6 +272,12 @@ class ApiClient {
     return Settings.fromJson(res.data as Map<String, dynamic>);
   }
 
+  Future<bool> getTicketLevelEnabled() async {
+    final res = await _dio.get('/settings/public');
+    final data = res.data as Map<String, dynamic>;
+    return (data['ticket_level_question_enabled'] as bool?) ?? true;
+  }
+
   // Admin — Locations
   Future<Location> createLocation({required String name, String? address}) async {
     final res = await _dio.post('/locations', data: {

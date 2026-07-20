@@ -229,6 +229,7 @@ void main() {
       emailBodyReports: 'Adjunto encontrará el informe de averías solicitado.',
       emailSubjectStats: 'Estadísticas — {archivo}',
       emailBodyStats: 'Adjunto encontrará el reporte de estadísticas solicitado.',
+      ticketLevelQuestionEnabled: true,
     ));
 
     await tester.pumpWidget(MaterialApp(home: AdminScreen(api: api, storage: storage)));
@@ -251,6 +252,7 @@ void main() {
       emailBodyReports: 'Cuerpo viejo',
       emailSubjectStats: 'Asunto stats viejo',
       emailBodyStats: 'Cuerpo stats viejo',
+      ticketLevelQuestionEnabled: true,
     ));
     when(() => api.updateSettings(any())).thenAnswer((_) async => const Settings(
       smtpHost: '', smtpPort: '587', smtpUser: '', smtpPass: '', smtpFrom: '',
@@ -259,6 +261,7 @@ void main() {
       emailBodyReports: 'Cuerpo viejo',
       emailSubjectStats: 'Asunto stats viejo',
       emailBodyStats: 'Cuerpo stats viejo',
+      ticketLevelQuestionEnabled: true,
     ));
 
     await tester.pumpWidget(MaterialApp(home: AdminScreen(api: api, storage: storage)));
