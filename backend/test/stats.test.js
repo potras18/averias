@@ -208,6 +208,27 @@ describe('GET /stats', () => {
     expect(res.body.dispenser_stats.pct_empty).toBe(0)
   })
 
+  it('dispenser_stats ticket-level breakdown is zeroed when ticket_level_question_enabled is false', async () => {
+    const loc = await seedLocation({ name: 'Toggle Loc' })
+    const tech = await seedUser({ email: 'toggle-tech@example.com' })
+    const machine = await seedMachine({ locationId: loc.id, name: 'Toggle Machine', qrCode: 'TOGGLE-1' })
+    const insp = await seedInspection({ machineId: machine.id, technicianId: tech.id, status: 'operative', inspectedAt: '2026-06-01T08:00:00Z' })
+    await pool.query(
+      'INSERT INTO ticket_checks (inspection_id, dispenser_ok, ticket_level) VALUES ($1, true, $2)',
+      [insp.id, 'full']
+    )
+    await seedSettings({ ticket_level_question_enabled: 'false' })
+
+    const res = await st.get(`/stats?location_id=${loc.id}`).set(auth())
+    expect(res.status).toBe(200)
+    expect(res.body.dispenser_stats.pct_ok).toBe(100)
+    expect(res.body.dispenser_stats.pct_full).toBe(0)
+    expect(res.body.dispenser_stats.pct_low).toBe(0)
+    expect(res.body.dispenser_stats.pct_empty).toBe(0)
+
+    await seedSettings() // restaurar defaults para no filtrar estado a otros tests
+  })
+
   it('technician recibe 403 (sin estadisticas.view)', async () => {
     const res = await st.get('/stats').set({ Authorization: `Bearer ${techToken}` })
     expect(res.status).toBe(403)

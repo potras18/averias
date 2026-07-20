@@ -8,7 +8,7 @@ const { renderEmailTemplate } = require('../email/template')
 const {
   getInspectionRows, getMttrHours, getMttrTopMachines, getTopProblematic, buildSummary,
   getDailyBreakdown, getCardReaderStats, getDispenserStats, getIncidenciaResolution,
-  dedupeLatestPerMachineDay,
+  dedupeLatestPerMachineDay, getTicketLevelEnabled,
 } = require('../reports/queries')
 
 module.exports = async function statsRoutes(app) {
@@ -23,11 +23,12 @@ module.exports = async function statsRoutes(app) {
   }
 
   async function buildStatsData(db, filters) {
-    const [rawRows, mttrStats, mttrTopMachines, incidenciaResolution] = await Promise.all([
+    const [rawRows, mttrStats, mttrTopMachines, incidenciaResolution, ticketLevelEnabled] = await Promise.all([
       getInspectionRows(db, filters),
       getMttrHours(db, filters),
       getMttrTopMachines(db, filters),
       getIncidenciaResolution(db, filters),
+      getTicketLevelEnabled(db),
     ])
     const rows = dedupeLatestPerMachineDay(rawRows)
     const summary = buildSummary(rows)
@@ -43,7 +44,7 @@ module.exports = async function statsRoutes(app) {
       topProblematic:  getTopProblematic(rows),
       dailyBreakdown:  getDailyBreakdown(rows),
       cardReaderStats: getCardReaderStats(rows),
-      dispenserStats:  getDispenserStats(rows),
+      dispenserStats:  getDispenserStats(rows, ticketLevelEnabled),
     }
   }
 
