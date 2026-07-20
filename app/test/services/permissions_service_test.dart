@@ -47,4 +47,17 @@ void main() {
     });
     expect(perms.landingRoute(), '/history');
   });
+
+  test('landingRoute sin ningún permiso concedido → /no-access', () {
+    perms.debugSet('technician', {
+      'maquinas.view': false,
+      'inspecciones.view': false,
+      'incidencias.view': false,
+      'informes.view': false,
+      'estadisticas.view': false,
+      'repuestos.view': false,
+      'admin.view': false,
+    });
+    expect(perms.landingRoute(), '/no-access');
+  });
 }

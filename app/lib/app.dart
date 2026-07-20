@@ -16,6 +16,7 @@ import 'screens/spare_parts_screen.dart';
 import 'screens/spare_part_form_screen.dart';
 import 'screens/incidencia_form_screen.dart';
 import 'screens/incidencias_screen.dart';
+import 'screens/no_access_screen.dart';
 import 'models/spare_part.dart';
 import 'services/storage_service.dart';
 import 'services/api_client.dart';
@@ -79,6 +80,7 @@ final _router = GoRouter(
   routes: [
     GoRoute(path: '/login', builder: (_, __) => LoginScreen(api: _api, storage: _storage)),
     GoRoute(path: '/incidencia', builder: (_, __) => IncidenciaFormScreen(api: _api, storage: _storage)),
+    GoRoute(path: '/no-access', builder: (_, __) => NoAccessScreen(api: _api, storage: _storage)),
     // The shell (desktop sidebar + content) is built once and persists across
     // navigations, so only the content swaps — the menu stays fixed.
     ShellRoute(

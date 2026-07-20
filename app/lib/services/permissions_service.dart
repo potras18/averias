@@ -80,7 +80,7 @@ class PermissionsService {
     for (final (key, route) in order) {
       if (can(key)) return route;
     }
-    return '/incidencia';
+    return '/no-access';
   }
 
   void reset() {
