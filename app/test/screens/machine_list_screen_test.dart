@@ -63,6 +63,7 @@ void main() {
     when(() => api.getMachineById('m-1')).thenAnswer((_) async => machine1);
     when(() => api.getMachineById('m-2')).thenAnswer((_) async => machine2);
     when(() => api.getSpareParts(machineId: any(named: 'machineId'))).thenAnswer((_) async => []);
+    when(() => api.getTicketLevelEnabled()).thenAnswer((_) async => true);
     // The mobile AppBar icons now gate on PermissionsService.instance.can(...)
     // rather than storage.getRole() directly; seed the technician default set.
     PermissionsService.instance.debugSet('technician', PermissionsService.fallbackNonAdmin);

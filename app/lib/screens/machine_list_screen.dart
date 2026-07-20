@@ -662,8 +662,25 @@ class _InspectionPanelState extends State<_InspectionPanel> {
   String _failureType = 'no_lee';
   bool _dispenserOk = true;
   String _ticketLevel = 'full';
+  bool _ticketLevelEnabled = true;
   bool _saving = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTicketLevelSetting();
+  }
+
+  Future<void> _loadTicketLevelSetting() async {
+    try {
+      final enabled = await widget.api.getTicketLevelEnabled();
+      if (!mounted) return;
+      setState(() => _ticketLevelEnabled = enabled);
+    } catch (_) {
+      // Mantener el valor por defecto (true) si falla la consulta.
+    }
+  }
 
   @override
   void dispose() {
@@ -683,7 +700,7 @@ class _InspectionPanelState extends State<_InspectionPanel> {
         'card_reader_ok': _cardReaderOk,
         if (!_cardReaderOk) 'card_reader_failure_type': _failureType,
         if (_commentCtrl.text.trim().isNotEmpty) 'comment': _commentCtrl.text.trim(),
-        if (widget.hasRedemptionTickets)
+        if (widget.hasRedemptionTickets && _ticketLevelEnabled)
           'ticket_check': {'dispenser_ok': _dispenserOk, 'ticket_level': _ticketLevel},
       };
       await widget.api.createInspection(data);
@@ -735,7 +752,7 @@ class _InspectionPanelState extends State<_InspectionPanel> {
                   onChanged: (v) => setState(() => _failureType = v!),
                 )),
           ],
-          if (widget.hasRedemptionTickets) ...[
+          if (widget.hasRedemptionTickets && _ticketLevelEnabled) ...[
             const Divider(),
             Text('Tickets redemption', style: Theme.of(context).textTheme.titleSmall),
             SwitchListTile(

@@ -23,6 +23,7 @@ void main() {
 
   setUp(() {
     mockApi = MockApiClient();
+    when(() => mockApi.getTicketLevelEnabled()).thenAnswer((_) async => true);
   });
 
   // --- existing tests (create mode) ---
@@ -62,6 +63,19 @@ void main() {
     ));
     await tester.pump();
     expect(find.text('Tickets redemption'), findsOneWidget);
+  });
+
+  testWidgets('ticket section hidden when ticket-level question disabled even if machine has tickets', (tester) async {
+    when(() => mockApi.getTicketLevelEnabled()).thenAnswer((_) async => false);
+    await tester.pumpWidget(MaterialApp(
+      home: InspectionFormScreen(
+        api: mockApi,
+        machineId: '123',
+        hasRedemptionTickets: true,
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Nivel de tickets'), findsNothing);
   });
 
   // --- new edit mode tests ---
