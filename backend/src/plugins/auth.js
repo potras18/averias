@@ -29,4 +29,38 @@ module.exports = fp(async function authPlugin(app) {
       }
     }
   })
+
+  // --- Data-driven permission matrix (role_permissions) ---
+  // In-process cache: `${role}:${key}` -> boolean. The table is tiny and rarely
+  // written, so a query-per-request is avoidable. Cache is cleared on every
+  // PUT /role-permissions via app.invalidatePermissionCache().
+  const _permCache = new Map()
+
+  app.decorate('invalidatePermissionCache', function () {
+    _permCache.clear()
+  })
+
+  app.decorate('hasPermission', async function (role, key) {
+    if (role === 'admin') return true
+    const cacheKey = `${role}:${key}`
+    if (_permCache.has(cacheKey)) return _permCache.get(cacheKey)
+    const { rows } = await app.db.query(
+      'SELECT allowed FROM role_permissions WHERE role = $1 AND permission_key = $2',
+      [role, key]
+    )
+    const allowed = rows.length ? rows[0].allowed : false
+    _permCache.set(cacheKey, allowed)
+    return allowed
+  })
+
+  // Factory: preHandler that requires a single permission key.
+  app.decorate('requirePermission', function (key) {
+    return async function (request, reply) {
+      if (request.user.role === 'admin') return
+      const allowed = await app.hasPermission(request.user.role, key)
+      if (!allowed) {
+        return reply.code(403).send({ error: 'Forbidden' })
+      }
+    }
+  })
 })

@@ -38,6 +38,18 @@ beforeAll(async () => {
 
 afterAll(() => app.close())
 
+let gerenteToken
+beforeAll(async () => {
+  const gerente = await seedUser({ email: 'rpt-gerente@example.com', role: 'gerente' })
+  gerenteToken = (await st.post('/auth/login').send({ email: gerente.email, password: gerente.password })).body.accessToken
+})
+
+test('GET /reports/pdf → 200 para gerente (informes.view)', async () => {
+  const res = await st.get('/reports/pdf').set({ Authorization: `Bearer ${gerenteToken}` })
+  expect(res.status).toBe(200)
+  expect(res.headers['content-type']).toContain('application/pdf')
+})
+
 const auth = () => ({ Authorization: `Bearer ${token}` })
 
 describe('GET /reports/pdf', () => {
@@ -83,6 +95,24 @@ describe('GET /reports/pdf', () => {
     const { stats } = buildReportHtml.mock.calls[0][0]
     expect(stats.mttrHours).toBe(3)
     expect(typeof stats.mttrHours).toBe('number')
+  })
+
+  it('passes ticketLevelEnabled=true to the report template by default', async () => {
+    await seedSettings()
+    buildReportHtml.mockClear()
+    const res = await st.get('/reports/pdf').set(auth())
+    expect(res.status).toBe(200)
+    expect(buildReportHtml).toHaveBeenCalledTimes(1)
+    expect(buildReportHtml.mock.calls[0][0].ticketLevelEnabled).toBe(true)
+  })
+
+  it('passes ticketLevelEnabled=false when the setting is disabled', async () => {
+    await seedSettings({ ticket_level_question_enabled: 'false' })
+    buildReportHtml.mockClear()
+    const res = await st.get('/reports/pdf').set(auth())
+    expect(res.status).toBe(200)
+    expect(buildReportHtml.mock.calls[0][0].ticketLevelEnabled).toBe(false)
+    await seedSettings() // restaurar defaults para no filtrar estado a otros tests
   })
 
   it('same-day duplicate inspections: only the most recent counts in the listing, summary and top_problematic', async () => {

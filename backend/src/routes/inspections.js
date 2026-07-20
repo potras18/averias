@@ -3,7 +3,7 @@
 
 module.exports = async function inspectionsRoutes(app) {
   app.post('/', {
-    preHandler: [app.authenticate],
+    preHandler: [app.authenticate, app.requirePermission('inspecciones.edit')],
     schema: {
       body: {
         type: 'object',
@@ -60,7 +60,7 @@ module.exports = async function inspectionsRoutes(app) {
   })
 
   app.patch('/:id', {
-    preHandler: [app.authenticate],
+    preHandler: [app.authenticate, app.requirePermission('inspecciones.edit')],
     schema: {
       params: {
         type: 'object',
@@ -171,7 +171,7 @@ module.exports = async function inspectionsRoutes(app) {
     }
   })
 
-  app.get('/', { preHandler: [app.authenticate] }, async (req) => {
+  app.get('/', { preHandler: [app.authenticate, app.requirePermission('inspecciones.view')] }, async (req) => {
     const { machine_id, location_id, from, to } = req.query
     const conditions = []
     const params = []

@@ -69,6 +69,12 @@ describe('GET /settings', () => {
     })
   })
 
+  it('GET /settings includes ticket_level_question_enabled defaulting to true', async () => {
+    const res = await st.get('/settings').set(auth(adminTok))
+    expect(res.status).toBe(200)
+    expect(res.body.ticket_level_question_enabled).toBe(true)
+  })
+
   it('returns 403 for technician', async () => {
     const res = await st.get('/settings').set(auth(techTok))
     expect(res.status).toBe(403)
@@ -119,6 +125,12 @@ describe('PUT /settings', () => {
     expect(res.body.email_body_reports).toBe('Cuerpo custom')
   })
 
+  it('PUT /settings accepts and stores ticket_level_question_enabled', async () => {
+    const res = await st.put('/settings').set(auth(adminTok)).send({ ticket_level_question_enabled: false })
+    expect(res.status).toBe(200)
+    expect(res.body.ticket_level_question_enabled).toBe(false)
+  })
+
   it('returns 400 for unknown key', async () => {
     const res = await st.put('/settings').set(auth(adminTok)).send({ unknown_key: 'x' })
     expect(res.status).toBe(400)
@@ -126,6 +138,26 @@ describe('PUT /settings', () => {
 
   it('returns 401 without token', async () => {
     const res = await st.put('/settings').send({ smtp_host: 'x' })
+    expect(res.status).toBe(401)
+  })
+})
+
+describe('GET /settings/public', () => {
+  it('returns ticket_level_question_enabled for a technician (non-admin)', async () => {
+    const res = await st.get('/settings/public').set(auth(techTok))
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ ticket_level_question_enabled: true })
+  })
+
+  it('reflects the stored value when disabled', async () => {
+    await seedSettings({ ticket_level_question_enabled: 'false' })
+    const res = await st.get('/settings/public').set(auth(techTok))
+    expect(res.status).toBe(200)
+    expect(res.body.ticket_level_question_enabled).toBe(false)
+  })
+
+  it('returns 401 without token', async () => {
+    const res = await st.get('/settings/public')
     expect(res.status).toBe(401)
   })
 })

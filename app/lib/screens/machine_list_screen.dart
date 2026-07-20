@@ -6,6 +6,7 @@ import '../models/inspection.dart';
 import '../models/spare_part.dart';
 import '../services/api_client.dart';
 import '../services/storage_service.dart';
+import '../services/permissions_service.dart';
 import '../widgets/desktop_shell_scope.dart';
 import '../widgets/machine_card.dart';
 import '../widgets/confirm_dialog.dart';
@@ -211,32 +212,36 @@ class _MachineListScreenState extends State<MachineListScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              if (_role == 'admin')
+              if (PermissionsService.instance.can('admin.view'))
                 IconButton(
                   icon: const Icon(Icons.settings),
                   tooltip: 'Administración',
                   onPressed: () => context.push('/admin'),
                 ),
-              IconButton(
-                icon: const Icon(Icons.history),
-                tooltip: 'Histórico',
-                onPressed: () => context.push('/history'),
-              ),
-              IconButton(
-                icon: const Icon(Icons.build),
-                tooltip: 'Repuestos',
-                onPressed: () => context.push('/repuestos'),
-              ),
-              IconButton(
-                icon: const Icon(Icons.bar_chart),
-                tooltip: 'Estadísticas',
-                onPressed: () => context.push('/stats'),
-              ),
-              IconButton(
-                icon: const Icon(Icons.assessment),
-                tooltip: 'Informes',
-                onPressed: () => context.push('/reports'),
-              ),
+              if (PermissionsService.instance.can('inspecciones.view'))
+                IconButton(
+                  icon: const Icon(Icons.history),
+                  tooltip: 'Histórico',
+                  onPressed: () => context.push('/history'),
+                ),
+              if (PermissionsService.instance.can('repuestos.view'))
+                IconButton(
+                  icon: const Icon(Icons.build),
+                  tooltip: 'Repuestos',
+                  onPressed: () => context.push('/repuestos'),
+                ),
+              if (PermissionsService.instance.can('estadisticas.view'))
+                IconButton(
+                  icon: const Icon(Icons.bar_chart),
+                  tooltip: 'Estadísticas',
+                  onPressed: () => context.push('/stats'),
+                ),
+              if (PermissionsService.instance.can('informes.view'))
+                IconButton(
+                  icon: const Icon(Icons.assessment),
+                  tooltip: 'Informes',
+                  onPressed: () => context.push('/reports'),
+                ),
               IconButton(
                 icon: const Icon(Icons.qr_code_scanner),
                 tooltip: 'Escanear QR',
@@ -620,7 +625,7 @@ class _SparePartTile extends StatelessWidget {
               padding: EdgeInsets.zero,
             ),
             IconButton(icon: const Icon(Icons.edit), tooltip: 'Editar', onPressed: onEdit),
-            if (role == 'admin')
+            if (PermissionsService.instance.can('repuestos.edit'))
               IconButton(icon: const Icon(Icons.delete_outline), tooltip: 'Eliminar', onPressed: onDelete),
           ],
         ),
@@ -657,8 +662,25 @@ class _InspectionPanelState extends State<_InspectionPanel> {
   String _failureType = 'no_lee';
   bool _dispenserOk = true;
   String _ticketLevel = 'full';
+  bool _ticketLevelEnabled = true;
   bool _saving = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTicketLevelSetting();
+  }
+
+  Future<void> _loadTicketLevelSetting() async {
+    try {
+      final enabled = await widget.api.getTicketLevelEnabled();
+      if (!mounted) return;
+      setState(() => _ticketLevelEnabled = enabled);
+    } catch (_) {
+      // Mantener el valor por defecto (true) si falla la consulta.
+    }
+  }
 
   @override
   void dispose() {
@@ -678,7 +700,7 @@ class _InspectionPanelState extends State<_InspectionPanel> {
         'card_reader_ok': _cardReaderOk,
         if (!_cardReaderOk) 'card_reader_failure_type': _failureType,
         if (_commentCtrl.text.trim().isNotEmpty) 'comment': _commentCtrl.text.trim(),
-        if (widget.hasRedemptionTickets)
+        if (widget.hasRedemptionTickets && _ticketLevelEnabled)
           'ticket_check': {'dispenser_ok': _dispenserOk, 'ticket_level': _ticketLevel},
       };
       await widget.api.createInspection(data);
@@ -730,7 +752,7 @@ class _InspectionPanelState extends State<_InspectionPanel> {
                   onChanged: (v) => setState(() => _failureType = v!),
                 )),
           ],
-          if (widget.hasRedemptionTickets) ...[
+          if (widget.hasRedemptionTickets && _ticketLevelEnabled) ...[
             const Divider(),
             Text('Tickets redemption', style: Theme.of(context).textTheme.titleSmall),
             SwitchListTile(

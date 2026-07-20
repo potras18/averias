@@ -9,6 +9,7 @@ class Settings {
   final String emailBodyReports;
   final String emailSubjectStats;
   final String emailBodyStats;
+  final bool ticketLevelQuestionEnabled;
 
   const Settings({
     required this.smtpHost,
@@ -21,6 +22,7 @@ class Settings {
     required this.emailBodyReports,
     required this.emailSubjectStats,
     required this.emailBodyStats,
+    required this.ticketLevelQuestionEnabled,
   });
 
   factory Settings.fromJson(Map<String, dynamic> j) => Settings(
@@ -34,5 +36,6 @@ class Settings {
         emailBodyReports:    (j['email_body_reports']    as String?) ?? '',
         emailSubjectStats:   (j['email_subject_stats']   as String?) ?? '',
         emailBodyStats:      (j['email_body_stats']      as String?) ?? '',
+        ticketLevelQuestionEnabled: (j['ticket_level_question_enabled'] as bool?) ?? true,
       );
 }

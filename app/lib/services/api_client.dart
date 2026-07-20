@@ -9,6 +9,7 @@ import '../models/user.dart';
 import '../models/settings.dart';
 import '../models/spare_part.dart';
 import '../models/incidencia.dart';
+import '../models/role_permission.dart';
 import 'storage_service.dart';
 
 class ApiClient {
@@ -271,6 +272,12 @@ class ApiClient {
     return Settings.fromJson(res.data as Map<String, dynamic>);
   }
 
+  Future<bool> getTicketLevelEnabled() async {
+    final res = await _dio.get('/settings/public');
+    final data = res.data as Map<String, dynamic>;
+    return (data['ticket_level_question_enabled'] as bool?) ?? true;
+  }
+
   // Admin — Locations
   Future<Location> createLocation({required String name, String? address}) async {
     final res = await _dio.post('/locations', data: {
@@ -445,5 +452,22 @@ class ApiClient {
 
   Future<void> deleteIncidencia(String id) async {
     await _dio.delete('/incidencias/$id');
+  }
+
+  // Role permissions
+  Future<List<RolePermission>> getRolePermissions() async {
+    final res = await _dio.get('/role-permissions');
+    return (res.data as List)
+        .map((j) => RolePermission.fromJson(j as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> updateRolePermissions(List<RolePermission> perms) async {
+    await _dio.put('/role-permissions', data: perms.map((p) => p.toJson()).toList());
+  }
+
+  Future<Map<String, bool>> getMyPermissions() async {
+    final res = await _dio.get('/role-permissions/me');
+    return Map<String, bool>.from(res.data as Map);
   }
 }

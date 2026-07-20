@@ -8,7 +8,7 @@ const { renderEmailTemplate } = require('../email/template')
 const {
   getInspectionRows, getMttrHours, getMttrTopMachines, getTopProblematic, buildSummary,
   getDailyBreakdown, getCardReaderStats, getDispenserStats, getIncidenciaResolution,
-  dedupeLatestPerMachineDay,
+  dedupeLatestPerMachineDay, getTicketLevelEnabled,
 } = require('../reports/queries')
 
 module.exports = async function statsRoutes(app) {
@@ -23,11 +23,12 @@ module.exports = async function statsRoutes(app) {
   }
 
   async function buildStatsData(db, filters) {
-    const [rawRows, mttrStats, mttrTopMachines, incidenciaResolution] = await Promise.all([
+    const [rawRows, mttrStats, mttrTopMachines, incidenciaResolution, ticketLevelEnabled] = await Promise.all([
       getInspectionRows(db, filters),
       getMttrHours(db, filters),
       getMttrTopMachines(db, filters),
       getIncidenciaResolution(db, filters),
+      getTicketLevelEnabled(db),
     ])
     const rows = dedupeLatestPerMachineDay(rawRows)
     const summary = buildSummary(rows)
@@ -43,12 +44,12 @@ module.exports = async function statsRoutes(app) {
       topProblematic:  getTopProblematic(rows),
       dailyBreakdown:  getDailyBreakdown(rows),
       cardReaderStats: getCardReaderStats(rows),
-      dispenserStats:  getDispenserStats(rows),
+      dispenserStats:  getDispenserStats(rows, ticketLevelEnabled),
     }
   }
 
   app.get('/', {
-    preHandler: [app.authenticate],
+    preHandler: [app.authenticate, app.requirePermission('estadisticas.view')],
     schema: { querystring: QUERY_SCHEMA },
   }, async (req, reply) => {
     const { from, to, location_id } = req.query
@@ -73,7 +74,7 @@ module.exports = async function statsRoutes(app) {
   })
 
   app.get('/pdf', {
-    preHandler: [app.authenticate],
+    preHandler: [app.authenticate, app.requirePermission('estadisticas.view')],
     schema: { querystring: QUERY_SCHEMA },
     config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
   }, async (req, reply) => {
@@ -103,7 +104,7 @@ module.exports = async function statsRoutes(app) {
   })
 
   app.post('/email', {
-    preHandler: [app.authenticate],
+    preHandler: [app.authenticate, app.requirePermission('estadisticas.view')],
     schema: {
       body: {
         type: ['object', 'null'],

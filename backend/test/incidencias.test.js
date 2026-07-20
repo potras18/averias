@@ -5,7 +5,7 @@ const { buildApp } = require('../src/app')
 
 let app, st
 let locA, locB, machineA, machineB
-let reportesToken, techToken, adminToken
+let reportesToken, techToken, adminToken, gerenteToken
 
 async function login(email, password) {
   const res = await st.post('/auth/login').send({ email, password })
@@ -26,9 +26,11 @@ beforeAll(async () => {
   const client = await seedUser({ name: 'Cliente A', email: 'cliente@example.com', role: 'reportes', locationId: locA.id })
   const tech = await seedUser({ name: 'Tecnico', email: 'tec@example.com', role: 'technician' })
   const admin = await seedUser({ name: 'Admin', email: 'admin@example.com', role: 'admin' })
+  const gerente = await seedUser({ name: 'Gerente', email: 'gerente@example.com', role: 'gerente' })
   reportesToken = await login(client.email, client.password)
   techToken = await login(tech.email, tech.password)
   adminToken = await login(admin.email, admin.password)
+  gerenteToken = await login(gerente.email, gerente.password)
 })
 
 afterAll(() => app.close())
@@ -40,6 +42,7 @@ beforeEach(async () => {
 const asReportes = () => ({ Authorization: `Bearer ${reportesToken}` })
 const asTech = () => ({ Authorization: `Bearer ${techToken}` })
 const asAdmin = () => ({ Authorization: `Bearer ${adminToken}` })
+const asGerente = () => ({ Authorization: `Bearer ${gerenteToken}` })
 
 test('reportes creates incidencia → machine goes out_of_service', async () => {
   const res = await st.post('/incidencias').set(asReportes()).send({
@@ -148,7 +151,7 @@ test('stats includes incidencia resolution counts', async () => {
   await st.patch(`/incidencias/${deleted.body.id}/resolve`).set(asTech()).send({ resolution: 'operative' })
   await pool.query('UPDATE incidencias SET active = false WHERE id = $1', [deleted.body.id])
 
-  const stats = await st.get('/stats').set(asTech())
+  const stats = await st.get('/stats').set(asAdmin())
   expect(stats.status).toBe(200)
   expect(stats.body.resolved_incidencias).toBe(1)
   expect(stats.body.open_incidencias).toBe(1)
@@ -242,4 +245,17 @@ test('resolver incidencia borrada → 404', async () => {
   await pool.query('UPDATE incidencias SET active = false WHERE id = $1', [created.body.id])
   const res = await st.patch(`/incidencias/${created.body.id}/resolve`).set(asAdmin()).send({ resolution: 'operative' })
   expect(res.status).toBe(404)
+})
+
+test('gerente puede LISTAR incidencias (incidencias.view) → 200', async () => {
+  const res = await st.get('/incidencias').set(asGerente())
+  expect(res.status).toBe(200)
+})
+
+test('gerente NO puede resolver una incidencia (sin incidencias.edit) → 403', async () => {
+  const created = await st.post('/incidencias').set(asReportes())
+    .send({ machine_id: machineA.id, machine_problem_type: 'otro' })
+  const res = await st.patch(`/incidencias/${created.body.id}/resolve`).set(asGerente())
+    .send({ resolution: 'operative' })
+  expect(res.status).toBe(403)
 })

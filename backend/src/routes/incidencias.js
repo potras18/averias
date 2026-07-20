@@ -83,7 +83,7 @@ module.exports = async function incidenciasRoutes(app) {
 
   // GET /incidencias — staff list, filterable.
   app.get('/', {
-    preHandler: [app.authenticate, app.requireRole('technician', 'admin')],
+    preHandler: [app.authenticate, app.requirePermission('incidencias.view')],
     schema: {
       querystring: {
         type: 'object',
@@ -174,7 +174,7 @@ module.exports = async function incidenciasRoutes(app) {
 
   // PATCH /incidencias/:id/resolve — staff resolves; creates the resulting inspection.
   app.patch('/:id/resolve', {
-    preHandler: [app.authenticate, app.requireRole('technician', 'admin')],
+    preHandler: [app.authenticate, app.requirePermission('incidencias.edit')],
     schema: {
       params: { type: 'object', properties: { id: { type: 'string' } } },
       body: {

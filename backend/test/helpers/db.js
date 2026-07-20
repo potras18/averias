@@ -16,6 +16,7 @@ async function resetDb() {
       WHEN key = 'email_body_reports' THEN 'Adjunto encontrará el informe de averías solicitado.'
       WHEN key = 'email_subject_stats' THEN 'Estadísticas — {archivo}'
       WHEN key = 'email_body_stats' THEN 'Adjunto encontrará el reporte de estadísticas solicitado.'
+      WHEN key = 'ticket_level_question_enabled' THEN 'true'
       ELSE ''
     END, updated_at = now()
   `)
@@ -33,6 +34,7 @@ async function seedSettings(overrides = {}) {
     email_body_reports: 'Adjunto encontrará el informe de averías solicitado.',
     email_subject_stats: 'Estadísticas — {archivo}',
     email_body_stats: 'Adjunto encontrará el reporte de estadísticas solicitado.',
+    ticket_level_question_enabled: 'true',
     ...overrides,
   }
   await Promise.all(

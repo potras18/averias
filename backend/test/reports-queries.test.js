@@ -5,6 +5,7 @@ const {
   getDailyBreakdown,
   getCardReaderStats,
   getDispenserStats,
+  getTicketLevelEnabled,
 } = require('../src/reports/queries')
 
 function row(overrides) {
@@ -128,5 +129,30 @@ describe('getDispenserStats', () => {
 
   test('no rows -> all zeros', () => {
     expect(getDispenserStats([])).toEqual({ pct_ok: 0, pct_no_check: 0, pct_full: 0, pct_low: 0, pct_empty: 0 })
+  })
+})
+
+describe('getDispenserStats ticket level toggle', () => {
+  test('when ticketLevelEnabled is false, ticket-level breakdown is zeroed but dispenser_ok pct is kept', () => {
+    const rows = [
+      row({ dispenserOk: true,  ticketLevel: 'full' }),
+      row({ dispenserOk: false, ticketLevel: 'empty' }),
+    ]
+    const result = getDispenserStats(rows, false)
+    expect(result.pct_ok).toBe(50)
+    expect(result.pct_no_check).toBe(0)
+    expect(result.pct_full).toBe(0)
+    expect(result.pct_low).toBe(0)
+    expect(result.pct_empty).toBe(0)
+  })
+
+  test('when ticketLevelEnabled is true (default), the breakdown is computed', () => {
+    const rows = [
+      row({ dispenserOk: true,  ticketLevel: 'full' }),
+      row({ dispenserOk: false, ticketLevel: 'empty' }),
+    ]
+    const result = getDispenserStats(rows, true)
+    expect(result.pct_full).toBe(50)
+    expect(result.pct_empty).toBe(50)
   })
 })

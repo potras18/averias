@@ -10,7 +10,7 @@ const supertest = require('supertest')
 const { resetDb, seedUser, seedLocation, seedMachine } = require('./helpers/db')
 const { buildApp } = require('../src/app')
 
-let app, st, token, adminToken, location
+let app, st, token, adminToken, gerenteToken, location
 
 beforeAll(async () => {
   app = buildApp()
@@ -23,6 +23,9 @@ beforeAll(async () => {
   const admin = await seedUser({ name: 'Admin User', email: 'admin@example.com', role: 'admin' })
   const adminRes = await st.post('/auth/login').send({ email: admin.email, password: admin.password })
   adminToken = adminRes.body.accessToken
+  const gerente = await seedUser({ name: 'Gerente User', email: 'gerente@example.com', role: 'gerente' })
+  const gerenteRes = await st.post('/auth/login').send({ email: gerente.email, password: gerente.password })
+  gerenteToken = gerenteRes.body.accessToken
   location = await seedLocation()
 })
 
@@ -30,6 +33,7 @@ afterAll(() => app.close())
 
 const auth = () => ({ Authorization: `Bearer ${token}` })
 const authAdmin = () => ({ Authorization: `Bearer ${adminToken}` })
+const authGerente = () => ({ Authorization: `Bearer ${gerenteToken}` })
 
 beforeEach(async () => {
   const { pool } = require('./helpers/db')
@@ -275,4 +279,9 @@ test('PUT image rejects unsupported mime', async () => {
   const res = await st.put(`/machines/${m.id}/image`).set(authAdmin())
     .send({ image: PNG_1x1_B64, mime: 'image/gif' })
   expect(res.status).toBe(400)
+})
+
+test('POST /machines → 403 para gerente (sin maquinas.edit)', async () => {
+  const res = await st.post('/machines').set(authGerente()).send({ name: 'G' })
+  expect(res.status).toBe(403)
 })

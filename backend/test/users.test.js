@@ -85,6 +85,14 @@ describe('POST /users', () => {
     })
     expect(res.status).toBe(403)
   })
+
+  test('POST /users crea un usuario con rol gerente', async () => {
+    const res = await st.post('/users').set(auth(adminToken)).send({
+      name: 'Geren Te', email: 'nuevo-gerente@x.com', password: 'pass123', role: 'gerente',
+    })
+    expect(res.status).toBe(201)
+    expect(res.body.role).toBe('gerente')
+  })
 })
 
 describe('PATCH /users/:id', () => {

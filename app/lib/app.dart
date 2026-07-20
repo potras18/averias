@@ -16,13 +16,28 @@ import 'screens/spare_parts_screen.dart';
 import 'screens/spare_part_form_screen.dart';
 import 'screens/incidencia_form_screen.dart';
 import 'screens/incidencias_screen.dart';
+import 'screens/no_access_screen.dart';
 import 'models/spare_part.dart';
 import 'services/storage_service.dart';
 import 'services/api_client.dart';
+import 'services/permissions_service.dart';
 import 'widgets/web_shell.dart';
 
 final _storage = StorageService();
 final _api = ApiClient(_storage);
+
+/// Maps a location to the permission required to view it (null = open to any
+/// authenticated staff member, e.g. /scan and inspection/form sub-routes).
+String? _permissionForLocation(String loc) {
+  if (loc.startsWith('/stats')) return 'estadisticas.view';
+  if (loc.startsWith('/reports')) return 'informes.view';
+  if (loc.startsWith('/history')) return 'inspecciones.view';
+  if (loc.startsWith('/repuestos')) return 'repuestos.view';
+  if (loc.startsWith('/incidencias')) return 'incidencias.view';
+  if (loc.startsWith('/admin')) return 'admin.view';
+  if (loc.startsWith('/machines')) return 'maquinas.view';
+  return null;
+}
 
 /// Maps the current location to the sidebar section it belongs to, so detail
 /// and form sub-routes keep their parent nav item highlighted.
@@ -54,11 +69,18 @@ final _router = GoRouter(
     if (role == 'reportes') return loc == '/incidencia' ? null : '/incidencia';
     // Staff never sit on the login or client page while authenticated.
     if (atLogin || loc == '/incidencia') return '/machines';
+    // Permission guards for staff routes.
+    await PermissionsService.instance.ensureLoaded();
+    final required = _permissionForLocation(loc);
+    if (required != null && !PermissionsService.instance.can(required)) {
+      return PermissionsService.instance.landingRoute();
+    }
     return null;
   },
   routes: [
     GoRoute(path: '/login', builder: (_, __) => LoginScreen(api: _api, storage: _storage)),
     GoRoute(path: '/incidencia', builder: (_, __) => IncidenciaFormScreen(api: _api, storage: _storage)),
+    GoRoute(path: '/no-access', builder: (_, __) => NoAccessScreen(api: _api, storage: _storage)),
     // The shell (desktop sidebar + content) is built once and persists across
     // navigations, so only the content swaps — the menu stays fixed.
     ShellRoute(
@@ -196,7 +218,9 @@ class _AveAppState extends State<AveApp> {
   @override
   void initState() {
     super.initState();
+    PermissionsService.instance.configure(_api, _storage);
     _api.onUnauthorized = () {
+      PermissionsService.instance.reset();
       _router.go('/login');
     };
   }

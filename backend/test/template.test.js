@@ -66,4 +66,16 @@ describe('buildReportHtml', () => {
     })
     expect(html).toContain('—')
   })
+
+  it('includes the Tickets column when ticketLevelEnabled is true (default)', () => {
+    const html = buildReportHtml(FIXTURE)
+    expect(html).toContain('<th>Tickets</th>')
+    expect(html).toContain('<td>full</td>')
+  })
+
+  it('omits the Tickets column when ticketLevelEnabled is false', () => {
+    const html = buildReportHtml({ ...FIXTURE, ticketLevelEnabled: false })
+    expect(html).not.toContain('<th>Tickets</th>')
+    expect(html).not.toContain('<td>full</td>')
+  })
 })

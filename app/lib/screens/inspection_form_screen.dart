@@ -49,6 +49,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   String _failureType = 'no_lee';
   bool _dispenserOk = true;
   String _ticketLevel = 'full';
+  bool _ticketLevelEnabled = true;
   bool _saving = false;
   String? _error;
 
@@ -67,6 +68,17 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         _dispenserOk = i.ticketCheck!.dispenserOk;
         _ticketLevel = i.ticketCheck!.ticketLevel;
       }
+    }
+    _loadTicketLevelSetting();
+  }
+
+  Future<void> _loadTicketLevelSetting() async {
+    try {
+      final enabled = await widget.api.getTicketLevelEnabled();
+      if (!mounted) return;
+      setState(() => _ticketLevelEnabled = enabled);
+    } catch (_) {
+      // Mantener el valor por defecto (true) si falla la consulta.
     }
   }
 
@@ -88,7 +100,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
         if (_isEdit)
           'comment': _commentCtrl.text.trim().isEmpty ? null : _commentCtrl.text.trim(),
         if (!_isEdit && _commentCtrl.text.trim().isNotEmpty) 'comment': _commentCtrl.text.trim(),
-        if (widget.hasRedemptionTickets)
+        if (widget.hasRedemptionTickets && _ticketLevelEnabled)
           'ticket_check': {'dispenser_ok': _dispenserOk, 'ticket_level': _ticketLevel},
       };
       if (_isEdit) {
@@ -157,7 +169,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
                   dense: true,
                 )),
           ],
-          if (widget.hasRedemptionTickets) ...[
+          if (widget.hasRedemptionTickets && _ticketLevelEnabled) ...[
             const Divider(),
             Text('Tickets redemption', style: Theme.of(context).textTheme.titleSmall),
             SwitchListTile(

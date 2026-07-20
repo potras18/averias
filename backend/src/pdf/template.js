@@ -25,14 +25,14 @@ function esc(s) {
     .replace(/"/g, '&quot;')
 }
 
-function buildReportHtml({ from, to, generatedAt, technicianName, summary, locationSections, machineStates = [], stats }) {
+function buildReportHtml({ from, to, generatedAt, technicianName, summary, locationSections, machineStates = [], stats, ticketLevelEnabled = true }) {
   const locationHtml = locationSections.map(loc => `
     <h3>${esc(loc.name)}</h3>
     <table>
       <thead>
         <tr>
           <th>Máquina</th><th>Estado</th><th>Lector tarjeta</th>
-          <th>Tickets</th><th>Técnico</th><th>Comentario</th><th>Fecha</th>
+          ${ticketLevelEnabled ? '<th>Tickets</th>' : ''}<th>Técnico</th><th>Comentario</th><th>Fecha</th>
         </tr>
       </thead>
       <tbody>
@@ -41,7 +41,7 @@ function buildReportHtml({ from, to, generatedAt, technicianName, summary, locat
             <td>${esc(r.machine_name)}</td>
             <td>${statusLabel(r.status)}</td>
             <td>${r.card_reader_ok ? 'OK' : esc(r.card_reader_failure_type ?? 'Fallo')}</td>
-            <td>${esc(r.ticket_level)}</td>
+            ${ticketLevelEnabled ? `<td>${esc(r.ticket_level)}</td>` : ''}
             <td>${esc(r.technician_name)}</td>
             <td>${esc(r.comment)}</td>
             <td>${fmtDate(r.inspected_at)}</td>

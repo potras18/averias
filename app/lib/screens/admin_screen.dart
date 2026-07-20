@@ -6,7 +6,9 @@ import 'dart:ui' as ui;
 import '../models/location.dart';
 import '../models/machine.dart';
 import '../models/user.dart';
+import '../models/role_permission.dart';
 import '../services/api_client.dart';
+import '../services/permissions_service.dart';
 import '../services/storage_service.dart';
 import '../utils/download_file.dart';
 import '../widgets/desktop_shell_scope.dart';
@@ -35,7 +37,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _load();
   }
 
@@ -448,6 +450,8 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                       DropdownMenuItem(
                           value: 'technician', child: Text('Técnico')),
                       DropdownMenuItem(
+                          value: 'gerente', child: Text('Gerente')),
+                      DropdownMenuItem(
                           value: 'admin', child: Text('Administrador')),
                       DropdownMenuItem(
                           value: 'reportes', child: Text('Cliente (avisos)')),
@@ -784,6 +788,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     Tab(text: 'Ubicaciones'),
     Tab(text: 'Máquinas'),
     Tab(text: 'Usuarios'),
+    Tab(text: 'Permisos'),
     Tab(text: 'Ajustes'),
   ];
 
@@ -810,6 +815,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                       _buildLocationTab(),
                       _buildMachinesTab(),
                       _buildUsersTab(),
+                      _PermissionsTab(api: widget.api),
                       _AdminSettingsTab(api: widget.api),
                     ],
                   ),
@@ -842,6 +848,7 @@ class _AdminSettingsTabState extends State<_AdminSettingsTab> {
 
   List<String> _recipients = [];
   bool _passWasSet = false;
+  bool _ticketLevelEnabled = true;
   bool _loading    = true;
   bool _saving     = false;
   String? _error;
@@ -883,6 +890,7 @@ class _AdminSettingsTabState extends State<_AdminSettingsTab> {
         _emailBodyReportsCtrl.text    = s.emailBodyReports;
         _emailSubjectStatsCtrl.text   = s.emailSubjectStats;
         _emailBodyStatsCtrl.text      = s.emailBodyStats;
+        _ticketLevelEnabled = s.ticketLevelQuestionEnabled;
         _loading        = false;
       });
     } catch (_) {
@@ -904,6 +912,7 @@ class _AdminSettingsTabState extends State<_AdminSettingsTab> {
         'email_body_reports':    _emailBodyReportsCtrl.text,
         'email_subject_stats':   _emailSubjectStatsCtrl.text,
         'email_body_stats':      _emailBodyStatsCtrl.text,
+        'ticket_level_question_enabled': _ticketLevelEnabled,
       };
       final newPass = _passCtrl.text;
       if (newPass.isNotEmpty) body['smtp_pass'] = newPass;
@@ -1073,6 +1082,18 @@ class _AdminSettingsTabState extends State<_AdminSettingsTab> {
               ),
             ],
           ),
+          _section(
+            icon: Icons.confirmation_number,
+            title: 'Revisiones',
+            children: [
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Preguntar nivel de tickets en revisiones'),
+                value: _ticketLevelEnabled,
+                onChanged: (v) => setState(() => _ticketLevelEnabled = v),
+              ),
+            ],
+          ),
           FilledButton(
             onPressed: _saving ? null : _save,
             child: _saving
@@ -1084,6 +1105,140 @@ class _AdminSettingsTabState extends State<_AdminSettingsTab> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PermissionsTab extends StatefulWidget {
+  final ApiClient api;
+  const _PermissionsTab({required this.api});
+
+  @override
+  State<_PermissionsTab> createState() => _PermissionsTabState();
+}
+
+class _PermissionsTabState extends State<_PermissionsTab> {
+  static const _editableRoles = ['technician', 'gerente'];
+  static const _roleLabels = {'technician': 'Técnico', 'gerente': 'Gerente', 'admin': 'Admin'};
+  static const _keys = [
+    'estadisticas.view',
+    'informes.view',
+    'incidencias.view',
+    'incidencias.edit',
+    'inspecciones.view',
+    'inspecciones.edit',
+    'maquinas.view',
+    'maquinas.edit',
+    'repuestos.view',
+    'repuestos.edit',
+    'admin.view',
+  ];
+
+  late Future<void> _loadFuture;
+  // role -> (key -> allowed)
+  final Map<String, Map<String, bool>> _matrix = {};
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFuture = _load();
+  }
+
+  Future<void> _load() async {
+    final rows = await widget.api.getRolePermissions();
+    _matrix.clear();
+    for (final role in _editableRoles) {
+      _matrix[role] = {for (final k in _keys) k: false};
+    }
+    for (final r in rows) {
+      if (_matrix.containsKey(r.role)) {
+        _matrix[r.role]![r.key] = r.allowed;
+      }
+    }
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    final payload = <RolePermission>[];
+    for (final role in _editableRoles) {
+      for (final k in _keys) {
+        payload.add(RolePermission(role: role, key: k, allowed: _matrix[role]![k]!));
+      }
+    }
+    try {
+      await widget.api.updateRolePermissions(payload);
+      PermissionsService.instance.reset();
+      await PermissionsService.instance.ensureLoaded();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Permisos guardados')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudieron guardar los permisos')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<void>(
+      future: _loadFuture,
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snap.hasError) {
+          return Center(child: Text('Error: ${snap.error}'));
+        }
+        return Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.vertical,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    columns: [
+                      const DataColumn(label: Text('Permiso')),
+                      for (final role in _editableRoles)
+                        DataColumn(label: Text(_roleLabels[role]!)),
+                      DataColumn(label: Text(_roleLabels['admin']!)),
+                    ],
+                    rows: [
+                      for (final k in _keys)
+                        DataRow(cells: [
+                          DataCell(Text(k)),
+                          for (final role in _editableRoles)
+                            DataCell(Checkbox(
+                              value: _matrix[role]![k],
+                              onChanged: (v) => setState(() => _matrix[role]![k] = v ?? false),
+                            )),
+                          // admin column: always-on, disabled (admin is not editable)
+                          const DataCell(Checkbox(value: true, onChanged: null)),
+                        ]),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: FilledButton.icon(
+                icon: const Icon(Icons.save),
+                label: const Text('Guardar'),
+                onPressed: _saving ? null : _save,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
