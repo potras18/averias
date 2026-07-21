@@ -8,6 +8,7 @@ import 'package:averias_app/services/storage_service.dart';
 import 'package:averias_app/services/permissions_service.dart';
 import 'package:averias_app/models/machine.dart';
 import 'package:averias_app/models/inspection.dart';
+import 'package:averias_app/models/location.dart';
 import 'package:averias_app/widgets/desktop_shell_scope.dart';
 
 class MockApiClient extends Mock implements ApiClient {}
@@ -21,6 +22,9 @@ final machine2 = Machine(
   id: 'm-2', name: 'Futbolín B', qrCode: 'QR-B',
   hasRedemptionTickets: false, active: true, locationName: 'Sala B',
 );
+
+const locationA = Location(id: 'loc-a', name: 'Sala A');
+const locationB = Location(id: 'loc-b', name: 'Sala B');
 
 final _fakeInspection = Inspection(
   id: 'insp-1',
@@ -59,7 +63,13 @@ void main() {
     storage = MockStorageService();
     when(() => storage.getRole()).thenAnswer((_) async => 'technician');
     when(() => storage.getUserId()).thenAnswer((_) async => 'user-1');
-    when(() => api.getMachines(inspectionDate: any(named: 'inspectionDate'))).thenAnswer((_) async => [machine1, machine2]);
+    when(() => storage.getSelectedLocationId()).thenAnswer((_) async => null);
+    when(() => storage.setSelectedLocationId(any())).thenAnswer((_) async {});
+    when(() => api.getLocations()).thenAnswer((_) async => [locationA, locationB]);
+    when(() => api.getMachines(
+          inspectionDate: any(named: 'inspectionDate'),
+          locationId: any(named: 'locationId'),
+        )).thenAnswer((_) async => [machine1, machine2]);
     when(() => api.getMachineById('m-1')).thenAnswer((_) async => machine1);
     when(() => api.getMachineById('m-2')).thenAnswer((_) async => machine2);
     when(() => api.getSpareParts(machineId: any(named: 'machineId'))).thenAnswer((_) async => []);
@@ -227,5 +237,69 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('historico'), findsOneWidget);
+  });
+
+  testWidgets('mobile: shows location selector when 2+ locations exist', (tester) async {
+    await tester.pumpWidget(_mobileWrap(
+      MachineListScreen(api: api, storage: storage),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('location-selector')), findsOneWidget);
+    expect(find.text('Todas'), findsOneWidget);
+  });
+
+  testWidgets('mobile: hides location selector when only 1 location exists', (tester) async {
+    when(() => api.getLocations()).thenAnswer((_) async => [locationA]);
+
+    await tester.pumpWidget(_mobileWrap(
+      MachineListScreen(api: api, storage: storage),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('location-selector')), findsNothing);
+  });
+
+  testWidgets('desktop: selecting a location filters via getMachines and persists it', (tester) async {
+    when(() => api.getMachines(
+          inspectionDate: any(named: 'inspectionDate'),
+          locationId: 'loc-b',
+        )).thenAnswer((_) async => [machine2]);
+
+    await tester.pumpWidget(_desktopWrap(
+      MachineListScreen(api: api, storage: storage),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('location-selector')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sala B').last);
+    await tester.pumpAndSettle();
+
+    verify(() => api.getMachines(
+          inspectionDate: any(named: 'inspectionDate'),
+          locationId: 'loc-b',
+        )).called(1);
+    verify(() => storage.setSelectedLocationId('loc-b')).called(1);
+  });
+
+  testWidgets('mobile: restores a previously persisted location selection on init', (tester) async {
+    when(() => storage.getSelectedLocationId()).thenAnswer((_) async => 'loc-b');
+    when(() => api.getMachines(
+          inspectionDate: any(named: 'inspectionDate'),
+          locationId: 'loc-b',
+        )).thenAnswer((_) async => [machine2]);
+
+    await tester.pumpWidget(_mobileWrap(
+      MachineListScreen(api: api, storage: storage),
+    ));
+    await tester.pumpAndSettle();
+
+    verify(() => api.getMachines(
+          inspectionDate: any(named: 'inspectionDate'),
+          locationId: 'loc-b',
+        )).called(1);
+    expect(find.text('Pinball A'), findsNothing);
+    expect(find.text('Futbolín B'), findsOneWidget);
   });
 }

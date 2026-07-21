@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import '../models/machine.dart';
 import '../models/inspection.dart';
 import '../models/spare_part.dart';
+import '../models/location.dart';
 import '../services/api_client.dart';
 import '../services/storage_service.dart';
 import '../services/permissions_service.dart';
@@ -63,11 +64,14 @@ class _MachineListScreenState extends State<MachineListScreen> {
   String _searchQuery = '';
   bool _isDesktop = false;
   DateTime _inspectionDate = DateTime.now();
+  // Location filter
+  List<Location> _locations = [];
+  String? _selectedLocationId;
 
   @override
   void initState() {
     super.initState();
-    _loadList();
+    _initLocationAndList();
     _loadRole();
     widget.storage.getUserId().then((id) { if (mounted) setState(() => _userId = id); });
     _searchCtrl.addListener(() {
@@ -91,6 +95,7 @@ class _MachineListScreenState extends State<MachineListScreen> {
     try {
       final machines = await widget.api.getMachines(
         inspectionDate: _inspectionDate,
+        locationId: _selectedLocationId,
       );
       if (!mounted) return;
       setState(() {
@@ -108,6 +113,33 @@ class _MachineListScreenState extends State<MachineListScreen> {
         _error = 'Error al cargar máquinas';
       });
     }
+  }
+
+  Future<void> _initLocationAndList() async {
+    try {
+      final locations = await widget.api.getLocations();
+      final storedLocationId = await widget.storage.getSelectedLocationId();
+      if (mounted) {
+        setState(() {
+          _locations = locations;
+          _selectedLocationId =
+              locations.any((l) => l.id == storedLocationId) ? storedLocationId : null;
+        });
+      }
+    } catch (_) {
+      // Si falla la carga de localizaciones, se mantiene el listado sin filtrar
+      // (selector oculto, comportamiento actual preservado).
+    }
+    await _loadList();
+  }
+
+  Future<void> _onLocationChanged(String? locationId) async {
+    setState(() {
+      _selectedLocationId = locationId;
+      _loadingList = true;
+    });
+    await widget.storage.setSelectedLocationId(locationId);
+    await _loadList();
   }
 
   Future<void> _loadRole() async {
@@ -172,6 +204,28 @@ class _MachineListScreenState extends State<MachineListScreen> {
     );
   }
 
+  Widget? _buildLocationSelector() {
+    if (_locations.length < 2) return null;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: DropdownButtonFormField<String?>(
+        key: const Key('location-selector'),
+        value: _selectedLocationId,
+        isExpanded: true,
+        decoration: const InputDecoration(
+          labelText: 'Localización',
+          border: OutlineInputBorder(),
+          isDense: true,
+        ),
+        items: [
+          const DropdownMenuItem<String?>(value: null, child: Text('Todas')),
+          ..._locations.map((l) => DropdownMenuItem<String?>(value: l.id, child: Text(l.name))),
+        ],
+        onChanged: _onLocationChanged,
+      ),
+    );
+  }
+
   void _selectMachine(String id) {
     setState(() {
       _selectedMachineId = id;
@@ -219,6 +273,7 @@ class _MachineListScreenState extends State<MachineListScreen> {
   }
 
   Widget _buildMobile(BuildContext context) {
+    final locationSelector = _buildLocationSelector();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Máquinas'),
@@ -269,6 +324,7 @@ class _MachineListScreenState extends State<MachineListScreen> {
       body: Column(
         children: [
           _buildSearchField(),
+          if (locationSelector != null) locationSelector,
           _buildDatePickerRow(),
           Expanded(
             child: _loadingList
@@ -325,9 +381,11 @@ class _MachineListScreenState extends State<MachineListScreen> {
   }
 
   Widget _buildListPanel() {
+    final locationSelector = _buildLocationSelector();
     return Column(
       children: [
         _buildSearchField(),
+        if (locationSelector != null) locationSelector,
         _buildDatePickerRow(),
         if (_loadingList)
           const Expanded(child: Center(child: CircularProgressIndicator()))
