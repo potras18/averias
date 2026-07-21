@@ -134,6 +134,21 @@ class _MachineListScreenState extends State<MachineListScreen> {
     }
   }
 
+  Widget _buildSearchField() {
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: TextField(
+        controller: _searchCtrl,
+        decoration: const InputDecoration(
+          hintText: 'Buscar máquina...',
+          prefixIcon: Icon(Icons.search),
+          border: OutlineInputBorder(),
+          isDense: true,
+        ),
+      ),
+    );
+  }
+
   Widget _buildDatePickerRow() {
     final d = _inspectionDate;
     final label =
@@ -253,6 +268,7 @@ class _MachineListScreenState extends State<MachineListScreen> {
       ),
       body: Column(
         children: [
+          _buildSearchField(),
           _buildDatePickerRow(),
           Expanded(
             child: _loadingList
@@ -272,11 +288,11 @@ class _MachineListScreenState extends State<MachineListScreen> {
                         : RefreshIndicator(
                             onRefresh: _loadList,
                             child: ListView.separated(
-                              itemCount: _machines.length,
+                              itemCount: _filtered.length,
                               separatorBuilder: (_, __) => const Divider(height: 1),
                               itemBuilder: (_, i) => MachineCard(
-                                machine: _machines[i],
-                                onTap: () => context.push('/machines/${_machines[i].id}'),
+                                machine: _filtered[i],
+                                onTap: () => context.push('/machines/${_filtered[i].id}'),
                               ),
                             ),
                           ),
@@ -311,18 +327,7 @@ class _MachineListScreenState extends State<MachineListScreen> {
   Widget _buildListPanel() {
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.all(8),
-          child: TextField(
-            controller: _searchCtrl,
-            decoration: const InputDecoration(
-              hintText: 'Buscar máquina...',
-              prefixIcon: Icon(Icons.search),
-              border: OutlineInputBorder(),
-              isDense: true,
-            ),
-          ),
-        ),
+        _buildSearchField(),
         _buildDatePickerRow(),
         if (_loadingList)
           const Expanded(child: Center(child: CircularProgressIndicator()))

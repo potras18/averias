@@ -191,7 +191,20 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Pinball A'), findsOneWidget);
-    expect(find.byType(TextField), findsNothing);  // no search field in mobile
+    expect(find.byType(TextField), findsOneWidget);  // search field now present in mobile
+  });
+
+  testWidgets('mobile: search filters machine list', (tester) async {
+    await tester.pumpWidget(_mobileWrap(
+      MachineListScreen(api: api, storage: storage),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'Futbolín');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pinball A'), findsNothing);
+    expect(find.text('Futbolín B'), findsOneWidget);
   });
 
   testWidgets('mobile: Histórico icon pushes to /history', (tester) async {
