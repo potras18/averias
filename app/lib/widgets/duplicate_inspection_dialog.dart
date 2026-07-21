@@ -13,7 +13,7 @@ Inspection? todaysInspection(Machine machine) {
   if (machine.inspections.isEmpty) return null;
   final latest = machine.inspections.first;
   final now = DateTime.now();
-  final d = latest.inspectedAt;
+  final d = latest.inspectedAt.toLocal();
   final isToday = d.year == now.year && d.month == now.month && d.day == now.day;
   return isToday ? latest : null;
 }

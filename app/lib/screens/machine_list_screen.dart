@@ -612,7 +612,7 @@ class _InspectionTile extends StatelessWidget {
     if (role == null) return false;
     if (role == 'admin') return true;
     final today = DateTime.now();
-    final d = inspection.inspectedAt;
+    final d = inspection.inspectedAt.toLocal();
     final isToday = d.year == today.year && d.month == today.month && d.day == today.day;
     return isToday && inspection.technicianId == currentUserId;
   }
