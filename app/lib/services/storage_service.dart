@@ -47,11 +47,13 @@ class StorageService {
   static const _keyRole     = 'user_role';
   static const _keyUserId   = 'user_id';
   static const _keyBiometricEnabled = 'biometric_enabled';
+  static const _keySelectedLocationId = 'selected_location_id';
 
   Future<String?> getAccessToken()  => _storage.read(_keyAccess);
   Future<String?> getRefreshToken() => _storage.read(_keyRefresh);
   Future<String?> getRole()         => _storage.read(_keyRole);
   Future<String?> getUserId()       => _storage.read(_keyUserId);
+  Future<String?> getSelectedLocationId() => _storage.read(_keySelectedLocationId);
 
   Future<bool> getBiometricEnabled() async =>
       (await _storage.read(_keyBiometricEnabled)) == 'true';
@@ -69,11 +71,20 @@ class StorageService {
     await _storage.write(_keyUserId, userId);
   }
 
+  Future<void> setSelectedLocationId(String? locationId) async {
+    if (locationId == null) {
+      await _storage.delete(_keySelectedLocationId);
+    } else {
+      await _storage.write(_keySelectedLocationId, locationId);
+    }
+  }
+
   Future<void> clear() async {
     await _storage.delete(_keyAccess);
     await _storage.delete(_keyRefresh);
     await _storage.delete(_keyRole);
     await _storage.delete(_keyUserId);
+    await _storage.delete(_keySelectedLocationId);
     // _keyBiometricEnabled intentionally NOT cleared — persists across sessions
   }
 }
