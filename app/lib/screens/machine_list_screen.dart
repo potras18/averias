@@ -619,6 +619,7 @@ class _InspectionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localInspectedAt = inspection.inspectedAt.toLocal();
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
@@ -640,7 +641,7 @@ class _InspectionTile extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '${inspection.inspectedAt.day}/${inspection.inspectedAt.month}/${inspection.inspectedAt.year}',
+              '${localInspectedAt.day}/${localInspectedAt.month}/${localInspectedAt.year}',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             if (_canEdit())

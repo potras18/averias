@@ -289,8 +289,9 @@ class _InspectionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localInspectedAt = inspection.inspectedAt.toLocal();
     final dateStr =
-        '${inspection.inspectedAt.day}/${inspection.inspectedAt.month}/${inspection.inspectedAt.year}';
+        '${localInspectedAt.day}/${localInspectedAt.month}/${localInspectedAt.year}';
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
