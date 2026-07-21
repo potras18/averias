@@ -12,6 +12,7 @@ import '../widgets/desktop_shell_scope.dart';
 import '../widgets/section_card.dart';
 import '../widgets/machine_photo.dart';
 import '../widgets/confirm_dialog.dart';
+import '../widgets/duplicate_inspection_dialog.dart';
 
 class MachineDetailScreen extends StatefulWidget {
   final ApiClient api;
@@ -67,6 +68,25 @@ class _MachineDetailScreenState extends State<MachineDetailScreen>
     ).then((_) => setState(() {
           _machineFuture = widget.api.getMachineById(widget.machineId);
         }));
+  }
+
+  Future<void> _onTapRegistrarInspeccion(Machine machine) async {
+    final proceed = await maybeWarnDuplicateInspection(
+      context: context,
+      machine: machine,
+      currentUserId: _userId,
+      onEditExisting: (existing) => _openEdit(machine, existing),
+    );
+    if (!proceed || !mounted) return;
+    await context.push('/machines/${machine.id}/inspect', extra: {
+      'hasRedemptionTickets': machine.hasRedemptionTickets,
+      'inspection': null,
+    });
+    if (mounted) {
+      setState(() {
+        _machineFuture = widget.api.getMachineById(widget.machineId);
+      });
+    }
   }
 
   Future<void> _deleteInspection(Inspection inspection) async {
@@ -167,16 +187,7 @@ class _MachineDetailScreenState extends State<MachineDetailScreen>
                   FilledButton.icon(
                     icon: const Icon(Icons.edit_note),
                     label: const Text('Registrar inspección'),
-                    onPressed: () => context
-                        .push('/machines/${machine.id}/inspect',
-                            extra: {
-                              'hasRedemptionTickets': machine.hasRedemptionTickets,
-                              'inspection': null,
-                            })
-                        .then((_) => setState(() {
-                              _machineFuture =
-                                  widget.api.getMachineById(widget.machineId);
-                            })),
+                    onPressed: () => _onTapRegistrarInspeccion(machine),
                   ),
                   const SizedBox(height: 24),
                   SectionCard(

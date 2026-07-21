@@ -37,6 +37,25 @@ final testMachine = Machine(
   inspections: [_todayInspection, _oldInspection],
 );
 
+final _otherTechTodayInspection = Inspection(
+  id: 'insp-other-today',
+  machineId: 'machine-1',
+  technicianId: 'user-OTHER',
+  technicianName: 'Ana',
+  status: 'operative',
+  cardReaderOk: true,
+  inspectedAt: DateTime.now(),
+);
+
+final _machineOtherTechToday = Machine(
+  id: 'machine-1',
+  name: 'Pinball',
+  qrCode: 'qr-abc-123',
+  hasRedemptionTickets: false,
+  active: true,
+  inspections: [_otherTechTodayInspection],
+);
+
 void main() {
   late MockApiClient api;
   late MockStorageService storage;
@@ -57,6 +76,36 @@ void main() {
     ));
     await tester.pumpAndSettle();
     expect(find.text('Pinball'), findsWidgets);
+  });
+
+  testWidgets('tapping Registrar inspección shows duplicate dialog when technician already inspected today', (tester) async {
+    // testMachine's inspections are [_todayInspection (technicianId: user-1), _oldInspection],
+    // and storage.getUserId() defaults to 'user-1' — same-technician case.
+    await tester.pumpWidget(MaterialApp(
+      home: MachineDetailScreen(api: api, storage: storage, machineId: 'machine-1'),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Registrar inspección'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ya registraste una revisión de esta máquina hoy'), findsOneWidget);
+    expect(find.text('Editar'), findsOneWidget);
+  });
+
+  testWidgets('tapping Registrar inspección shows informational dialog when another technician already inspected today', (tester) async {
+    when(() => api.getMachineById('machine-1')).thenAnswer((_) async => _machineOtherTechToday);
+
+    await tester.pumpWidget(MaterialApp(
+      home: MachineDetailScreen(api: api, storage: storage, machineId: 'machine-1'),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Registrar inspección'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ya la revisó Ana hoy'), findsOneWidget);
+    expect(find.text('Editar'), findsNothing);
   });
 
   testWidgets('technician sees edit button only on today inspection', (tester) async {
