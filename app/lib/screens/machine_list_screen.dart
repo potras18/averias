@@ -14,6 +14,7 @@ import '../widgets/confirm_dialog.dart';
 import '../widgets/section_card.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/machine_photo.dart';
+import '../widgets/duplicate_inspection_dialog.dart';
 
 // Inspection form options (same as InspectionFormScreen)
 const _statusOptions = [
@@ -235,6 +236,26 @@ class _MachineListScreenState extends State<MachineListScreen> {
     });
   }
 
+  Future<void> _onTapRegistrarInspeccion(Machine machine) async {
+    final proceed = await maybeWarnDuplicateInspection(
+      context: context,
+      machine: machine,
+      currentUserId: _userId,
+      onEditExisting: (existing) => context.push(
+        '/machines/${machine.id}/inspect',
+        extra: {
+          'hasRedemptionTickets': machine.hasRedemptionTickets,
+          'inspection': existing,
+        },
+      ).then((_) => setState(() {
+            _detailFuture = widget.api.getMachineById(_selectedMachineId!);
+            _partsFuture = widget.api.getSpareParts(machineId: _selectedMachineId!);
+          })),
+    );
+    if (!proceed || !mounted) return;
+    setState(() => _showForm = true);
+  }
+
   Future<void> _deleteInspection(Inspection inspection) async {
     final ok = await showConfirmDialog(
       context,
@@ -448,7 +469,7 @@ class _MachineListScreenState extends State<MachineListScreen> {
               FilledButton.icon(
                 icon: const Icon(Icons.edit_note),
                 label: const Text('Registrar inspección'),
-                onPressed: () => setState(() => _showForm = true),
+                onPressed: () => _onTapRegistrarInspeccion(machine),
               ),
               const SizedBox(height: 24),
               SectionCard(

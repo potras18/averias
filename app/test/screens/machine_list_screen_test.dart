@@ -40,6 +40,38 @@ final _machine1WithInspection = Machine(
   inspections: [_fakeInspection],
 );
 
+final _sameTechTodayInspection = Inspection(
+  id: 'insp-mine-today',
+  machineId: 'm-1',
+  technicianId: 'user-1',
+  technicianName: 'Yo Técnico',
+  status: 'operative',
+  cardReaderOk: true,
+  inspectedAt: DateTime.now(),
+);
+
+final _otherTechTodayInspection = Inspection(
+  id: 'insp-other-today',
+  machineId: 'm-1',
+  technicianId: 'user-OTHER',
+  technicianName: 'Ana',
+  status: 'operative',
+  cardReaderOk: true,
+  inspectedAt: DateTime.now(),
+);
+
+final _machine1SameTechToday = Machine(
+  id: 'm-1', name: 'Pinball A', qrCode: 'QR-A',
+  hasRedemptionTickets: false, active: true, locationName: 'Sala A',
+  inspections: [_sameTechTodayInspection],
+);
+
+final _machine1OtherTechToday = Machine(
+  id: 'm-1', name: 'Pinball A', qrCode: 'QR-A',
+  hasRedemptionTickets: false, active: true, locationName: 'Sala A',
+  inspections: [_otherTechTodayInspection],
+);
+
 Widget _desktopWrap(Widget child) => DesktopShellScope(
       isDesktop: true,
       child: SizedBox(
@@ -144,6 +176,37 @@ void main() {
     await tester.pumpAndSettle();
 
     verify(() => api.createInspection(any())).called(1);
+  });
+
+  testWidgets('desktop: Registrar inspección shows duplicate dialog when technician already inspected today', (tester) async {
+    when(() => api.getMachineById('m-1')).thenAnswer((_) async => _machine1SameTechToday);
+
+    await tester.pumpWidget(_desktopWrap(
+      MachineListScreen(api: api, storage: storage),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Registrar inspección'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ya registraste una revisión de esta máquina hoy'), findsOneWidget);
+    expect(find.text('Estado'), findsNothing); // form panel did not open
+  });
+
+  testWidgets('desktop: Registrar inspección shows informational dialog when another technician already inspected today', (tester) async {
+    when(() => api.getMachineById('m-1')).thenAnswer((_) async => _machine1OtherTechToday);
+
+    await tester.pumpWidget(_desktopWrap(
+      MachineListScreen(api: api, storage: storage),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Registrar inspección'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ya la revisó Ana hoy'), findsOneWidget);
+    expect(find.text('Editar'), findsNothing);
+    expect(find.text('Estado'), findsNothing); // form panel did not open
   });
 
   testWidgets('desktop: admin sees delete button on inspection in detail panel', (tester) async {
